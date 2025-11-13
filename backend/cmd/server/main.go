@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/prabalesh/loco/backend/internal/delivery/router"
 	"github.com/prabalesh/loco/backend/pkg/config"
+	"github.com/prabalesh/loco/backend/pkg/database"
 	"github.com/prabalesh/loco/backend/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -33,7 +35,38 @@ func main() {
 		zap.String("port", cfg.Server.Port),
 	)
 
-	router := setupRouter(log, cfg)
+	db, err := database.NewPostgresDB(cfg.Database, log)
+	if err != nil {
+		log.Fatal("Failed to connect to database", zap.Error(err))
+	}
+	defer func() {
+		if err := db.DB.Close(); err != nil {
+			log.Error("Failed to close database connection", zap.Error(err))
+		}
+	}()
+
+	stats := db.DB.Stats()
+	log.Info("Database connection pool initialized",
+		zap.Int("open_connections", stats.OpenConnections),
+		zap.Int("in_use", stats.InUse),
+		zap.Int("idle", stats.Idle),
+	)
+
+	if err := database.RunMigrations(db.DB, "./migrations", log); err != nil {
+		log.Fatal("Failed to run migrations", zap.Error(err))
+	}
+
+	version, dirty, err := database.GetMigrationVersion(db.DB, "./migrations")
+	if err != nil {
+		log.Warn("Could not get migration version", zap.Error(err))
+	} else {
+		log.Info("Current migration version",
+			zap.Uint("version", version),
+			zap.Bool("dirty", dirty),
+		)
+	}
+
+	router := router.SetupRouter(log, cfg)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,
@@ -68,57 +101,4 @@ func main() {
 	}
 
 	log.Info("=== Application Stopped ===")
-}
-
-func setupRouter(log *zap.Logger, cfg *config.Config) http.Handler {
-	mux := http.NewServeMux()
-
-	// Health check endpoint
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		log.Debug("Health check endpoint called",
-			zap.String("method", r.Method),
-			zap.String("path", r.URL.Path),
-			zap.String("remote_addr", r.RemoteAddr),
-		)
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"status":"healthy","timestamp":"%s"}`, time.Now().Format(time.RFC3339))
-	})
-
-	// API info endpoint
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" {
-			http.NotFound(w, r)
-			return
-		}
-
-		log.Info("Root endpoint called",
-			zap.String("method", r.Method),
-			zap.String("user_agent", r.UserAgent()),
-		)
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"message":"Coding Platform API","version":"1.0.0","port":"%s"}`, cfg.Server.Port)
-	})
-
-	return loggingMiddleware(mux, log)
-}
-
-func loggingMiddleware(next http.Handler, log *zap.Logger) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-
-		// Call the next handler
-		next.ServeHTTP(w, r)
-
-		// Log request details
-		log.Info("HTTP Request",
-			zap.String("method", r.Method),
-			zap.String("path", r.URL.Path),
-			zap.String("remote_addr", r.RemoteAddr),
-			zap.Duration("duration", time.Since(start)),
-		)
-	})
 }
