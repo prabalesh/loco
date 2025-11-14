@@ -10,7 +10,10 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/prabalesh/loco/backend/internal/delivery/handler"
 	"github.com/prabalesh/loco/backend/internal/delivery/router"
+	"github.com/prabalesh/loco/backend/internal/repository/postgres"
+	"github.com/prabalesh/loco/backend/internal/usecase"
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/prabalesh/loco/backend/pkg/database"
 	"github.com/prabalesh/loco/backend/pkg/logger"
@@ -66,7 +69,8 @@ func main() {
 		)
 	}
 
-	router := router.SetupRouter(log, cfg)
+	deps := initializeDependencies(db, log, cfg)
+	router := router.SetupRouter(deps)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,
@@ -101,4 +105,12 @@ func main() {
 	}
 
 	log.Info("=== Application Stopped ===")
+}
+
+func initializeDependencies(db *database.Database, logger *zap.Logger, cfg *config.Config) *router.Dependencies {
+	userRepo := postgres.NewUserRepository(db)
+	authUsecase := usecase.NewAuthUsecase(userRepo, logger)
+	authHanlder := handler.NewAuthHandler(authUsecase, logger)
+
+	return &router.Dependencies{Log: logger, Cfg: cfg, Db: db, AuthHandler: authHanlder}
 }

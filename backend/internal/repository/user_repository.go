@@ -1,15 +1,13 @@
 package repository
 
 import (
-	"database/sql"
+	"github.com/prabalesh/loco/backend/pkg/database"
 )
 
 type UserRepositoryPostgres struct {
-	db *sql.DB
+	db *database.Database
 }
 
-func NewUserRepositoryPostgres(db *sql.DB) *UserRepositoryPostgres {
+func NewUserRepositoryPostgres(db *database.Database) *UserRepositoryPostgres {
 	return &UserRepositoryPostgres{db: db}
 }
-
-// Implement methods like CreateUser, GetUser etc.

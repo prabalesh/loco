@@ -2,28 +2,27 @@ package domain
 
 import "time"
 
+// User entity - just the database model
 type User struct {
-	ID           int       `json:"id"`
-	Email        string    `json:"email"`
-	Username     string    `json:"username"`
-	PasswordHash string    `json:"-"`
-	Role         string    `json:"role"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID            int       `json:"id" db:"id"`
+	Email         string    `json:"email" db:"email"`
+	Username      string    `json:"username" db:"username"`
+	PasswordHash  string    `json:"-" db:"password_hash"`
+	Role          string    `json:"role" db:"role"`
+	IsActive      bool      `json:"is_active" db:"is_active"`
+	EmailVerified bool      `json:"email_verified" db:"email_verified"`
+	CreatedAt     time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
 }
 
-type RegisterRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Username string `json:"username" binding:"required,min=3,max=50"`
-	Password string `json:"password" binding:"required,min=6"`
-}
-
-type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
-}
-
-type LoginResponse struct {
-	Token string `json:"token"`
-	User  User   `json:"user"`
+// ToUserResponse converts User entity to UserResponse DTO
+func (u *User) ToResponse() UserResponse {
+	return UserResponse{
+		ID:            u.ID,
+		Email:         u.Email,
+		Username:      u.Username,
+		Role:          u.Role,
+		EmailVerified: u.EmailVerified,
+		CreatedAt:     u.CreatedAt,
+	}
 }

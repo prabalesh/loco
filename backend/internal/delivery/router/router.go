@@ -5,17 +5,30 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/prabalesh/loco/backend/internal/delivery/handler"
 	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
 	"github.com/prabalesh/loco/backend/pkg/config"
+	"github.com/prabalesh/loco/backend/pkg/database"
 	"go.uber.org/zap"
 )
 
-func SetupRouter(log *zap.Logger, cfg *config.Config) http.Handler {
+type Dependencies struct {
+	Log         *zap.Logger
+	Cfg         *config.Config
+	Db          *database.Database
+	AuthHandler *handler.AuthHandler
+}
+
+func SetupRouter(deps *Dependencies) http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/health", healthHandler())
+	mux.HandleFunc("GET /health", healthHandler())
 
-	handler := middleware.Logging(log)(mux)
+	handler := middleware.Logging(deps.Log)(mux)
+
+	// auth handler
+	mux.HandleFunc("POST /auth/register", deps.AuthHandler.Register)
+
 	return handler
 }
 

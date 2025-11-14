@@ -80,6 +80,21 @@ func (d *Database) QueryContext(ctx context.Context, query string, args ...inter
 	return rows, err
 }
 
+func (d *Database) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	start := time.Now()
+	row := d.DB.QueryRowContext(ctx, query, args...)
+	duration := time.Since(start)
+
+	if duration > 500*time.Millisecond {
+		d.Logger.Warn("Slow query detected",
+			zap.Duration("duration", duration),
+			zap.String("query", query),
+		)
+	}
+
+	return row
+}
+
 func (d *Database) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	start := time.Now()
 	result, err := d.DB.ExecContext(ctx, query, args...)
