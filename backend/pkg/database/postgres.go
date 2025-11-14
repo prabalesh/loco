@@ -12,7 +12,8 @@ import (
 )
 
 type Database struct {
-	DB *sql.DB
+	DB     *sql.DB
+	Logger *zap.Logger
 }
 
 func NewPostgresDB(cfg config.DatabaseConfig, logger *zap.Logger) (*Database, error) {
@@ -53,5 +54,52 @@ func NewPostgresDB(cfg config.DatabaseConfig, logger *zap.Logger) (*Database, er
 		zap.Duration("conn_max_lifetime", 5*time.Minute),
 	)
 
-	return &Database{DB: db}, nil
+	return &Database{DB: db, Logger: logger}, nil
+}
+
+func (d *Database) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	start := time.Now()
+	rows, err := d.DB.QueryContext(ctx, query, args...)
+	duration := time.Since(start)
+
+	if duration > 500*time.Millisecond {
+		d.Logger.Warn("Slow query detected",
+			zap.Duration("duration", duration),
+			zap.String("query", query),
+		)
+	}
+
+	if err != nil {
+		d.Logger.Error("Query failed",
+			zap.Error(err),
+			zap.String("query", query),
+			zap.Duration("duration", duration),
+		)
+	}
+
+	return rows, err
+}
+
+func (d *Database) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	start := time.Now()
+	result, err := d.DB.ExecContext(ctx, query, args...)
+	duration := time.Since(start)
+
+	// Log slow queries
+	if duration > 500*time.Millisecond {
+		d.Logger.Warn("Slow query detected",
+			zap.Duration("duration", duration),
+			zap.String("query", query),
+		)
+	}
+
+	if err != nil {
+		d.Logger.Error("Exec failed",
+			zap.Error(err),
+			zap.String("query", query),
+			zap.Duration("duration", duration),
+		)
+	}
+
+	return result, err
 }
