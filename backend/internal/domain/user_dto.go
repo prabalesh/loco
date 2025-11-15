@@ -27,10 +27,8 @@ type RegisterResponse struct {
 }
 
 type LoginResponse struct {
-	AccessToken  string       `json:"access_token"`
-	RefreshToken string       `json:"refresh_token"`
-	ExpiresIn    int          `json:"expires_in"`
-	User         UserResponse `json:"user"`
+	Message string       `json:"message`
+	User    UserResponse `json:"user"`
 }
 
 type UserResponse struct {
@@ -41,3 +39,10 @@ type UserResponse struct {
 	EmailVerified bool      `json:"email_verified"`
 	CreatedAt     time.Time `json:"created_at"`
 }
+
+const (
+	AccessTokenCookie  = "access_token"
+	RefreshTokenCookie = "refresh_token"
+	AccessTokenMaxAge  = 15 * 60          // 15 minutes
+	RefreshTokenMaxAge = 7 * 24 * 60 * 60 // 7 days
+)

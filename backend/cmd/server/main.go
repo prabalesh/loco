@@ -12,6 +12,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/prabalesh/loco/backend/internal/delivery/handler"
 	"github.com/prabalesh/loco/backend/internal/delivery/router"
+	"github.com/prabalesh/loco/backend/internal/infrastructure/auth"
 	"github.com/prabalesh/loco/backend/internal/repository/postgres"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"github.com/prabalesh/loco/backend/pkg/config"
@@ -109,8 +110,9 @@ func main() {
 
 func initializeDependencies(db *database.Database, logger *zap.Logger, cfg *config.Config) *router.Dependencies {
 	userRepo := postgres.NewUserRepository(db)
-	authUsecase := usecase.NewAuthUsecase(userRepo, logger)
-	authHanlder := handler.NewAuthHandler(authUsecase, logger)
+	jwtService := auth.NewJWTService(cfg.JWT.AccessTokenSecret, cfg.JWT.RefreshTokenSecret, cfg.JWT.AccessTokenExpiration, cfg.JWT.RefreshTokenExpiration)
+	authUsecase := usecase.NewAuthUsecase(userRepo, jwtService, logger)
+	authHanlder := handler.NewAuthHandler(authUsecase, logger, cfg)
 
 	return &router.Dependencies{Log: logger, Cfg: cfg, Db: db, AuthHandler: authHanlder}
 }

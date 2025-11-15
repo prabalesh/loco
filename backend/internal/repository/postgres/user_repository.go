@@ -105,3 +105,38 @@ func (r *userRepository) GetByUsername(username string) (*domain.User, error) {
 
 	return user, nil
 }
+
+// GetByID retrieves user by ID
+func (r *userRepository) GetByID(userID int) (*domain.User, error) {
+	ctx, cancel := database.WithShortTimeout()
+	defer cancel()
+
+	user := &domain.User{}
+	query := `
+        SELECT id, email, username, password_hash, role, is_active, 
+               email_verified, created_at, updated_at
+        FROM users WHERE id = $1
+    `
+
+	err := r.db.QueryRowContext(ctx, query, userID).Scan(
+		&user.ID,
+		&user.Email,
+		&user.Username,
+		&user.PasswordHash,
+		&user.Role,
+		&user.IsActive,
+		&user.EmailVerified,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	return user, nil
+}

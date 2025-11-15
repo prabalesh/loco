@@ -15,39 +15,66 @@ type JWTClaims struct {
 }
 
 type JWTService struct {
-	secretKey []byte
+	accessTokenSecretKey  []byte
+	refreshTokenSecretKey []byte
+	accessTokenExpires    time.Duration
+	refreshTokenExpires   time.Duration
 }
 
-func NewJWTService(secret string) *JWTService {
+func NewJWTService(accessSecret, refreshSecret string, accessTokenExpires, refreshTokenExpires time.Duration) *JWTService {
 	return &JWTService{
-		secretKey: []byte(secret),
+		accessTokenSecretKey:  []byte(accessSecret),
+		refreshTokenSecretKey: []byte(refreshSecret),
+		accessTokenExpires:    accessTokenExpires,
+		refreshTokenExpires:   refreshTokenExpires,
 	}
 }
 
-// GenerateToken creates a new JWT token
-func (j *JWTService) GenerateToken(userID int, email, role string) (string, error) {
+func (j *JWTService) GenerateAccessToken(userID int, email, role string) (string, time.Duration, error) {
+	expiresAt := time.Now().Add(j.accessTokenExpires)
 	claims := JWTClaims{
 		UserID: userID,
 		Email:  email,
 		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "coding-platform",
+			Issuer:    "loco",
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(j.secretKey)
+	tokenStr, err := token.SignedString(j.accessTokenSecretKey)
+	return tokenStr, j.accessTokenExpires, err
 }
 
-// ValidateToken parses and validates JWT token
-func (j *JWTService) ValidateToken(tokenString string) (*JWTClaims, error) {
+func (j *JWTService) GenerateRefreshToken(userID int, email string) (string, time.Duration, error) {
+	expiresAt := time.Now().Add(j.accessTokenExpires)
+	claims := JWTClaims{
+		UserID: userID,
+		Email:  email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    "loco",
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenStr, err := token.SignedString(j.refreshTokenSecretKey)
+	return tokenStr, j.refreshTokenExpires, err
+
+}
+
+func (j *JWTService) ValidateToken(tokenString string, isRefresh bool) (*JWTClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
-		return j.secretKey, nil
+		if isRefresh {
+			return j.refreshTokenSecretKey, nil
+		}
+		return j.accessTokenSecretKey, nil
 	})
 
 	if err != nil {

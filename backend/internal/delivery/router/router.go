@@ -28,6 +28,9 @@ func SetupRouter(deps *Dependencies) http.Handler {
 
 	// auth handler
 	mux.HandleFunc("POST /auth/register", deps.AuthHandler.Register)
+	mux.HandleFunc("POST /auth/login", deps.AuthHandler.Login)
+	mux.HandleFunc("POST /auth/refresh", deps.AuthHandler.RefreshToken)
+	mux.HandleFunc("POST /auth/logout", deps.AuthHandler.Logout)
 
 	return handler
 }
