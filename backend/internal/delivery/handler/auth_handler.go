@@ -3,9 +3,9 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 
+	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
 	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"github.com/prabalesh/loco/backend/pkg/config"
@@ -130,9 +130,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		User:    user.ToResponse(),
 	}
 
-	fmt.Println(int(tokenPair.AccessExpiresAt.Seconds()))
-	fmt.Println(int(tokenPair.RefreshExpiresAt.Seconds()))
-
 	h.setTokenCookie(w, "accessToken", tokenPair.AccessToken, int(tokenPair.AccessExpiresAt.Seconds()))
 	h.setTokenCookie(w, "refreshToken", tokenPair.RefreshToken, int(tokenPair.RefreshExpiresAt.Seconds()))
 
@@ -198,7 +195,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 func (h *AuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context (set by auth middleware)
-	userID, ok := r.Context().Value("user_id").(int)
+	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
 		RespondError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -206,11 +203,13 @@ func (h *AuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.authUsecase.GetCurrentUser(userID)
 	if err != nil {
+		h.logger.Error("Failed to get user", zap.Error(err), zap.Int("user_id", userID))
 		RespondError(w, http.StatusNotFound, "user not found")
 		return
 	}
 
-	RespondJSON(w, http.StatusOK, user)
+	h.logger.Info("User retrieved successfully", zap.Int("user_id", userID))
+	RespondJSON(w, http.StatusOK, user.ToResponse())
 }
 
 // setTokenCookie sets an HTTP-only cookie with environment-aware settings

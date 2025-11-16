@@ -49,7 +49,7 @@ func (j *JWTService) GenerateAccessToken(userID int, email, role string) (string
 }
 
 func (j *JWTService) GenerateRefreshToken(userID int, email string) (string, time.Duration, error) {
-	expiresAt := time.Now().Add(j.accessTokenExpires)
+	expiresAt := time.Now().Add(j.refreshTokenExpires)
 	claims := JWTClaims{
 		UserID: userID,
 		Email:  email,
@@ -72,9 +72,9 @@ func (j *JWTService) ValidateToken(tokenString string, isRefresh bool) (*JWTClai
 			return nil, errors.New("unexpected signing method")
 		}
 		if isRefresh {
-			return j.refreshTokenSecretKey, nil
+			return []byte(j.refreshTokenSecretKey), nil
 		}
-		return j.accessTokenSecretKey, nil
+		return []byte(j.accessTokenSecretKey), nil
 	})
 
 	if err != nil {

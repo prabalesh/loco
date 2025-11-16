@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -12,13 +13,18 @@ type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
 	JWT      JWTConfig
-	Cookie   CookieConfig // NEW
+	Cookie   CookieConfig
+	CORS     CORSConfig
 	Log      LogConfig
+}
+
+type CORSConfig struct {
+	AllowedOrigins []string
 }
 
 type ServerConfig struct {
 	Port string
-	Env  string // NEW: "development" or "production"
+	Env  string // "development" or "production"
 }
 
 type DatabaseConfig struct {
@@ -39,7 +45,7 @@ type JWTConfig struct {
 	RefreshTokenMaxAge     int // in seconds
 }
 
-type CookieConfig struct { // NEW
+type CookieConfig struct {
 	Secure   bool
 	SameSite string
 	Domain   string
@@ -61,6 +67,8 @@ func InitConfig() {
 
 		env := getEnv("ENV", "development")
 		isProduction := env == "production"
+
+		allowedOrigins := parseAllowedOrigins(getEnv("ALLOWED_ORIGINS", "http://localhost:3000"))
 
 		instance = &Config{
 			Server: ServerConfig{
@@ -87,6 +95,9 @@ func InitConfig() {
 				Secure:   isProduction,
 				SameSite: getEnv("COOKIE_SAMESITE", getDefaultSameSite(isProduction)),
 				Domain:   getEnv("COOKIE_DOMAIN", ""),
+			},
+			CORS: CORSConfig{
+				AllowedOrigins: allowedOrigins,
 			},
 			Log: LogConfig{
 				Level: getEnv("LOG_LEVEL", "info"),
@@ -153,4 +164,18 @@ func getDefaultSameSite(isProduction bool) string {
 		return "strict"
 	}
 	return "lax"
+}
+
+func parseAllowedOrigins(originsStr string) []string {
+	origins := strings.Split(originsStr, ",")
+	result := make([]string, 0, len(origins))
+
+	for _, origin := range origins {
+		trimmed := strings.TrimSpace(origin)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+
+	return result
 }

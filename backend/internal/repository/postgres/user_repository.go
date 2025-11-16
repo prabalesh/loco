@@ -91,9 +91,9 @@ func (r *userRepository) GetByUsername(username string) (*domain.User, error) {
 	defer cancel()
 
 	user := &domain.User{}
-	query := `SELECT id, username FROM users WHERE username = $1`
+	query := `SELECT id, username, email_verified, created_at FROM users WHERE username = $1`
 
-	err := r.db.QueryRowContext(ctx, query, username).Scan(&user.ID, &user.Username)
+	err := r.db.QueryRowContext(ctx, query, username).Scan(&user.ID, &user.Username, &user.EmailVerified, &user.CreatedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found")

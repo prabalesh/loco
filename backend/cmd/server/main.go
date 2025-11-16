@@ -112,7 +112,10 @@ func initializeDependencies(db *database.Database, logger *zap.Logger, cfg *conf
 	userRepo := postgres.NewUserRepository(db)
 	jwtService := auth.NewJWTService(cfg.JWT.AccessTokenSecret, cfg.JWT.RefreshTokenSecret, cfg.JWT.AccessTokenExpiration, cfg.JWT.RefreshTokenExpiration)
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtService, logger)
-	authHanlder := handler.NewAuthHandler(authUsecase, logger, cfg)
+	userUsecase := usecase.NewUserUsecase(userRepo, logger)
 
-	return &router.Dependencies{Log: logger, Cfg: cfg, Db: db, AuthHandler: authHanlder}
+	authHanlder := handler.NewAuthHandler(authUsecase, logger, cfg)
+	userHandler := handler.NewUserHandler(userUsecase, logger)
+
+	return &router.Dependencies{Log: logger, Cfg: cfg, Db: db, JWTService: jwtService, AuthHandler: authHanlder, UserHandler: userHandler}
 }

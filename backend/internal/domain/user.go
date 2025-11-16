@@ -26,3 +26,12 @@ func (u *User) ToResponse() UserResponse {
 		CreatedAt:     u.CreatedAt,
 	}
 }
+
+func (u *User) ToUserProfileResponse() UserProfileResponse {
+	return UserProfileResponse{
+		ID:         u.ID,
+		Username:   u.Username,
+		IsVerified: u.EmailVerified,
+		CreatedAt:  u.CreatedAt,
+	}
+}
