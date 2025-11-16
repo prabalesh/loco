@@ -10,6 +10,11 @@ type RegisterRequest struct {
 	Password string `json:"password"`
 }
 
+type VerifyEmailRequest struct {
+	Email string `json:"email"`
+	OTP   string `json:"otp"`
+}
+
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -24,6 +29,10 @@ type UpdateProfileRequest struct {
 type RegisterResponse struct {
 	Message string       `json:"message"`
 	User    UserResponse `json:"user"`
+}
+
+type ResendVerificationRequest struct {
+	Email string `json:"email"`
 }
 
 type LoginResponse struct {

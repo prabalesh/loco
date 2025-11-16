@@ -4,15 +4,19 @@ import "time"
 
 // User entity - just the database model
 type User struct {
-	ID            int       `json:"id" db:"id"`
-	Email         string    `json:"email" db:"email"`
-	Username      string    `json:"username" db:"username"`
-	PasswordHash  string    `json:"-" db:"password_hash"`
-	Role          string    `json:"role" db:"role"`
-	IsActive      bool      `json:"is_active" db:"is_active"`
-	EmailVerified bool      `json:"email_verified" db:"email_verified"`
-	CreatedAt     time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
+	ID                              int        `json:"id" db:"id"`
+	Email                           string     `json:"email" db:"email"`
+	Username                        string     `json:"username" db:"username"`
+	PasswordHash                    string     `json:"-" db:"password_hash"`
+	Role                            string     `json:"role" db:"role"`
+	IsActive                        bool       `json:"is_active" db:"is_active"`
+	EmailVerified                   bool       `json:"email_verified" db:"email_verified"`
+	EmailVerificationToken          *string    `json:"-" db:"email_verification_token"`
+	EmailVerificationTokenExpiresAt *time.Time `json:"-" db:"email_verification_token_expires_at"`
+	EmailVerificationAttempts       int        `json:"-" db:"email_verification_attempts"`
+	EmailVerificationLastSentAt     *time.Time `json:"-" db:"email_verification_last_sent_at"`
+	CreatedAt                       time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt                       time.Time  `json:"updated_at" db:"updated_at"`
 }
 
 // ToUserResponse converts User entity to UserResponse DTO
