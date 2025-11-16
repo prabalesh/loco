@@ -26,22 +26,20 @@ export const router = createBrowserRouter([
         path: ROUTES.REGISTER,
         element: <RegisterPage />,
       },
-      // Protected routes (add more as you build them)
-      {
-        path: '/users/:username',  // ⭐ NEW: User profile by username
-        element: (
-          <ProtectedRoute>
-            <UserProfilePage />
-          </ProtectedRoute>
-        ),
-      },
       {
         path: ROUTES.PROBLEMS,
         element: (
+          <div className="p-8 text-center">
+            <h1 className="text-3xl font-bold">Problems Page (Coming Soon)</h1>
+          </div>
+        ),
+      },
+      // Protected routes (add more as you build them)
+      {
+        path: '/users/:username',
+        element: (
           <ProtectedRoute>
-            <div className="p-8 text-center">
-              <h1 className="text-3xl font-bold">Problems Page (Coming Soon)</h1>
-            </div>
+            <UserProfilePage />
           </ProtectedRoute>
         ),
       },
