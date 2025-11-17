@@ -105,11 +105,14 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		// handling business logic errors
 		errMsg := err.Error()
 
-		switch errMsg {
-		case "invalid email or password":
+		switch {
+		case err == usecase.ErrEmailNotVerified:
+			h.logger.Warn("Login failed: email not verified", zap.String("email", req.Email))
+			RespondError(w, http.StatusForbidden, "please verify your email before logging in")
+		case errMsg == "invalid email or password":
 			h.logger.Warn("Login failed: invalid email or password", zap.String("error", errMsg))
 			RespondError(w, http.StatusUnauthorized, errMsg)
-		case "account is deactivated":
+		case errMsg == "account is deactivated":
 			h.logger.Warn("Login failed: account is deactivated", zap.String("error", errMsg))
 			RespondError(w, http.StatusForbidden, errMsg)
 		default:
@@ -133,7 +136,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	h.setTokenCookie(w, "accessToken", tokenPair.AccessToken, int(tokenPair.AccessExpiresAt.Seconds()))
 	h.setTokenCookie(w, "refreshToken", tokenPair.RefreshToken, int(tokenPair.RefreshExpiresAt.Seconds()))
 
-	RespondJSON(w, http.StatusCreated, response)
+	RespondJSON(w, http.StatusOK, response)
 }
 
 // RefreshToken generates new access token from refresh token cookie
@@ -250,4 +253,63 @@ func (h *AuthHandler) clearTokenCookie(w http.ResponseWriter, name string) {
 		Domain:   h.cfg.Cookie.Domain,
 	}
 	http.SetCookie(w, cookie)
+}
+
+func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	var req domain.VerifyEmailRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Warn("Invalid JSON in verify email request", zap.Error(err))
+		RespondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.authUsecase.VerifyEmail(r.Context(), &req); err != nil {
+		switch err {
+		case usecase.ErrInvalidOTP:
+			h.logger.Warn("Invalid OTP", zap.String("email", req.Email))
+			RespondError(w, http.StatusBadRequest, "invalid or expired OTP")
+		case usecase.ErrMaxOTPAttemptsExceeded:
+			h.logger.Warn("Max OTP attempts exceeded", zap.String("email", req.Email))
+			RespondError(w, http.StatusTooManyRequests, "maximum OTP attempts exceeded. Please request a new OTP")
+		default:
+			h.logger.Error("Failed to verify email", zap.Error(err))
+			RespondError(w, http.StatusInternalServerError, "failed to verify email")
+		}
+		return
+	}
+
+	h.logger.Info("Email verified successfully", zap.String("email", req.Email))
+	RespondJSON(w, http.StatusOK, map[string]string{
+		"message": "email verified successfully",
+	})
+}
+
+// ⭐ NEW: ResendVerificationEmail handles OTP resend with cooldown
+func (h *AuthHandler) ResendVerificationEmail(w http.ResponseWriter, r *http.Request) {
+	var req domain.ResendVerificationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Warn("Invalid JSON in resend verification request", zap.Error(err))
+		RespondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.authUsecase.ResendVerificationEmail(r.Context(), &req); err != nil {
+		switch {
+		case errors.Is(err, usecase.ErrResendCooldown):
+			h.logger.Warn("Resend cooldown active", zap.String("email", req.Email))
+			RespondError(w, http.StatusTooManyRequests, err.Error())
+		case err == usecase.ErrMaxOTPAttemptsExceeded:
+			h.logger.Warn("Max attempts exceeded", zap.String("email", req.Email))
+			RespondError(w, http.StatusTooManyRequests, "maximum attempts exceeded")
+		default:
+			h.logger.Error("Failed to resend verification email", zap.Error(err))
+			RespondError(w, http.StatusInternalServerError, "failed to send verification email")
+		}
+		return
+	}
+
+	h.logger.Info("Verification email resent", zap.String("email", req.Email))
+	RespondJSON(w, http.StatusOK, map[string]string{
+		"message": "verification email sent successfully",
+	})
 }

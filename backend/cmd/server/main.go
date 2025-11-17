@@ -13,6 +13,7 @@ import (
 	"github.com/prabalesh/loco/backend/internal/delivery/handler"
 	"github.com/prabalesh/loco/backend/internal/delivery/router"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/auth"
+	"github.com/prabalesh/loco/backend/internal/infrastructure/email"
 	"github.com/prabalesh/loco/backend/internal/repository/postgres"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"github.com/prabalesh/loco/backend/pkg/config"
@@ -110,8 +111,11 @@ func main() {
 
 func initializeDependencies(db *database.Database, logger *zap.Logger, cfg *config.Config) *router.Dependencies {
 	userRepo := postgres.NewUserRepository(db)
+
 	jwtService := auth.NewJWTService(cfg.JWT.AccessTokenSecret, cfg.JWT.RefreshTokenSecret, cfg.JWT.AccessTokenExpiration, cfg.JWT.RefreshTokenExpiration)
-	authUsecase := usecase.NewAuthUsecase(userRepo, jwtService, logger)
+	emailService := email.NewEmailService(&cfg.Email, logger)
+
+	authUsecase := usecase.NewAuthUsecase(userRepo, jwtService, emailService, cfg, logger)
 	userUsecase := usecase.NewUserUsecase(userRepo, logger)
 
 	authHanlder := handler.NewAuthHandler(authUsecase, logger, cfg)

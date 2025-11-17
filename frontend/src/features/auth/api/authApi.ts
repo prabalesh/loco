@@ -48,4 +48,20 @@ export const authApi = {
     const response = await apiClient.get<PublicUser>(API_ENDPOINTS.USERS.BY_USERNAME(username))
     return response.data
   },
+
+  verifyEmail: async (email: string, otp: string): Promise<{ message: string }> => {
+    const response = await apiClient.post<{ message: string }>(
+      API_ENDPOINTS.AUTH.VERIFY_EMAIL,
+      { email, otp }
+    )
+    return response.data
+  },
+
+  resendVerificationEmail: async (email: string): Promise<{ message: string }> => {
+    const response = await apiClient.post<{ message: string }>(
+      API_ENDPOINTS.AUTH.RESEND_VERIFICATION,
+      { email }
+    )
+    return response.data
+  },
 }

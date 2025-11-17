@@ -1,18 +1,62 @@
-import { Link, Navigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Code } from 'lucide-react'
-import { RegisterForm } from '../components/RegisterForm'
-import { Card } from '../../../shared/components/ui/Card'
-import { useAuth } from '../../../shared/hooks/useAuth'
-import { ROUTES } from '../../../shared/constants/routes'
-import { CONFIG } from '../../../shared/constants/config'
+import { Code, Loader2 } from 'lucide-react'
+import { Input } from '@/shared/components/ui/Input'
+import { Button } from '@/shared/components/ui/Button'
+import { Card } from '@/shared/components/ui/Card'
+import { authApi } from '../api/authApi'
+import { ROUTES } from '@/shared/constants/routes'
+import { CONFIG } from '@/shared/constants/config'
+import { toast } from 'react-hot-toast'
+import type { AxiosError } from 'axios'
+
+const registerSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Invalid email format'),
+  username: z
+    .string()
+    .min(3, 'Username must be at least 3 characters')
+    .max(20, 'Username must be less than 20 characters')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
+})
+
+type RegisterFormData = z.infer<typeof registerSchema>
 
 export const RegisterPage = () => {
-  const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
+  const [isLoading, setIsLoading] = useState(false)
 
-  // Redirect if already logged in
-  if (isAuthenticated) {
-    return <Navigate to={ROUTES.HOME} replace />
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+  })
+
+  const onSubmit = async (data: RegisterFormData) => {
+    setIsLoading(true)
+    try {
+      await authApi.register(data)
+      toast.success('Registration successful! Please verify your email.')
+      // ⭐ Redirect to verify email page
+      navigate(`${ROUTES.VERIFY_EMAIL}?email=${encodeURIComponent(data.email)}`)
+    } catch (err) {
+      const error = err as AxiosError<{ error: string }>
+      const errorMsg = error.response?.data?.error || 'Registration failed'
+      toast.error(errorMsg)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -30,24 +74,58 @@ export const RegisterPage = () => {
               {CONFIG.APP_NAME}
             </span>
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Create Your Account
-          </h1>
-          <p className="text-gray-600">
-            Start your journey to coding mastery
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
+          <p className="text-gray-600">Start your coding journey today</p>
         </div>
 
         <Card className="p-8">
-          <RegisterForm />
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <Input
+              label="Email"
+              type="email"
+              placeholder="john@example.com"
+              error={errors.email?.message}
+              {...register('email')}
+            />
+
+            <Input
+              label="Username"
+              type="text"
+              placeholder="johndoe"
+              error={errors.username?.message}
+              {...register('username')}
+            />
+
+            <Input
+              label="Password"
+              type="password"
+              placeholder="••••••••"
+              error={errors.password?.message}
+              {...register('password')}
+            />
+
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full"
+              isLoading={isLoading}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating Account...
+                </>
+              ) : (
+                'Sign Up'
+              )}
+            </Button>
+          </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{' '}
-              <Link
-                to={ROUTES.LOGIN}
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
+              <Link to={ROUTES.LOGIN} className="text-blue-600 hover:text-blue-700 font-medium">
                 Sign in
               </Link>
             </p>

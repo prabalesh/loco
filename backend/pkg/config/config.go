@@ -15,6 +15,7 @@ type Config struct {
 	JWT      JWTConfig
 	Cookie   CookieConfig
 	CORS     CORSConfig
+	Email    EmailConfig
 	Log      LogConfig
 }
 
@@ -49,6 +50,15 @@ type CookieConfig struct {
 	Secure   bool
 	SameSite string
 	Domain   string
+}
+
+type EmailConfig struct {
+	ResendAPIKey          string
+	FromEmail             string
+	FromName              string
+	OTPExpirationMinutes  int
+	MaxOTPAttempts        int
+	ResendCooldownMinutes int
 }
 
 type LogConfig struct {
@@ -98,6 +108,14 @@ func InitConfig() {
 			},
 			CORS: CORSConfig{
 				AllowedOrigins: allowedOrigins,
+			},
+			Email: EmailConfig{
+				ResendAPIKey:          mustGetEnv("RESEND_API_KEY"),
+				FromEmail:             getEnv("FROM_EMAIL", "onboarding@yourdomain.com"),
+				FromName:              getEnv("FROM_NAME", "Loco Platform"),
+				OTPExpirationMinutes:  parseInt("OTP_EXPIRATION_MINUTES", 10),
+				MaxOTPAttempts:        parseInt("MAX_OTP_ATTEMPTS", 5),
+				ResendCooldownMinutes: parseInt("RESEND_COOLDOWN_MINUTES", 2),
 			},
 			Log: LogConfig{
 				Level: getEnv("LOG_LEVEL", "info"),

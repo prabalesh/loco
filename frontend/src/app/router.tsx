@@ -8,6 +8,7 @@ import { RegisterPage } from '../features/auth/pages/RegisterPage'
 import { ROUTES } from '../shared/constants/routes'
 import { ProfilePage } from '@/pages/ProfilePage'
 import { UserProfilePage } from '@/pages/UserProfilePage'
+import { VerifyEmailPage } from '@/pages/VerifyEmailPage'
 
 export const router = createBrowserRouter([
   {
@@ -25,6 +26,10 @@ export const router = createBrowserRouter([
       {
         path: ROUTES.REGISTER,
         element: <RegisterPage />,
+      },
+      {
+        path: ROUTES.VERIFY_EMAIL,
+        element: <VerifyEmailPage />,
       },
       {
         path: ROUTES.PROBLEMS,
