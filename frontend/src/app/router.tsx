@@ -9,6 +9,8 @@ import { ROUTES } from '../shared/constants/routes'
 import { ProfilePage } from '@/pages/ProfilePage'
 import { UserProfilePage } from '@/pages/UserProfilePage'
 import { VerifyEmailPage } from '@/pages/VerifyEmailPage'
+import { ForgotPasswordPage } from '@/features/auth/pages/ForgetPasswordPage'
+import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage'
 
 export const router = createBrowserRouter([
   {
@@ -38,6 +40,14 @@ export const router = createBrowserRouter([
             <h1 className="text-3xl font-bold">Problems Page (Coming Soon)</h1>
           </div>
         ),
+      },
+      {
+        path: ROUTES.FORGOT_PASSWORD,
+        element: <ForgotPasswordPage />,
+      },
+      {
+        path: ROUTES.RESET_PASSWORD,
+        element: <ResetPasswordPage />,
       },
       // Protected routes (add more as you build them)
       {

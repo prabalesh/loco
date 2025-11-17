@@ -24,8 +24,9 @@ type CORSConfig struct {
 }
 
 type ServerConfig struct {
-	Port string
-	Env  string // "development" or "production"
+	Port       string
+	Env        string // "development" or "production"
+	AppBaseUrl string
 }
 
 type DatabaseConfig struct {
@@ -53,12 +54,13 @@ type CookieConfig struct {
 }
 
 type EmailConfig struct {
-	ResendAPIKey          string
-	FromEmail             string
-	FromName              string
-	OTPExpirationMinutes  int
-	MaxOTPAttempts        int
-	ResendCooldownMinutes int
+	ResendAPIKey               string
+	FromEmail                  string
+	FromName                   string
+	TokenExpirationMinutes     int
+	MaxTokenAttempts           int
+	ResendCooldownMinutes      int
+	PasswordResetExpiryMinutes int
 }
 
 type LogConfig struct {
@@ -82,8 +84,9 @@ func InitConfig() {
 
 		instance = &Config{
 			Server: ServerConfig{
-				Port: getEnv("PORT", "8080"),
-				Env:  env,
+				Port:       getEnv("PORT", "8080"),
+				Env:        env,
+				AppBaseUrl: getEnv("APP_BASE_URL", "http://localhost:5173"),
 			},
 			Database: DatabaseConfig{
 				Host:     getEnv("DB_HOST", "localhost"),
@@ -110,12 +113,13 @@ func InitConfig() {
 				AllowedOrigins: allowedOrigins,
 			},
 			Email: EmailConfig{
-				ResendAPIKey:          mustGetEnv("RESEND_API_KEY"),
-				FromEmail:             getEnv("FROM_EMAIL", "onboarding@yourdomain.com"),
-				FromName:              getEnv("FROM_NAME", "Loco Platform"),
-				OTPExpirationMinutes:  parseInt("OTP_EXPIRATION_MINUTES", 10),
-				MaxOTPAttempts:        parseInt("MAX_OTP_ATTEMPTS", 5),
-				ResendCooldownMinutes: parseInt("RESEND_COOLDOWN_MINUTES", 2),
+				ResendAPIKey:               mustGetEnv("RESEND_API_KEY"),
+				FromEmail:                  getEnv("FROM_EMAIL", "onboarding@yourdomain.com"),
+				FromName:                   getEnv("FROM_NAME", "Loco Platform"),
+				TokenExpirationMinutes:     parseInt("TOKEN_EXPIRATION_MINUTES", 1440),
+				MaxTokenAttempts:           parseInt("MAX_TOKEN_ATTEMPTS", 5),
+				PasswordResetExpiryMinutes: parseInt("PASSWORD_RESET_EXPIRY_MINUTES", 15),
+				ResendCooldownMinutes:      parseInt("RESEND_COOLDOWN_MINUTES", 2),
 			},
 			Log: LogConfig{
 				Level: getEnv("LOG_LEVEL", "info"),

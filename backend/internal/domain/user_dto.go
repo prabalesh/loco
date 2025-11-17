@@ -11,8 +11,7 @@ type RegisterRequest struct {
 }
 
 type VerifyEmailRequest struct {
-	Email string `json:"email"`
-	OTP   string `json:"otp"`
+	Token string `json:"token"`
 }
 
 type LoginRequest struct {

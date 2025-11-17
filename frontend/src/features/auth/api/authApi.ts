@@ -49,10 +49,10 @@ export const authApi = {
     return response.data
   },
 
-  verifyEmail: async (email: string, otp: string): Promise<{ message: string }> => {
+  verifyEmail: async (token: string): Promise<{ message: string }> => {
     const response = await apiClient.post<{ message: string }>(
       API_ENDPOINTS.AUTH.VERIFY_EMAIL,
-      { email, otp }
+      { token }
     )
     return response.data
   },
@@ -61,6 +61,22 @@ export const authApi = {
     const response = await apiClient.post<{ message: string }>(
       API_ENDPOINTS.AUTH.RESEND_VERIFICATION,
       { email }
+    )
+    return response.data
+  },
+
+  forgotPassword: async (email: string): Promise<{ message: string }> => {
+    const response = await apiClient.post<{ message: string }>(
+      API_ENDPOINTS.AUTH.FORGOT_PASSWORD,
+      { email }
+    )
+    return response.data
+  },
+
+  resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
+    const response = await apiClient.post<{ message: string }>(
+      API_ENDPOINTS.AUTH.RESET_PASSWORD,
+      { token, new_password: newPassword }  // adjust key names to match backend
     )
     return response.data
   },

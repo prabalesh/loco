@@ -15,4 +15,11 @@ type UserRepository interface {
 	UpdateVerificationAttempts(userID int, attempts int) error
 	UpdateLastSentAt(userID int, sentAt time.Time) error
 	VerifyEmail(userID int) error
+	SetPasswordResetToken(userID int, token string, expiresAt time.Time) error
+	ClearPasswordResetToken(userID int) error
+	GetUserByResetToken(token string) (*domain.User, error)
+	UpdatePassword(userID int, newPasswordHash string) error
+	GetByPasswordResetToken(token string) (*domain.User, error)
+	GetByVerificationToken(token string) (*domain.User, error)
+	UpdatePasswordResetToken(userID int, token string, expiresAt time.Time, sentAt time.Time) error
 }

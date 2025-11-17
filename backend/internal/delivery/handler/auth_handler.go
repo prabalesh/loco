@@ -26,7 +26,7 @@ func NewAuthHandler(authUsecase *usecase.AuthUsecase, logger *zap.Logger, cfg *c
 	}
 }
 
-// Register handles user registration
+// register handles user registration
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// Parse request body
 	var req domain.RegisterRequest
@@ -73,7 +73,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	)
 
 	response := domain.RegisterResponse{
-		Message: "registration successful",
+		Message: "registration successful. we have send an email for verification in your email id. please verify",
 		User:    user.ToResponse(),
 	}
 
@@ -265,12 +265,9 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.authUsecase.VerifyEmail(r.Context(), &req); err != nil {
 		switch err {
-		case usecase.ErrInvalidOTP:
-			h.logger.Warn("Invalid OTP", zap.String("email", req.Email))
-			RespondError(w, http.StatusBadRequest, "invalid or expired OTP")
-		case usecase.ErrMaxOTPAttemptsExceeded:
-			h.logger.Warn("Max OTP attempts exceeded", zap.String("email", req.Email))
-			RespondError(w, http.StatusTooManyRequests, "maximum OTP attempts exceeded. Please request a new OTP")
+		case usecase.ErrInvalidToken:
+			h.logger.Warn("Invalid token", zap.String("token", req.Token))
+			RespondError(w, http.StatusBadRequest, "invalid or expired verification token")
 		default:
 			h.logger.Error("Failed to verify email", zap.Error(err))
 			RespondError(w, http.StatusInternalServerError, "failed to verify email")
@@ -278,13 +275,13 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.logger.Info("Email verified successfully", zap.String("email", req.Email))
+	h.logger.Info("Email verified successfully")
 	RespondJSON(w, http.StatusOK, map[string]string{
 		"message": "email verified successfully",
 	})
 }
 
-// ⭐ NEW: ResendVerificationEmail handles OTP resend with cooldown
+// resend verification email
 func (h *AuthHandler) ResendVerificationEmail(w http.ResponseWriter, r *http.Request) {
 	var req domain.ResendVerificationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -298,7 +295,7 @@ func (h *AuthHandler) ResendVerificationEmail(w http.ResponseWriter, r *http.Req
 		case errors.Is(err, usecase.ErrResendCooldown):
 			h.logger.Warn("Resend cooldown active", zap.String("email", req.Email))
 			RespondError(w, http.StatusTooManyRequests, err.Error())
-		case err == usecase.ErrMaxOTPAttemptsExceeded:
+		case err == usecase.ErrMaxTokenAttemptsExceeded:
 			h.logger.Warn("Max attempts exceeded", zap.String("email", req.Email))
 			RespondError(w, http.StatusTooManyRequests, "maximum attempts exceeded")
 		default:
@@ -312,4 +309,55 @@ func (h *AuthHandler) ResendVerificationEmail(w http.ResponseWriter, r *http.Req
 	RespondJSON(w, http.StatusOK, map[string]string{
 		"message": "verification email sent successfully",
 	})
+}
+
+// POST /auth/forgot-password
+func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		Email string `json:"email"`
+	}
+
+	var req request
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" {
+		RespondError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+
+	err := h.authUsecase.ForgotPassword(r.Context(), req.Email)
+	if err != nil {
+		if errors.Is(err, usecase.ErrResendCooldown) {
+			RespondError(w, http.StatusTooManyRequests, "Please wait before requesting another reset email")
+			return
+		}
+		h.logger.Error("Failed to process forgot password", zap.Error(err))
+		// For security, respond with generic message
+	}
+
+	RespondJSON(w, http.StatusOK, map[string]string{"message": "If the email exists, a reset link has been sent"})
+}
+
+// POST /auth/reset-password
+func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		Token       string `json:"token"`
+		NewPassword string `json:"new_password"`
+	}
+
+	var req request
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Token == "" || req.NewPassword == "" {
+		RespondError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+
+	if err := h.authUsecase.ResetPassword(r.Context(), req.Token, req.NewPassword); err != nil {
+		switch err {
+		case usecase.ErrInvalidToken:
+			RespondError(w, http.StatusBadRequest, "invalid password reset token")
+		default:
+			RespondError(w, http.StatusInternalServerError, "failed to reset password")
+		}
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, map[string]string{"message": "password reset successful"})
 }

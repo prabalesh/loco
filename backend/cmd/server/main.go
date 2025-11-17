@@ -113,7 +113,7 @@ func initializeDependencies(db *database.Database, logger *zap.Logger, cfg *conf
 	userRepo := postgres.NewUserRepository(db)
 
 	jwtService := auth.NewJWTService(cfg.JWT.AccessTokenSecret, cfg.JWT.RefreshTokenSecret, cfg.JWT.AccessTokenExpiration, cfg.JWT.RefreshTokenExpiration)
-	emailService := email.NewEmailService(&cfg.Email, logger)
+	emailService := email.NewEmailService(cfg, logger)
 
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtService, emailService, cfg, logger)
 	userUsecase := usecase.NewUserUsecase(userRepo, logger)

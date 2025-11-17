@@ -6,7 +6,9 @@ export const API_ENDPOINTS = {
     REFRESH: '/auth/refresh',
     ME: '/auth/me',
     VERIFY_EMAIL: '/auth/verify-email',
-    RESEND_VERIFICATION: '/auth/resend-verification'
+    RESEND_VERIFICATION: '/auth/resend-verification',
+    FORGOT_PASSWORD: '/auth/forgot-password',
+    RESET_PASSWORD: '/auth/reset-password',
   },
   USERS: {
     PROFILE: (id: 'me') => `/users/${id}`,

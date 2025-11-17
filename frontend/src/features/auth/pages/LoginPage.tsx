@@ -1,11 +1,10 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Code, CheckCircle, Mail, AlertCircle, Loader2 } from 'lucide-react'
-import { useEffect } from 'react'
 import { Input } from '@/shared/components/ui/Input'
 import { Button } from '@/shared/components/ui/Button'
 import { Card } from '@/shared/components/ui/Card'
@@ -25,12 +24,10 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>
 
 export const LoginPage = () => {
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { isAuthenticated } = useAuth()
   const { mutate: login, isPending } = useLogin()
-  
-  // ⭐ NEW: State for email verification error
+
   const [showResendOption, setShowResendOption] = useState(false)
   const [resendEmail, setResendEmail] = useState('')
   const [resendLoading, setResendLoading] = useState(false)
@@ -40,12 +37,10 @@ export const LoginPage = () => {
     register,
     handleSubmit,
     formState: { errors },
-    getValues,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   })
 
-  // Show success message if coming from email verification
   useEffect(() => {
     if (searchParams.get('verified') === 'true') {
       toast.success('Email verified! You can now log in.', {
@@ -54,7 +49,6 @@ export const LoginPage = () => {
     }
   }, [searchParams])
 
-  // ⭐ Cooldown timer
   useEffect(() => {
     if (resendCooldown > 0) {
       const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000)
@@ -63,19 +57,15 @@ export const LoginPage = () => {
   }, [resendCooldown])
 
   const onSubmit = (data: LoginFormData) => {
-    setShowResendOption(false) // Hide previous resend option
-    
+    setShowResendOption(false)
     login(data, {
       onError: (error: any) => {
         const errorMessage = error.response?.data?.error || 'Login failed'
-        
-        // ⭐ Handle email not verified error
-        if (errorMessage.includes('verify your email')) {
+
+        if (errorMessage.toLowerCase().includes('verify your email')) {
           setShowResendOption(true)
           setResendEmail(data.email)
-          toast.error('Please verify your email first', {
-            duration: 5000,
-          })
+          toast.error('Please verify your email first.', { duration: 5000 })
         } else {
           toast.error(errorMessage)
         }
@@ -83,24 +73,18 @@ export const LoginPage = () => {
     })
   }
 
-  // ⭐ NEW: Handle resend verification email
   const handleResendVerification = async () => {
     setResendLoading(true)
     try {
       await authApi.resendVerificationEmail(resendEmail)
-      setResendCooldown(120) // 2 minutes cooldown
-      toast.success('Verification email sent! Check your inbox. 📧', {
-        duration: 5000,
-      })
+      setResendCooldown(120)
+      toast.success('Verification email sent! Check your inbox.', { duration: 5000 })
     } catch (err: any) {
       const errorMsg = err.response?.data?.error || 'Failed to send verification email'
-      
-      // Extract cooldown from error message if present
       const match = errorMsg.match(/(\d+) seconds/)
       if (match) {
-        const remainingSeconds = parseInt(match[1])
-        setResendCooldown(remainingSeconds)
-        toast.error(`Please wait ${remainingSeconds} seconds before requesting again`)
+        setResendCooldown(parseInt(match[1]))
+        toast.error(`Please wait ${match[1]} seconds before requesting again`)
       } else {
         toast.error(errorMsg)
       }
@@ -109,118 +93,64 @@ export const LoginPage = () => {
     }
   }
 
-  // ⭐ NEW: Go to verify page
-  const goToVerifyPage = () => {
-    navigate(`${ROUTES.VERIFY_EMAIL}?email=${encodeURIComponent(resendEmail)}`)
-  }
-
   if (isAuthenticated) {
     return <Navigate to={ROUTES.HOME} replace />
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 py-12">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to={ROUTES.HOME} className="inline-flex items-center space-x-2 mb-6">
             <Code className="h-10 w-10 text-blue-600" />
-            <span className="text-2xl font-bold text-gray-900">
-              {CONFIG.APP_NAME}
-            </span>
+            <span className="text-2xl font-bold text-gray-900">{CONFIG.APP_NAME}</span>
           </Link>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
           <p className="text-gray-600">Sign in to continue your coding journey</p>
         </div>
 
         <Card className="p-8">
-          {/* ⭐ NEW: Email Verification Warning */}
           <AnimatePresence>
             {showResendOption && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mb-6 overflow-hidden"
-              >
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-6 overflow-hidden">
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                   <div className="flex items-start mb-3">
                     <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 mr-2 flex-shrink-0" />
                     <div className="flex-1">
-                      <h3 className="text-sm font-semibold text-amber-900 mb-1">
-                        Email Not Verified
-                      </h3>
-                      <p className="text-sm text-amber-800">
-                        Please verify your email address before logging in. Check your inbox for the verification code.
-                      </p>
+                      <h3 className="text-sm font-semibold text-amber-900 mb-1">Email Not Verified</h3>
+                      <p className="text-sm text-amber-800">Please verify your email address before logging in. Check your inbox for the verification link.</p>
                     </div>
                   </div>
-                  
-                  <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={goToVerifyPage}
-                      className="flex-1 text-amber-700 border-amber-300 hover:bg-amber-100"
-                    >
-                      <Mail className="h-4 w-4 mr-2" />
-                      Enter Code
-                    </Button>
-                    
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleResendVerification}
-                      disabled={resendCooldown > 0 || resendLoading}
-                      className="flex-1 text-amber-700 border-amber-300 hover:bg-amber-100"
-                    >
-                      {resendLoading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Sending...
-                        </>
-                      ) : resendCooldown > 0 ? (
-                        `Resend in ${Math.floor(resendCooldown / 60)}:${(resendCooldown % 60).toString().padStart(2, '0')}`
-                      ) : (
-                        <>
-                          <Mail className="h-4 w-4 mr-2" />
-                          Resend Email
-                        </>
-                      )}
-                    </Button>
-                  </div>
+
+                  <Button type="button" variant="outline" size="sm" onClick={handleResendVerification} disabled={resendCooldown > 0 || resendLoading} className="w-full text-amber-700 border-amber-300 hover:bg-amber-100">
+                    {resendLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : resendCooldown > 0 ? (
+                      `Resend in ${Math.floor(resendCooldown / 60)}:${(resendCooldown % 60).toString().padStart(2, '0')}`
+                    ) : (
+                      <>
+                        <Mail className="h-4 w-4 mr-2" />
+                        Resend Verification Email
+                      </>
+                    )}
+                  </Button>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <Input
-              label="Email"
-              type="email"
-              placeholder="john@example.com"
-              error={errors.email?.message}
-              {...register('email')}
-            />
+            <Input label="Email" type="email" placeholder="john@example.com" error={errors.email?.message} {...register('email')} />
 
-            <Input
-              label="Password"
-              type="password"
-              placeholder="••••••••"
-              error={errors.password?.message}
-              {...register('password')}
-            />
+            <Input label="Password" type="password" placeholder="••••••••" error={errors.password?.message} {...register('password')} />
 
             <Button type="submit" variant="primary" className="w-full" isLoading={isPending}>
               Sign In
             </Button>
-          </form>                                                             
+          </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">

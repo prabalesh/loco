@@ -19,10 +19,10 @@ import (
 )
 
 var (
-	ErrEmailNotVerified       = errors.New("email not verified")
-	ErrInvalidOTP             = errors.New("invalid or expired OTP")
-	ErrMaxOTPAttemptsExceeded = errors.New("maximum OTP attempts exceeded")
-	ErrResendCooldown         = errors.New("please wait before requesting a new OTP")
+	ErrEmailNotVerified         = errors.New("email not verified")
+	ErrInvalidToken             = errors.New("invalid or expired token")
+	ErrMaxTokenAttemptsExceeded = errors.New("maximum token attempts exceeded")
+	ErrResendCooldown           = errors.New("please wait before requesting a new token")
 )
 
 type AuthUsecase struct {
@@ -128,40 +128,42 @@ func (u *AuthUsecase) Register(req *domain.RegisterRequest) (*domain.User, error
 }
 
 func (u *AuthUsecase) VerifyEmail(ctx context.Context, req *domain.VerifyEmailRequest) error {
-	user, err := u.userRepo.GetByEmail(req.Email)
+	user, err := u.userRepo.GetByVerificationToken(req.Token)
 	if err != nil {
+		u.logger.Warn("User not found for token")
 		return errors.New("user not found")
 	}
 
 	if user.EmailVerified {
+		u.logger.Info("Email already verified", zap.Int("user_id", user.ID))
 		return nil // Already verified
 	}
 
 	// Check max attempts
-	if user.EmailVerificationAttempts >= u.cfg.Email.MaxOTPAttempts {
-		return ErrMaxOTPAttemptsExceeded
+	if user.EmailVerificationAttempts >= u.cfg.Email.MaxTokenAttempts {
+		return ErrMaxTokenAttemptsExceeded
 	}
 
 	// Check if token exists and hasn't expired
 	if user.EmailVerificationToken == nil || user.EmailVerificationTokenExpiresAt == nil {
-		return ErrInvalidOTP
+		return ErrInvalidToken
 	}
 
 	if time.Now().After(*user.EmailVerificationTokenExpiresAt) {
-		return ErrInvalidOTP
+		return ErrInvalidToken
 	}
 
-	// Verify OTP
-	if *user.EmailVerificationToken != req.OTP {
+	// Verify token
+	if *user.EmailVerificationToken != req.Token {
 		// Increment attempts
 		newAttempts := user.EmailVerificationAttempts + 1
 		u.userRepo.UpdateVerificationAttempts(user.ID, newAttempts)
 
-		if newAttempts >= u.cfg.Email.MaxOTPAttempts {
-			return ErrMaxOTPAttemptsExceeded
+		if newAttempts >= u.cfg.Email.MaxTokenAttempts {
+			return ErrMaxTokenAttemptsExceeded
 		}
 
-		return ErrInvalidOTP
+		return ErrInvalidToken
 	}
 
 	// Mark email as verified
@@ -197,8 +199,8 @@ func (u *AuthUsecase) ResendVerificationEmail(ctx context.Context, req *domain.R
 	}
 
 	// Check max attempts
-	if user.EmailVerificationAttempts >= u.cfg.Email.MaxOTPAttempts {
-		return ErrMaxOTPAttemptsExceeded
+	if user.EmailVerificationAttempts >= u.cfg.Email.MaxTokenAttempts {
+		return ErrMaxTokenAttemptsExceeded
 	}
 
 	return u.sendVerificationEmail(ctx, user)
@@ -206,21 +208,22 @@ func (u *AuthUsecase) ResendVerificationEmail(ctx context.Context, req *domain.R
 
 func (u *AuthUsecase) sendVerificationEmail(ctx context.Context, user *domain.User) error {
 	// Generate OTP
-	otp, err := utils.GenerateOTP()
+	token, err := utils.GenerateToken(64)
+	fmt.Printf("%s %d\n", token, len(token))
 	if err != nil {
-		return fmt.Errorf("failed to generate OTP: %w", err)
+		return fmt.Errorf("failed to generate token: %w", err)
 	}
 
 	// Set expiration
-	expiresAt := time.Now().Add(time.Duration(u.cfg.Email.OTPExpirationMinutes) * time.Minute)
+	expiresAt := time.Now().Add(time.Duration(u.cfg.Email.TokenExpirationMinutes) * time.Minute)
 
 	// Save OTP to database
-	if err := u.userRepo.UpdateVerificationToken(user.ID, otp, expiresAt); err != nil {
-		return fmt.Errorf("failed to save OTP: %w", err)
+	if err := u.userRepo.UpdateVerificationToken(user.ID, token, expiresAt); err != nil {
+		return fmt.Errorf("failed to save token: %w", err)
 	}
 
 	// Send email
-	if err := u.emailService.SendVerificationEmail(ctx, user.Email, user.Username, otp); err != nil {
+	if err := u.emailService.SendVerificationEmail(ctx, user.Email, user.Username, token); err != nil {
 		return fmt.Errorf("failed to send email: %w", err)
 	}
 
@@ -349,6 +352,65 @@ func (u *AuthUsecase) GetCurrentUser(userID int) (*domain.User, error) {
 		return nil, errors.New("user not found")
 	}
 	return user, nil
+}
+
+// Starts the password reset process: finds user by email, generates token, sends email
+func (u *AuthUsecase) ForgotPassword(ctx context.Context, email string) error {
+	user, err := u.userRepo.GetByEmail(email)
+	if err != nil {
+		// For security, do not reveal if user exists or not
+		return nil
+	}
+
+	// Implement rate limiting using sentAt timestamp
+	if user.PasswordResetSentAt != nil && time.Since(*user.PasswordResetSentAt) < time.Duration(u.cfg.Email.ResendCooldownMinutes)*time.Minute {
+		return ErrResendCooldown
+	}
+
+	// Generate secure token
+	token, err := utils.GenerateToken(64)
+	if err != nil {
+		return err
+	}
+
+	expiresAt := time.Now().Add(time.Duration(u.cfg.Email.PasswordResetExpiryMinutes) * time.Minute)
+
+	// Update DB with token and expiry
+	if err := u.userRepo.UpdatePasswordResetToken(user.ID, token, expiresAt, time.Now()); err != nil {
+		return err
+	}
+
+	// Send reset email
+	if err := u.emailService.SendPasswordResetEmail(ctx, user.Email, user.Username, token); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Resets password using the token; validates token and expiration, hashes new password
+func (u *AuthUsecase) ResetPassword(ctx context.Context, token string, newPassword string) error {
+	user, err := u.userRepo.GetByPasswordResetToken(token)
+	if err != nil {
+		return ErrInvalidToken
+	}
+
+	if user.PasswordResetTokenExpiresAt == nil || time.Now().After(*user.PasswordResetTokenExpiresAt) {
+		return ErrInvalidToken
+	}
+
+	// Hash new password
+	hashedPassword, err := hashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+
+	// Update user password and clear reset token
+	if err := u.userRepo.UpdatePassword(user.ID, hashedPassword); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func hashPassword(password string) (string, error) {

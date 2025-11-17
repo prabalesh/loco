@@ -11,12 +11,12 @@ import (
 
 type EmailService struct {
 	client *resend.Client
-	config *config.EmailConfig
+	config *config.Config
 	logger *zap.Logger
 }
 
-func NewEmailService(cfg *config.EmailConfig, logger *zap.Logger) *EmailService {
-	client := resend.NewClient(cfg.ResendAPIKey)
+func NewEmailService(cfg *config.Config, logger *zap.Logger) *EmailService {
+	client := resend.NewClient(cfg.Email.ResendAPIKey)
 
 	return &EmailService{
 		client: client,
@@ -25,12 +25,12 @@ func NewEmailService(cfg *config.EmailConfig, logger *zap.Logger) *EmailService 
 	}
 }
 
-func (s *EmailService) SendVerificationEmail(ctx context.Context, email, username, otp string) error {
+func (s *EmailService) SendVerificationEmail(ctx context.Context, email, username, token string) error {
 	params := &resend.SendEmailRequest{
-		From:    fmt.Sprintf("%s <%s>", s.config.FromName, s.config.FromEmail),
+		From:    fmt.Sprintf("%s <%s>", s.config.Email.FromName, s.config.Email.FromEmail),
 		To:      []string{email},
 		Subject: "Verify Your Email - Loco Platform",
-		Html:    s.getVerificationEmailHTML(username, otp),
+		Html:    s.getVerificationEmailHTML(s.config.Server.AppBaseUrl, username, token),
 	}
 
 	_, err := s.client.Emails.SendWithContext(ctx, params)
@@ -49,7 +49,9 @@ func (s *EmailService) SendVerificationEmail(ctx context.Context, email, usernam
 	return nil
 }
 
-func (s *EmailService) getVerificationEmailHTML(username, otp string) string {
+func (s *EmailService) getVerificationEmailHTML(appUrl, username, token string) string {
+	verificationLink := fmt.Sprintf("%s/verify-email?token=%s", appUrl, token)
+
 	return fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -81,21 +83,16 @@ func (s *EmailService) getVerificationEmailHTML(username, otp string) string {
             padding: 40px 30px;
             background: #f9fafb;
         }
-        .otp-box { 
-            background: white; 
-            border: 3px solid #3b82f6; 
-            border-radius: 12px; 
-            padding: 30px; 
-            text-align: center; 
+        .verification-link {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #3b82f6;
+            color: white !important;
+            text-decoration: none;
+            border-radius: 6px;
             margin: 30px 0;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .otp-code { 
-            font-size: 42px; 
-            font-weight: bold; 
-            letter-spacing: 12px; 
-            color: #3b82f6;
-            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 18px;
         }
         .warning {
             background: #fef3c7;
@@ -111,15 +108,6 @@ func (s *EmailService) getVerificationEmailHTML(username, otp string) string {
             font-size: 14px;
             border-top: 1px solid #e5e7eb;
         }
-        .button {
-            display: inline-block;
-            padding: 12px 24px;
-            background: #3b82f6;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            margin: 10px 0;
-        }
     </style>
 </head>
 <body>
@@ -129,19 +117,18 @@ func (s *EmailService) getVerificationEmailHTML(username, otp string) string {
         </div>
         <div class="content">
             <h2>Hello %s!</h2>
-            <p>Thank you for registering with Loco Platform. To complete your registration, please verify your email address using the code below:</p>
+            <p>Thank you for registering with Loco Platform. To complete your registration, please verify your email by clicking the button below:</p>
             
-            <div class="otp-box">
-                <p style="margin: 0 0 10px 0; font-size: 14px; color: #6b7280;">Your Verification Code</p>
-                <div class="otp-code">%s</div>
-            </div>
+            <a href="%s" class="verification-link" target="_blank" rel="noopener noreferrer">
+                Verify My Email
+            </a>
             
             <div class="warning">
                 <strong>⚠️ Important:</strong>
                 <ul style="margin: 10px 0; padding-left: 20px;">
-                    <li>This code expires in <strong>%d minutes</strong></li>
-                    <li>You have <strong>5 attempts</strong> to enter the correct code</li>
-                    <li>Don't share this code with anyone</li>
+                    <li>This link expires in <strong>%d hours</strong></li>
+                    <li>It can only be used once</li>
+                    <li>Don't share this link with anyone</li>
                 </ul>
             </div>
             
@@ -154,5 +141,117 @@ func (s *EmailService) getVerificationEmailHTML(username, otp string) string {
     </div>
 </body>
 </html>
-    `, username, otp, s.config.OTPExpirationMinutes)
+    `, username, verificationLink, int(s.config.Email.PasswordResetExpiryMinutes/60))
+}
+
+func (s *EmailService) SendPasswordResetEmail(ctx context.Context, email, username, token string) error {
+	params := &resend.SendEmailRequest{
+		From:    fmt.Sprintf("%s <%s>", s.config.Email.FromName, s.config.Email.FromEmail),
+		To:      []string{email},
+		Subject: "Reset Your Password - Loco Platform",
+		Html:    s.getPasswordResetTokenEmailHTML(s.config.Server.AppBaseUrl, username, token),
+	}
+
+	_, err := s.client.Emails.SendWithContext(ctx, params)
+	if err != nil {
+		s.logger.Error("Failed to send password reset email",
+			zap.String("email", email),
+			zap.Error(err),
+		)
+		return fmt.Errorf("failed to send email: %w", err)
+	}
+
+	s.logger.Info("Password reset email sent",
+		zap.String("email", email),
+	)
+
+	return nil
+}
+
+func (s *EmailService) getPasswordResetTokenEmailHTML(appUrl, username, token string) string {
+	resetLink := fmt.Sprintf("%s/reset-password?token=%s", appUrl, token)
+
+	return fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f9fafb;
+            color: #333;
+            margin: 0; padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #f59e0b 0%%, #d97706 100%%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            padding: 30px 25px;
+        }
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .button {
+            display: inline-block;
+            background: #f59e0b;
+            color: white !important;
+            text-decoration: none;
+            font-weight: 700;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            margin: 25px 0;
+        }
+        .instructions {
+            font-size: 14px;
+            color: #92400e;
+            margin-bottom: 15px;
+        }
+        .footer {
+            font-size: 12px;
+            color: #9ca3af;
+            text-align: center;
+            padding: 20px 10px;
+            border-top: 1px solid #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Password Reset Request</h1>
+        </div>
+        <div class="content">
+            <p class="greeting">Hello %s,</p>
+            <p class="instructions">You requested to reset your password for your Loco Platform account. Please click the button below to proceed:</p>
+            <p style="text-align:center;">
+                <a href="%s" class="button" target="_blank" rel="noopener noreferrer">Reset Password</a>
+            </p>
+            <p class="instructions">This link will expire in <strong>%d minutes</strong> and can only be used once. Please do not share this link with anyone.</p>
+            <p>If you did not request this email, please ignore it or contact our support team.</p>
+        </div>
+        <div class="footer">
+            &copy; 2025 Loco Platform. All rights reserved.<br/>
+            This is an automated email, please do not reply.
+        </div>
+    </div>
+</body>
+</html>
+    `, username, resetLink, s.config.Email.PasswordResetExpiryMinutes)
 }

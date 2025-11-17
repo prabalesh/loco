@@ -15,6 +15,9 @@ type User struct {
 	EmailVerificationTokenExpiresAt *time.Time `json:"-" db:"email_verification_token_expires_at"`
 	EmailVerificationAttempts       int        `json:"-" db:"email_verification_attempts"`
 	EmailVerificationLastSentAt     *time.Time `json:"-" db:"email_verification_last_sent_at"`
+	PasswordResetToken              *string    `json:"-" db:"password_reset_token"`
+	PasswordResetTokenExpiresAt     *time.Time `json:"-" db:"password_reset_token_expires_at"`
+	PasswordResetSentAt             *time.Time `json:"-" db:"password_reset_sent_at"`
 	CreatedAt                       time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt                       time.Time  `json:"updated_at" db:"updated_at"`
 }

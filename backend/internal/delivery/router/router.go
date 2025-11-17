@@ -38,6 +38,9 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	mux.HandleFunc("POST /auth/refresh", deps.AuthHandler.RefreshToken)
 	mux.HandleFunc("POST /auth/logout", deps.AuthHandler.Logout)
 
+	mux.HandleFunc("POST /auth/forgot-password", deps.AuthHandler.ForgotPassword)
+	mux.HandleFunc("POST /auth/reset-password", deps.AuthHandler.ResetPassword)
+
 	// protected routes
 	authMiddleware := middleware.Auth(deps.JWTService, deps.Log)
 

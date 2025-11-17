@@ -9,5 +9,7 @@ export const ROUTES = {
   LEADERBOARD: '/leaderboard',
   PROFILE: '/profile',
   USER_PROFILE: (username: string) => `/users/${username}`,
+  FORGOT_PASSWORD: '/forgot-password',
+  RESET_PASSWORD: '/reset-password',
   NOT_FOUND: '/404',
 } as const
