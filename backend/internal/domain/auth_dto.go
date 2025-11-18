@@ -1,5 +1,15 @@
 package domain
 
+import "time"
+
+// sturcts
+type TokenPair struct {
+	AccessToken      string
+	RefreshToken     string
+	AccessExpiresAt  time.Duration
+	RefreshExpiresAt time.Duration
+}
+
 // ==================== REQUEST DTOs ====================
 
 type RegisterRequest struct {

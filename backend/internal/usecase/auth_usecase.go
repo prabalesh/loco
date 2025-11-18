@@ -227,14 +227,7 @@ func (u *AuthUsecase) sendVerificationEmail(ctx context.Context, user *domain.Us
 	return nil
 }
 
-type TokenPair struct {
-	AccessToken      string
-	RefreshToken     string
-	AccessExpiresAt  time.Duration
-	RefreshExpiresAt time.Duration
-}
-
-func (u *AuthUsecase) Login(req *domain.LoginRequest) (*domain.User, *TokenPair, error) {
+func (u *AuthUsecase) Login(req *domain.LoginRequest) (*domain.User, *domain.TokenPair, error) {
 	// validation
 	if validationErrors := validator.ValidateLoginRequest(req); len(validationErrors) > 0 {
 		u.logger.Warn("Registration validation failed",
@@ -279,7 +272,7 @@ func (u *AuthUsecase) Login(req *domain.LoginRequest) (*domain.User, *TokenPair,
 		return nil, nil, errors.New("internal server error")
 	}
 
-	tokenPair := TokenPair{
+	tokenPair := domain.TokenPair{
 		AccessToken:      accessToken,
 		RefreshToken:     refreshToken,
 		AccessExpiresAt:  accessTokenExpires,
