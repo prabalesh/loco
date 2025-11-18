@@ -8,6 +8,7 @@ import (
 	"github.com/prabalesh/loco/backend/internal/delivery/cookies"
 	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/uerror"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"go.uber.org/zap"
@@ -43,7 +44,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	user, err := h.authUsecase.Register(&req)
 	if err != nil {
 		// Handle validation errors
-		var validationErr *usecase.ValidationError
+		var validationErr *uerror.ValidationError
 		if errors.As(err, &validationErr) {
 			h.logger.Warn("Registration validation failed",
 				zap.Any("errors", validationErr.Errors),
@@ -96,7 +97,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	user, tokenPair, err := h.authUsecase.Login(&req)
 	if err != nil {
 		// handle validation error
-		var validationErr *usecase.ValidationError
+		var validationErr *uerror.ValidationError
 		if errors.As(err, &validationErr) {
 			h.logger.Warn("Registration validation failed",
 				zap.Any("errors", validationErr.Errors),
@@ -109,7 +110,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		errMsg := err.Error()
 
 		switch {
-		case err == usecase.ErrEmailNotVerified:
+		case err == uerror.ErrEmailNotVerified:
 			h.logger.Warn("Login failed: email not verified", zap.String("email", req.Email))
 			RespondError(w, http.StatusForbidden, "please verify your email before logging in")
 		case errMsg == "invalid email or password":
@@ -228,7 +229,7 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.authUsecase.VerifyEmail(r.Context(), &req); err != nil {
 		switch err {
-		case usecase.ErrInvalidToken:
+		case uerror.ErrInvalidToken:
 			h.logger.Warn("Invalid token", zap.String("token", req.Token))
 			RespondError(w, http.StatusBadRequest, "invalid or expired verification token")
 		default:
@@ -255,10 +256,10 @@ func (h *AuthHandler) ResendVerificationEmail(w http.ResponseWriter, r *http.Req
 
 	if err := h.authUsecase.ResendVerificationEmail(r.Context(), &req); err != nil {
 		switch {
-		case errors.Is(err, usecase.ErrResendCooldown):
+		case errors.Is(err, uerror.ErrResendCooldown):
 			h.logger.Warn("Resend cooldown active", zap.String("email", req.Email))
 			RespondError(w, http.StatusTooManyRequests, err.Error())
-		case err == usecase.ErrMaxTokenAttemptsExceeded:
+		case err == uerror.ErrMaxTokenAttemptsExceeded:
 			h.logger.Warn("Max attempts exceeded", zap.String("email", req.Email))
 			RespondError(w, http.StatusTooManyRequests, "maximum attempts exceeded")
 		default:
@@ -284,7 +285,7 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 
 	err := h.authUsecase.ForgotPassword(r.Context(), req.Email)
 	if err != nil {
-		if errors.Is(err, usecase.ErrResendCooldown) {
+		if errors.Is(err, uerror.ErrResendCooldown) {
 			RespondError(w, http.StatusTooManyRequests, "Please wait before requesting another reset email")
 			return
 		}
@@ -305,7 +306,7 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.authUsecase.ResetPassword(r.Context(), req.Token, req.NewPassword); err != nil {
 		switch err {
-		case usecase.ErrInvalidToken:
+		case uerror.ErrInvalidToken:
 			RespondError(w, http.StatusBadRequest, "invalid password reset token")
 		default:
 			RespondError(w, http.StatusInternalServerError, "failed to reset password")

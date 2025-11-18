@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/uerror"
 	"github.com/prabalesh/loco/backend/internal/domain/validator"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/auth"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/email"
@@ -15,13 +15,6 @@ import (
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/prabalesh/loco/backend/pkg/utils"
 	"go.uber.org/zap"
-)
-
-var (
-	ErrEmailNotVerified         = errors.New("email not verified")
-	ErrInvalidToken             = errors.New("invalid or expired token")
-	ErrMaxTokenAttemptsExceeded = errors.New("maximum token attempts exceeded")
-	ErrResendCooldown           = errors.New("please wait before requesting a new token")
 )
 
 type AuthUsecase struct {
@@ -48,12 +41,12 @@ func (u *AuthUsecase) Register(req *domain.RegisterRequest) (*domain.User, error
 		u.logger.Warn("Registration validation failed",
 			zap.Any("errors", validationErrors),
 		)
-		return nil, &ValidationError{Errors: validationErrors}
+		return nil, &uerror.ValidationError{Errors: validationErrors}
 	}
 
 	// checking if email already exists
 	existingUser, err := u.userRepo.GetByEmail(req.Email)
-	if err != nil && !isNotFoundError(err) {
+	if err != nil && !uerror.IsNotFoundError(err) {
 		// Database error (not "not found")
 		u.logger.Error("Failed to check email existence",
 			zap.Error(err),
@@ -70,7 +63,7 @@ func (u *AuthUsecase) Register(req *domain.RegisterRequest) (*domain.User, error
 
 	// check username exists
 	existingUsername, err := u.userRepo.GetByUsername(req.Username)
-	if err != nil && !isNotFoundError(err) {
+	if err != nil && !uerror.IsNotFoundError(err) {
 		u.logger.Error("Failed to check username existence",
 			zap.Error(err),
 			zap.String("username", req.Username),
@@ -140,16 +133,16 @@ func (u *AuthUsecase) VerifyEmail(ctx context.Context, req *domain.VerifyEmailRe
 
 	// Check max attempts
 	if user.EmailVerificationAttempts >= u.cfg.Email.MaxTokenAttempts {
-		return ErrMaxTokenAttemptsExceeded
+		return uerror.ErrMaxTokenAttemptsExceeded
 	}
 
 	// Check if token exists and hasn't expired
 	if user.EmailVerificationToken == nil || user.EmailVerificationTokenExpiresAt == nil {
-		return ErrInvalidToken
+		return uerror.ErrInvalidToken
 	}
 
 	if time.Now().After(*user.EmailVerificationTokenExpiresAt) {
-		return ErrInvalidToken
+		return uerror.ErrInvalidToken
 	}
 
 	// Verify token
@@ -159,10 +152,10 @@ func (u *AuthUsecase) VerifyEmail(ctx context.Context, req *domain.VerifyEmailRe
 		u.userRepo.UpdateVerificationAttempts(user.ID, newAttempts)
 
 		if newAttempts >= u.cfg.Email.MaxTokenAttempts {
-			return ErrMaxTokenAttemptsExceeded
+			return uerror.ErrMaxTokenAttemptsExceeded
 		}
 
-		return ErrInvalidToken
+		return uerror.ErrInvalidToken
 	}
 
 	// Mark email as verified
@@ -193,13 +186,13 @@ func (u *AuthUsecase) ResendVerificationEmail(ctx context.Context, req *domain.R
 
 		if time.Now().Before(nextAllowedTime) {
 			remainingSeconds := int(time.Until(nextAllowedTime).Seconds())
-			return fmt.Errorf("%w: %d seconds remaining", ErrResendCooldown, remainingSeconds)
+			return fmt.Errorf("%w: %d seconds remaining", uerror.ErrResendCooldown, remainingSeconds)
 		}
 	}
 
 	// Check max attempts
 	if user.EmailVerificationAttempts >= u.cfg.Email.MaxTokenAttempts {
-		return ErrMaxTokenAttemptsExceeded
+		return uerror.ErrMaxTokenAttemptsExceeded
 	}
 
 	return u.sendVerificationEmail(ctx, user)
@@ -247,12 +240,12 @@ func (u *AuthUsecase) Login(req *domain.LoginRequest) (*domain.User, *TokenPair,
 		u.logger.Warn("Registration validation failed",
 			zap.Any("errors", validationErrors),
 		)
-		return nil, nil, &ValidationError{Errors: validationErrors}
+		return nil, nil, &uerror.ValidationError{Errors: validationErrors}
 	}
 
 	// get user by email
 	existingUser, err := u.userRepo.GetByEmail(req.Email)
-	if err != nil && !isNotFoundError(err) {
+	if err != nil && !uerror.IsNotFoundError(err) {
 		return nil, nil, errors.New("internal server error")
 	}
 
@@ -264,7 +257,7 @@ func (u *AuthUsecase) Login(req *domain.LoginRequest) (*domain.User, *TokenPair,
 
 	if !existingUser.EmailVerified {
 		u.logger.Warn("Login attempt with unverified email", zap.String("email", req.Email))
-		return nil, nil, ErrEmailNotVerified
+		return nil, nil, uerror.ErrEmailNotVerified
 	}
 
 	// check if account is active
@@ -363,7 +356,7 @@ func (u *AuthUsecase) ForgotPassword(ctx context.Context, email string) error {
 
 	// Implement rate limiting using sentAt timestamp
 	if user.PasswordResetSentAt != nil && time.Since(*user.PasswordResetSentAt) < time.Duration(u.cfg.Email.ResendCooldownMinutes)*time.Minute {
-		return ErrResendCooldown
+		return uerror.ErrResendCooldown
 	}
 
 	// Generate secure token
@@ -391,11 +384,11 @@ func (u *AuthUsecase) ForgotPassword(ctx context.Context, email string) error {
 func (u *AuthUsecase) ResetPassword(ctx context.Context, token string, newPassword string) error {
 	user, err := u.userRepo.GetByPasswordResetToken(token)
 	if err != nil {
-		return ErrInvalidToken
+		return uerror.ErrInvalidToken
 	}
 
 	if user.PasswordResetTokenExpiresAt == nil || time.Now().After(*user.PasswordResetTokenExpiresAt) {
-		return ErrInvalidToken
+		return uerror.ErrInvalidToken
 	}
 
 	// Hash new password
@@ -410,16 +403,4 @@ func (u *AuthUsecase) ResetPassword(ctx context.Context, token string, newPasswo
 	}
 
 	return nil
-}
-
-func isNotFoundError(err error) bool {
-	return strings.Contains(strings.ToLower(err.Error()), "not found")
-}
-
-type ValidationError struct {
-	Errors map[string]string
-}
-
-func (e *ValidationError) Error() string {
-	return fmt.Sprintf("validation failed: %v", e.Errors)
 }
