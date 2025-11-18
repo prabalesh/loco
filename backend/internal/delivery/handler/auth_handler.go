@@ -305,9 +305,19 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.authUsecase.ResetPassword(r.Context(), req.Token, req.NewPassword); err != nil {
+		var validationErr *uerror.ValidationError
+		if errors.As(err, &validationErr) {
+			h.logger.Warn("Reset password validation failed",
+				zap.Any("errors", validationErr.Errors),
+			)
+			RespondValidationError(w, validationErr.Errors)
+			return
+		}
+
 		switch err {
 		case uerror.ErrInvalidToken:
 			RespondError(w, http.StatusBadRequest, "invalid password reset token")
+
 		default:
 			RespondError(w, http.StatusInternalServerError, "failed to reset password")
 		}
