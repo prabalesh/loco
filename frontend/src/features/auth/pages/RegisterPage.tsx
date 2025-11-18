@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { CheckCircle, Code } from 'lucide-react'
+import { Code } from 'lucide-react'
 import { Input } from '@/shared/components/ui/Input'
 import { Button } from '@/shared/components/ui/Button'
 import { Card } from '@/shared/components/ui/Card'
@@ -126,7 +126,7 @@ export const RegisterPage = () => {
 
           {/* {successMessage && ( */}
             <div className="mt-6 text-green-700 font-semibold text-center select-none drop-shadow-md bg-green-100 px-4 py-3 rounded-md border border-green-300">
-              <p>Registration successful. A verification email has been sent to your email address. Please check your inbox and verify your account.</p>
+              <p>{successMessage}</p>
             </div>
           {/* )} */}
 
