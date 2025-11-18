@@ -49,6 +49,30 @@ func (s *EmailService) SendVerificationEmail(ctx context.Context, email, usernam
 	return nil
 }
 
+func (s *EmailService) SendPasswordResetEmail(ctx context.Context, email, username, token string) error {
+	params := &resend.SendEmailRequest{
+		From:    fmt.Sprintf("%s <%s>", s.config.Email.FromName, s.config.Email.FromEmail),
+		To:      []string{email},
+		Subject: "Reset Your Password - Loco Platform",
+		Html:    s.getPasswordResetTokenEmailHTML(s.config.Server.AppBaseUrl, username, token),
+	}
+
+	_, err := s.client.Emails.SendWithContext(ctx, params)
+	if err != nil {
+		s.logger.Error("Failed to send password reset email",
+			zap.String("email", email),
+			zap.Error(err),
+		)
+		return fmt.Errorf("failed to send email: %w", err)
+	}
+
+	s.logger.Info("Password reset email sent",
+		zap.String("email", email),
+	)
+
+	return nil
+}
+
 func (s *EmailService) getVerificationEmailHTML(appUrl, username, token string) string {
 	verificationLink := fmt.Sprintf("%s/verify-email?token=%s", appUrl, token)
 
@@ -142,30 +166,6 @@ func (s *EmailService) getVerificationEmailHTML(appUrl, username, token string) 
 </body>
 </html>
     `, username, verificationLink, int(s.config.Email.TokenExpirationMinutes/60))
-}
-
-func (s *EmailService) SendPasswordResetEmail(ctx context.Context, email, username, token string) error {
-	params := &resend.SendEmailRequest{
-		From:    fmt.Sprintf("%s <%s>", s.config.Email.FromName, s.config.Email.FromEmail),
-		To:      []string{email},
-		Subject: "Reset Your Password - Loco Platform",
-		Html:    s.getPasswordResetTokenEmailHTML(s.config.Server.AppBaseUrl, username, token),
-	}
-
-	_, err := s.client.Emails.SendWithContext(ctx, params)
-	if err != nil {
-		s.logger.Error("Failed to send password reset email",
-			zap.String("email", email),
-			zap.Error(err),
-		)
-		return fmt.Errorf("failed to send email: %w", err)
-	}
-
-	s.logger.Info("Password reset email sent",
-		zap.String("email", email),
-	)
-
-	return nil
 }
 
 func (s *EmailService) getPasswordResetTokenEmailHTML(appUrl, username, token string) string {
