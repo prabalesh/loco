@@ -8,7 +8,7 @@ import { RegisterPage } from '../features/auth/pages/RegisterPage'
 import { ROUTES } from '../shared/constants/routes'
 import { ProfilePage } from '@/pages/ProfilePage'
 import { UserProfilePage } from '@/pages/UserProfilePage'
-import { VerifyEmailPage } from '@/pages/VerifyEmailPage'
+import { VerifyEmailPage } from '@/features/auth/pages/VerifyEmailPage'
 import { ForgotPasswordPage } from '@/features/auth/pages/ForgetPasswordPage'
 import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage'
 
