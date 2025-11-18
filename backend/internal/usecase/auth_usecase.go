@@ -15,7 +15,6 @@ import (
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/prabalesh/loco/backend/pkg/utils"
 	"go.uber.org/zap"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -86,7 +85,7 @@ func (u *AuthUsecase) Register(req *domain.RegisterRequest) (*domain.User, error
 	}
 
 	// hash password
-	hashedPassword, err := hashPassword(req.Password)
+	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
 		u.logger.Error("Failed to hash password",
 			zap.Error(err),
@@ -258,7 +257,7 @@ func (u *AuthUsecase) Login(req *domain.LoginRequest) (*domain.User, *TokenPair,
 	}
 
 	// verify password
-	if err != nil || !verifyPassword(existingUser.PasswordHash, req.Password) {
+	if err != nil || !utils.VerifyPassword(existingUser.PasswordHash, req.Password) {
 		u.logger.Warn("Login failed: invalid password", zap.String("email", req.Email))
 		return nil, nil, errors.New("invalid email or password")
 	}
@@ -400,7 +399,7 @@ func (u *AuthUsecase) ResetPassword(ctx context.Context, token string, newPasswo
 	}
 
 	// Hash new password
-	hashedPassword, err := hashPassword(newPassword)
+	hashedPassword, err := utils.HashPassword(newPassword)
 	if err != nil {
 		return err
 	}
@@ -411,21 +410,6 @@ func (u *AuthUsecase) ResetPassword(ctx context.Context, token string, newPasswo
 	}
 
 	return nil
-}
-
-func hashPassword(password string) (string, error) {
-	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(password), 10)
-	if err != nil {
-		return "", err
-	}
-	return string(hashedBytes), nil
-}
-
-func verifyPassword(hashedPassword, password string) bool {
-	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
-		return false
-	}
-	return true
 }
 
 func isNotFoundError(err error) bool {
