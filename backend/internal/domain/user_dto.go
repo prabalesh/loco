@@ -23,6 +23,15 @@ type UpdateProfileRequest struct {
 	Username string `json:"username,omitempty"`
 }
 
+type ForgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+type ResetPasswordRequest struct {
+	Token       string `json:"token"`
+	NewPassword string `json:"new_password"`
+}
+
 // ==================== RESPONSE DTOs ====================
 
 type RegisterResponse struct {

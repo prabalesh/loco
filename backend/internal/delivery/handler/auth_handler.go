@@ -274,13 +274,9 @@ func (h *AuthHandler) ResendVerificationEmail(w http.ResponseWriter, r *http.Req
 	})
 }
 
-// POST /auth/forgot-password
+// for sending forgot password email
 func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
-	type request struct {
-		Email string `json:"email"`
-	}
-
-	var req request
+	var req domain.ForgotPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" {
 		RespondError(w, http.StatusBadRequest, "invalid request")
 		return
@@ -299,14 +295,9 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	RespondJSON(w, http.StatusOK, map[string]string{"message": "If the email exists, a reset link has been sent"})
 }
 
-// POST /auth/reset-password
+// for reseting user password
 func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
-	type request struct {
-		Token       string `json:"token"`
-		NewPassword string `json:"new_password"`
-	}
-
-	var req request
+	var req domain.ResetPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Token == "" || req.NewPassword == "" {
 		RespondError(w, http.StatusBadRequest, "invalid request")
 		return
