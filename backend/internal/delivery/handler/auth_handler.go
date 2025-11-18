@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/prabalesh/loco/backend/internal/delivery/cookies"
 	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
 	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/internal/usecase"
@@ -13,16 +14,18 @@ import (
 )
 
 type AuthHandler struct {
-	authUsecase *usecase.AuthUsecase
-	logger      *zap.Logger
-	cfg         *config.Config
+	authUsecase   *usecase.AuthUsecase
+	logger        *zap.Logger
+	cfg           *config.Config
+	cookieManager *cookies.CookieManager
 }
 
-func NewAuthHandler(authUsecase *usecase.AuthUsecase, logger *zap.Logger, cfg *config.Config) *AuthHandler {
+func NewAuthHandler(authUsecase *usecase.AuthUsecase, logger *zap.Logger, cfg *config.Config, cookieManager *cookies.CookieManager) *AuthHandler {
 	return &AuthHandler{
-		authUsecase: authUsecase,
-		logger:      logger,
-		cfg:         cfg,
+		authUsecase:   authUsecase,
+		logger:        logger,
+		cfg:           cfg,
+		cookieManager: cookieManager,
 	}
 }
 
@@ -133,8 +136,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		User:    user.ToResponse(),
 	}
 
-	h.setTokenCookie(w, "accessToken", tokenPair.AccessToken, int(tokenPair.AccessExpiresAt.Seconds()))
-	h.setTokenCookie(w, "refreshToken", tokenPair.RefreshToken, int(tokenPair.RefreshExpiresAt.Seconds()))
+	h.cookieManager.SetSecure(w, "accessToken", tokenPair.AccessToken, int(tokenPair.AccessExpiresAt.Seconds()))
+	h.cookieManager.SetSecure(w, "refreshToken", tokenPair.RefreshToken, int(tokenPair.RefreshExpiresAt.Seconds()))
 
 	RespondJSON(w, http.StatusOK, response)
 }
@@ -159,7 +162,7 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 	// Set new access token cookie
 	maxAge := int(expiresAt.Seconds())
-	h.setTokenCookie(w, "accessToken", accessToken, maxAge)
+	h.cookieManager.SetSecure(w, "accessToken", accessToken, maxAge)
 
 	h.logger.Info("Access token refreshed successfully")
 
@@ -186,8 +189,8 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Clear cookies
-	h.clearTokenCookie(w, "accessToken")
-	h.clearTokenCookie(w, "refreshToken")
+	h.cookieManager.Clear(w, "accessToken")
+	h.cookieManager.Clear(w, "refreshToken")
 
 	h.logger.Info("User logged out successfully")
 
@@ -213,46 +216,6 @@ func (h *AuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Info("User retrieved successfully", zap.Int("user_id", userID))
 	RespondJSON(w, http.StatusOK, user.ToResponse())
-}
-
-// setTokenCookie sets an HTTP-only cookie with environment-aware settings
-func (h *AuthHandler) setTokenCookie(w http.ResponseWriter, name, value string, maxAge int) {
-	// Parse SameSite from config
-	sameSite := http.SameSiteLaxMode
-	switch h.cfg.Cookie.SameSite {
-	case "strict":
-		sameSite = http.SameSiteStrictMode
-	case "none":
-		sameSite = http.SameSiteNoneMode
-	case "lax":
-		sameSite = http.SameSiteLaxMode
-	}
-
-	cookie := &http.Cookie{
-		Name:     name,
-		Value:    value,
-		Path:     "/",
-		MaxAge:   maxAge,
-		HttpOnly: true,
-		Secure:   h.cfg.Cookie.Secure,
-		SameSite: sameSite,
-		Domain:   h.cfg.Cookie.Domain,
-	}
-	http.SetCookie(w, cookie)
-}
-
-// clearTokenCookie removes a cookie
-func (h *AuthHandler) clearTokenCookie(w http.ResponseWriter, name string) {
-	cookie := &http.Cookie{
-		Name:     name,
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   h.cfg.Cookie.Secure,
-		Domain:   h.cfg.Cookie.Domain,
-	}
-	http.SetCookie(w, cookie)
 }
 
 func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {

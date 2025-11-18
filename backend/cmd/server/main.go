@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/prabalesh/loco/backend/internal/delivery/cookies"
 	"github.com/prabalesh/loco/backend/internal/delivery/handler"
 	"github.com/prabalesh/loco/backend/internal/delivery/router"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/auth"
@@ -115,10 +116,12 @@ func initializeDependencies(db *database.Database, logger *zap.Logger, cfg *conf
 	jwtService := auth.NewJWTService(cfg.JWT.AccessTokenSecret, cfg.JWT.RefreshTokenSecret, cfg.JWT.AccessTokenExpiration, cfg.JWT.RefreshTokenExpiration)
 	emailService := email.NewEmailService(cfg, logger)
 
+	cookieManager := cookies.NewCookieManager(cfg)
+
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtService, emailService, cfg, logger)
 	userUsecase := usecase.NewUserUsecase(userRepo, logger)
 
-	authHanlder := handler.NewAuthHandler(authUsecase, logger, cfg)
+	authHanlder := handler.NewAuthHandler(authUsecase, logger, cfg, cookieManager)
 	userHandler := handler.NewUserHandler(userUsecase, logger)
 
 	return &router.Dependencies{Log: logger, Cfg: cfg, Db: db, JWTService: jwtService, AuthHandler: authHanlder, UserHandler: userHandler}
