@@ -38,6 +38,6 @@ type ResendVerificationRequest struct {
 }
 
 type LoginResponse struct {
-	Message string       `json:"message`
+	Message string       `json:"message"`
 	User    UserResponse `json:"user"`
 }

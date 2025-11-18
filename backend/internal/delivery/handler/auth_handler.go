@@ -131,7 +131,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		zap.String("email", user.Email),
 	)
 
-	response := domain.RegisterResponse{
+	response := domain.LoginResponse{
 		Message: "login successful",
 		User:    user.ToResponse(),
 	}
