@@ -168,7 +168,7 @@ func (u *AuthUsecase) VerifyEmail(ctx context.Context, req *domain.VerifyEmailRe
 	return nil
 }
 
-// ⭐ NEW: ResendVerificationEmail resends OTP with cooldown
+// resends email verification link with cooldown
 func (u *AuthUsecase) ResendVerificationEmail(ctx context.Context, req *domain.ResendVerificationRequest) error {
 	user, err := u.userRepo.GetByEmail(req.Email)
 	if err != nil {
@@ -196,35 +196,6 @@ func (u *AuthUsecase) ResendVerificationEmail(ctx context.Context, req *domain.R
 	}
 
 	return u.sendVerificationEmail(ctx, user)
-}
-
-func (u *AuthUsecase) sendVerificationEmail(ctx context.Context, user *domain.User) error {
-	// Generate OTP
-	token, err := utils.GenerateToken(64)
-	fmt.Printf("%s %d\n", token, len(token))
-	if err != nil {
-		return fmt.Errorf("failed to generate token: %w", err)
-	}
-
-	// Set expiration
-	expiresAt := time.Now().Add(time.Duration(u.cfg.Email.TokenExpirationMinutes) * time.Minute)
-
-	// Save OTP to database
-	if err := u.userRepo.UpdateVerificationToken(user.ID, token, expiresAt); err != nil {
-		return fmt.Errorf("failed to save token: %w", err)
-	}
-
-	// Send email
-	if err := u.emailService.SendVerificationEmail(ctx, user.Email, user.Username, token); err != nil {
-		return fmt.Errorf("failed to send email: %w", err)
-	}
-
-	// Update last sent time
-	if err := u.userRepo.UpdateLastSentAt(user.ID, time.Now()); err != nil {
-		u.logger.Error("Failed to update last sent time", zap.Error(err))
-	}
-
-	return nil
 }
 
 func (u *AuthUsecase) Login(req *domain.LoginRequest) (*domain.User, *domain.TokenPair, error) {
@@ -319,26 +290,6 @@ func (u *AuthUsecase) RefreshAccessToken(refreshToken string) (string, time.Dura
 	return accessToken, expiresAt, nil
 }
 
-// Logout revokes refresh token
-func (u *AuthUsecase) Logout(refreshToken string) error {
-	// If you're storing refresh tokens in DB:
-	// tokenHash := auth.HashToken(refreshToken)
-	// return u.refreshTokenRepo.Revoke(tokenHash)
-
-	// For now, just log
-	u.logger.Info("User logged out")
-	return nil
-}
-
-// GetCurrentUser returns user info by ID
-func (u *AuthUsecase) GetCurrentUser(userID int) (*domain.User, error) {
-	user, err := u.userRepo.GetByID(userID)
-	if err != nil {
-		return nil, errors.New("user not found")
-	}
-	return user, nil
-}
-
 // Starts the password reset process: finds user by email, generates token, sends email
 func (u *AuthUsecase) ForgotPassword(ctx context.Context, email string) error {
 	user, err := u.userRepo.GetByEmail(email)
@@ -393,6 +344,55 @@ func (u *AuthUsecase) ResetPassword(ctx context.Context, token string, newPasswo
 	// Update user password and clear reset token
 	if err := u.userRepo.UpdatePassword(user.ID, hashedPassword); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// Logout revokes refresh token
+func (u *AuthUsecase) Logout(refreshToken string) error {
+	// If you're storing refresh tokens in DB:
+	// tokenHash := auth.HashToken(refreshToken)
+	// return u.refreshTokenRepo.Revoke(tokenHash)
+
+	// For now, just log
+	u.logger.Info("User logged out")
+	return nil
+}
+
+// GetCurrentUser returns user info by ID
+func (u *AuthUsecase) GetCurrentUser(userID int) (*domain.User, error) {
+	user, err := u.userRepo.GetByID(userID)
+	if err != nil {
+		return nil, errors.New("user not found")
+	}
+	return user, nil
+}
+
+func (u *AuthUsecase) sendVerificationEmail(ctx context.Context, user *domain.User) error {
+	// Generate OTP
+	token, err := utils.GenerateToken(64)
+	fmt.Printf("%s %d\n", token, len(token))
+	if err != nil {
+		return fmt.Errorf("failed to generate token: %w", err)
+	}
+
+	// Set expiration
+	expiresAt := time.Now().Add(time.Duration(u.cfg.Email.TokenExpirationMinutes) * time.Minute)
+
+	// Save OTP to database
+	if err := u.userRepo.UpdateVerificationToken(user.ID, token, expiresAt); err != nil {
+		return fmt.Errorf("failed to save token: %w", err)
+	}
+
+	// Send email
+	if err := u.emailService.SendVerificationEmail(ctx, user.Email, user.Username, token); err != nil {
+		return fmt.Errorf("failed to send email: %w", err)
+	}
+
+	// Update last sent time
+	if err := u.userRepo.UpdateLastSentAt(user.ID, time.Now()); err != nil {
+		u.logger.Error("Failed to update last sent time", zap.Error(err))
 	}
 
 	return nil
