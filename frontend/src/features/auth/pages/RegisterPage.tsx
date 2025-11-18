@@ -2,9 +2,9 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Code, Loader2 } from 'lucide-react'
+import { CheckCircle, Code } from 'lucide-react'
 import { Input } from '@/shared/components/ui/Input'
 import { Button } from '@/shared/components/ui/Button'
 import { Card } from '@/shared/components/ui/Card'
@@ -32,8 +32,9 @@ const registerSchema = z.object({
 type RegisterFormData = z.infer<typeof registerSchema>
 
 export const RegisterPage = () => {
-  const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const {
     register,
@@ -45,15 +46,19 @@ export const RegisterPage = () => {
 
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true)
+    setIsSuccess(false)
+    setSuccessMessage(null)
     try {
-      await authApi.register(data)
+      const response = await authApi.register(data)
+      const message = response.message || 'Registration successful! Please verify your email.'
+      setSuccessMessage(message)
       toast.success('Registration successful! Please verify your email.')
-      // ⭐ Redirect to verify email page
-      navigate(`${ROUTES.VERIFY_EMAIL}?email=${encodeURIComponent(data.email)}`)
+      setIsSuccess(true)
     } catch (err) {
       const error = err as AxiosError<{ error: string }>
       const errorMsg = error.response?.data?.error || 'Registration failed'
       toast.error(errorMsg)
+      setIsSuccess(false)
     } finally {
       setIsLoading(false)
     }
@@ -109,18 +114,21 @@ export const RegisterPage = () => {
               variant="primary"
               className="w-full"
               isLoading={isLoading}
-              disabled={isLoading}
+              disabled={isLoading || isSuccess}
             >
               {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating Account...
-                </>
+                'Creating Account...'
               ) : (
                 'Sign Up'
               )}
             </Button>
           </form>
+
+          {/* {successMessage && ( */}
+            <div className="mt-6 text-green-700 font-semibold text-center select-none drop-shadow-md bg-green-100 px-4 py-3 rounded-md border border-green-300">
+              <p>Registration successful. A verification email has been sent to your email address. Please check your inbox and verify your account.</p>
+            </div>
+          {/* )} */}
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
