@@ -77,7 +77,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	)
 
 	response := domain.RegisterResponse{
-		Message: "registration successful. we have send an email for verification in your email id. please verify",
+		Message: "Registration successful. A verification email has been sent to your email address. Please check your inbox and verify your account.",
 		User:    user.ToResponse(),
 	}
 
