@@ -67,3 +67,23 @@ func ValidateLoginRequest(req *domain.LoginRequest) map[string]string {
 
 	return errors
 }
+
+func ValidateResetPasswordRequest(password string) map[string]string {
+	errors := make(map[string]string)
+
+	if password == "" {
+		errors["new_password"] = "password is required"
+	} else if len(password) < 8 {
+		errors["new_password"] = "password must be at least 8 characters"
+	} else if len(password) > 72 {
+		errors["new_password"] = "password too long (max 72 characters)"
+	} else if !HasUpperCase(password) {
+		errors["new_password"] = "password must contain at least one uppercase letter"
+	} else if !HasLowerCase(password) {
+		errors["new_password"] = "password must contain at least one lowercase letter"
+	} else if !HasDigit(password) {
+		errors["new_password"] = "password must contain at least one number"
+	}
+
+	return errors
+}

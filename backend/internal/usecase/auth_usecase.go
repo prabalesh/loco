@@ -326,6 +326,14 @@ func (u *AuthUsecase) ForgotPassword(ctx context.Context, email string) error {
 
 // Resets password using the token; validates token and expiration, hashes new password
 func (u *AuthUsecase) ResetPassword(ctx context.Context, token string, newPassword string) error {
+	// validation
+	if validationErrors := validator.ValidateResetPasswordRequest(newPassword); len(validationErrors) > 0 {
+		u.logger.Warn("Reset password validation failed",
+			zap.Any("errors", validationErrors),
+		)
+		return &uerror.ValidationError{Errors: validationErrors}
+	}
+
 	user, err := u.userRepo.GetByPasswordResetToken(token)
 	if err != nil {
 		return uerror.ErrInvalidToken
