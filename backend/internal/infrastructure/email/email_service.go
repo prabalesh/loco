@@ -141,7 +141,7 @@ func (s *EmailService) getVerificationEmailHTML(appUrl, username, token string) 
     </div>
 </body>
 </html>
-    `, username, verificationLink, int(s.config.Email.PasswordResetExpiryMinutes/60))
+    `, username, verificationLink, int(s.config.Email.TokenExpirationMinutes/60))
 }
 
 func (s *EmailService) SendPasswordResetEmail(ctx context.Context, email, username, token string) error {
