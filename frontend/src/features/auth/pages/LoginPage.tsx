@@ -145,7 +145,17 @@ export const LoginPage = () => {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <Input label="Email" type="email" placeholder="john@example.com" error={errors.email?.message} {...register('email')} />
 
-            <Input label="Password" type="password" placeholder="••••••••" error={errors.password?.message} {...register('password')} />
+            <div>
+              <Input label="Password" type="password" placeholder="••••••••" error={errors.password?.message} {...register('password')} />
+
+              <div className="mt-2 text-right">
+                <p className="text-sm text-gray-600">
+                  <Link to={ROUTES.FORGOT_PASSWORD} className="text-blue-600 hover:text-blue-700 font-medium">
+                    Forgot Password?
+                  </Link>
+                </p>
+              </div>
+            </div>
 
             <Button type="submit" variant="primary" className="w-full" isLoading={isPending}>
               Sign In
