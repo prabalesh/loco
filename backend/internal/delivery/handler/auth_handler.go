@@ -133,7 +133,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	)
 
 	response := domain.LoginResponse{
-		Message: "login successful",
+		Message: "Login successful",
 		User:    user.ToResponse(),
 	}
 
@@ -168,7 +168,7 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Access token refreshed successfully")
 
 	RespondJSON(w, http.StatusOK, map[string]string{
-		"message": "token refreshed successfully",
+		"message": "Token refreshed successfully",
 	})
 }
 
@@ -179,7 +179,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// No cookie = already logged out
 		RespondJSON(w, http.StatusOK, map[string]string{
-			"message": "logged out successfully",
+			"message": "Logged out successfully",
 		})
 		return
 	}
@@ -196,7 +196,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("User logged out successfully")
 
 	RespondJSON(w, http.StatusOK, map[string]string{
-		"message": "logged out successfully",
+		"message": "Logged out successfully",
 	})
 }
 
@@ -271,7 +271,7 @@ func (h *AuthHandler) ResendVerificationEmail(w http.ResponseWriter, r *http.Req
 
 	h.logger.Info("Verification email resent", zap.String("email", req.Email))
 	RespondJSON(w, http.StatusOK, map[string]string{
-		"message": "verification email sent successfully",
+		"message": "Verification email sent successfully",
 	})
 }
 
@@ -324,5 +324,5 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RespondJSON(w, http.StatusOK, map[string]string{"message": "password reset successful"})
+	RespondJSON(w, http.StatusOK, map[string]string{"message": "Password reset successful"})
 }
