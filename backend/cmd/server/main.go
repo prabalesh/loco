@@ -58,20 +58,6 @@ func main() {
 		zap.Int("idle", stats.Idle),
 	)
 
-	if err := database.RunMigrations(db.DB, "./migrations", log); err != nil {
-		log.Fatal("Failed to run migrations", zap.Error(err))
-	}
-
-	version, dirty, err := database.GetMigrationVersion(db.DB, "./migrations")
-	if err != nil {
-		log.Warn("Could not get migration version", zap.Error(err))
-	} else {
-		log.Info("Current migration version",
-			zap.Uint("version", version),
-			zap.Bool("dirty", dirty),
-		)
-	}
-
 	deps := initializeDependencies(db, log, cfg)
 	router := router.SetupRouter(deps)
 
