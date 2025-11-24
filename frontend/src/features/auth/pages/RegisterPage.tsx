@@ -124,11 +124,11 @@ export const RegisterPage = () => {
             </Button>
           </form>
 
-          {/* {successMessage && ( */}
+          {successMessage && (
             <div className="mt-6 text-green-700 font-semibold text-center select-none drop-shadow-md bg-green-100 px-4 py-3 rounded-md border border-green-300">
               <p>{successMessage}</p>
             </div>
-          {/* )} */}
+          )}
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
