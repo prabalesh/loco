@@ -2,9 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { authApi } from '../api/authApi'
 import { useAuth } from '@/shared/hooks/useAuth'
 
-export const useProfile = (userId?: number | 'me') => {
+export const useProfile = () => {
   const { user } = useAuth()
-  const targetUserId = userId || 'me'
+  const targetUserId = 'me'
 
   return useQuery({
     queryKey: ['user-profile', targetUserId],
