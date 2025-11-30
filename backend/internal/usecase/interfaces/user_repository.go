@@ -22,4 +22,12 @@ type UserRepository interface {
 	GetByPasswordResetToken(token string) (*domain.User, error)
 	GetByVerificationToken(token string) (*domain.User, error)
 	UpdatePasswordResetToken(userID int, token string, expiresAt time.Time, sentAt time.Time) error
+
+	GetAll() ([]*domain.User, error)
+	Delete(id int) error
+	UpdateRole(id int, role string) error
+	UpdateActiveStatus(id int, isActive bool) error
+	CountUsers() (int, error)
+	CountActiveUsers() (int, error)
+	CountVerifiedUsers() (int, error)
 }

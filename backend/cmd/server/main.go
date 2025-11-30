@@ -106,9 +106,12 @@ func initializeDependencies(db *database.Database, logger *zap.Logger, cfg *conf
 
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtService, emailService, cfg, logger)
 	userUsecase := usecase.NewUserUsecase(userRepo, logger)
+	adminUsecase := usecase.NewAdminUsecase(userRepo, logger)
 
 	authHanlder := handler.NewAuthHandler(authUsecase, logger, cfg, cookieManager)
 	userHandler := handler.NewUserHandler(userUsecase, logger)
+	adminAuthHandler := handler.NewAdminAuthHandler(authUsecase, logger, cfg, cookieManager)
+	adminHandler := handler.NewAdminHandler(adminUsecase, logger)
 
-	return &router.Dependencies{Log: logger, Cfg: cfg, Db: db, JWTService: jwtService, AuthHandler: authHanlder, UserHandler: userHandler}
+	return &router.Dependencies{Log: logger, Cfg: cfg, Db: db, JWTService: jwtService, AuthHandler: authHanlder, UserHandler: userHandler, AdminHandler: adminHandler, AdminAuthHandler: adminAuthHandler}
 }

@@ -22,10 +22,10 @@ func (r *userRepository) Create(user *domain.User) error {
 	defer cancel()
 
 	query := `
-		INSERT INTO users (email, username, password_hash, role, is_active, email_verified)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, created_at, updated_at
-	`
+        INSERT INTO users (email, username, password_hash, role, is_active, email_verified)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id, created_at, updated_at
+    `
 
 	err := r.db.QueryRowContext(ctx, query,
 		user.Email,
@@ -59,12 +59,12 @@ func (r *userRepository) GetByEmail(email string) (*domain.User, error) {
 
 	user := &domain.User{}
 	query := `
-		SELECT id, email, username, password_hash, role, is_active, 
-		       email_verified, email_verification_token, 
-		       email_verification_token_expires_at, email_verification_attempts,
-		       email_verification_last_sent_at, created_at, updated_at
-		FROM users WHERE email = $1
-	`
+        SELECT id, email, username, password_hash, role, is_active, 
+               email_verified, email_verification_token, 
+               email_verification_token_expires_at, email_verification_attempts,
+               email_verification_last_sent_at, created_at, updated_at
+        FROM users WHERE email = $1
+    `
 
 	err := r.db.QueryRowContext(ctx, query, email).Scan(
 		&user.ID,
@@ -99,10 +99,10 @@ func (r *userRepository) GetByUsername(username string) (*domain.User, error) {
 
 	user := &domain.User{}
 	query := `
-		SELECT id, email, username, password_hash, role, is_active,
-		       email_verified, created_at, updated_at
-		FROM users WHERE username = $1
-	`
+        SELECT id, email, username, password_hash, role, is_active,
+               email_verified, created_at, updated_at
+        FROM users WHERE username = $1
+    `
 
 	err := r.db.QueryRowContext(ctx, query, username).Scan(
 		&user.ID,
@@ -134,10 +134,10 @@ func (r *userRepository) GetByID(userID int) (*domain.User, error) {
 
 	user := &domain.User{}
 	query := `
-		SELECT id, email, username, password_hash, role, is_active, 
-		       email_verified, created_at, updated_at
-		FROM users WHERE id = $1
-	`
+        SELECT id, email, username, password_hash, role, is_active, 
+               email_verified, created_at, updated_at
+        FROM users WHERE id = $1
+    `
 
 	err := r.db.QueryRowContext(ctx, query, userID).Scan(
 		&user.ID,
@@ -170,13 +170,13 @@ func (r *userRepository) UpdateVerificationToken(userID int, token string, expir
 	defer cancel()
 
 	query := `
-		UPDATE users 
-		SET email_verification_token = $1,
-		    email_verification_token_expires_at = $2,
-		    email_verification_attempts = 0,
-		    updated_at = NOW()
-		WHERE id = $3
-	`
+        UPDATE users 
+        SET email_verification_token = $1,
+            email_verification_token_expires_at = $2,
+            email_verification_attempts = 0,
+            updated_at = NOW()
+        WHERE id = $3
+    `
 
 	result, err := r.db.ExecContext(ctx, query, token, expiresAt, userID)
 	if err != nil {
@@ -201,11 +201,11 @@ func (r *userRepository) UpdateVerificationAttempts(userID int, attempts int) er
 	defer cancel()
 
 	query := `
-		UPDATE users 
-		SET email_verification_attempts = $1,
-		    updated_at = NOW()
-		WHERE id = $2
-	`
+        UPDATE users 
+        SET email_verification_attempts = $1,
+            updated_at = NOW()
+        WHERE id = $2
+    `
 
 	result, err := r.db.ExecContext(ctx, query, attempts, userID)
 	if err != nil {
@@ -230,11 +230,11 @@ func (r *userRepository) UpdateLastSentAt(userID int, sentAt time.Time) error {
 	defer cancel()
 
 	query := `
-		UPDATE users 
-		SET email_verification_last_sent_at = $1,
-		    updated_at = NOW()
-		WHERE id = $2
-	`
+        UPDATE users 
+        SET email_verification_last_sent_at = $1,
+            updated_at = NOW()
+        WHERE id = $2
+    `
 
 	result, err := r.db.ExecContext(ctx, query, sentAt, userID)
 	if err != nil {
@@ -259,14 +259,14 @@ func (r *userRepository) VerifyEmail(userID int) error {
 	defer cancel()
 
 	query := `
-		UPDATE users 
-		SET email_verified = true,
-		    email_verification_token = NULL,
-		    email_verification_token_expires_at = NULL,
-		    email_verification_attempts = 0,
-		    updated_at = NOW()
-		WHERE id = $1
-	`
+        UPDATE users 
+        SET email_verified = true,
+            email_verification_token = NULL,
+            email_verification_token_expires_at = NULL,
+            email_verification_attempts = 0,
+            updated_at = NOW()
+        WHERE id = $1
+    `
 
 	result, err := r.db.ExecContext(ctx, query, userID)
 	if err != nil {
@@ -399,12 +399,12 @@ func (r *userRepository) GetByVerificationToken(token string) (*domain.User, err
 
 	user := &domain.User{}
 	query := `
-		SELECT id, email, username, password_hash, role, is_active, 
-		       email_verified, email_verification_token, 
-		       email_verification_token_expires_at, email_verification_attempts,
-		       email_verification_last_sent_at, created_at, updated_at
-		FROM users WHERE email_verification_token = $1
-	`
+        SELECT id, email, username, password_hash, role, is_active, 
+               email_verified, email_verification_token, 
+               email_verification_token_expires_at, email_verification_attempts,
+               email_verification_last_sent_at, created_at, updated_at
+        FROM users WHERE email_verification_token = $1
+    `
 
 	err := r.db.QueryRowContext(ctx, query, token).Scan(
 		&user.ID,
@@ -440,12 +440,12 @@ func (r *userRepository) GetByPasswordResetToken(token string) (*domain.User, er
 
 	user := &domain.User{}
 	query := `
-		SELECT id, email, username, password_hash, role, is_active,
-		       password_reset_token, password_reset_token_expires_at,
-		       password_reset_sent_at, created_at, updated_at
-		FROM users
-		WHERE password_reset_token = $1
-	`
+        SELECT id, email, username, password_hash, role, is_active,
+               password_reset_token, password_reset_token_expires_at,
+               password_reset_sent_at, created_at, updated_at
+        FROM users
+        WHERE password_reset_token = $1
+    `
 	err := r.db.QueryRowContext(ctx, query, token).Scan(
 		&user.ID, &user.Email, &user.Username, &user.PasswordHash,
 		&user.Role, &user.IsActive,
@@ -466,4 +466,179 @@ func (r *userRepository) UpdatePasswordResetToken(userID int, token string, expi
 	query := `UPDATE users SET password_reset_token = $1, password_reset_token_expires_at = $2, password_reset_sent_at = $3 WHERE id = $4`
 	_, err := r.db.ExecContext(ctx, query, token, expiresAt, sentAt, userID)
 	return err
+}
+
+// ========== ADMIN METHODS ==========
+
+// GetAll retrieves all users (admin only)
+func (r *userRepository) GetAll() ([]*domain.User, error) {
+	ctx, cancel := database.WithMediumTimeout()
+	defer cancel()
+
+	query := `
+        SELECT id, email, username, password_hash, role, is_active, 
+               email_verified, created_at, updated_at
+        FROM users
+        ORDER BY created_at DESC
+    `
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*domain.User
+	for rows.Next() {
+		var user domain.User
+		err := rows.Scan(
+			&user.ID,
+			&user.Email,
+			&user.Username,
+			&user.PasswordHash,
+			&user.Role,
+			&user.IsActive,
+			&user.EmailVerified,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+		users = append(users, &user)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating users: %w", err)
+	}
+
+	return users, nil
+}
+
+// Delete removes a user permanently
+func (r *userRepository) Delete(id int) error {
+	ctx, cancel := database.WithMediumTimeout()
+	defer cancel()
+
+	query := `DELETE FROM users WHERE id = $1`
+
+	result, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}
+
+// UpdateRole changes user role
+func (r *userRepository) UpdateRole(id int, role string) error {
+	ctx, cancel := database.WithShortTimeout()
+	defer cancel()
+
+	query := `
+        UPDATE users 
+        SET role = $1, updated_at = NOW() 
+        WHERE id = $2
+    `
+
+	result, err := r.db.ExecContext(ctx, query, role, id)
+	if err != nil {
+		return fmt.Errorf("failed to update role: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}
+
+// UpdateActiveStatus activates or deactivates user
+func (r *userRepository) UpdateActiveStatus(id int, isActive bool) error {
+	ctx, cancel := database.WithShortTimeout()
+	defer cancel()
+
+	query := `
+        UPDATE users 
+        SET is_active = $1, updated_at = NOW() 
+        WHERE id = $2
+    `
+
+	result, err := r.db.ExecContext(ctx, query, isActive, id)
+	if err != nil {
+		return fmt.Errorf("failed to update status: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}
+
+// CountUsers returns total number of users
+func (r *userRepository) CountUsers() (int, error) {
+	ctx, cancel := database.WithShortTimeout()
+	defer cancel()
+
+	var count int
+	query := `SELECT COUNT(*) FROM users`
+
+	err := r.db.QueryRowContext(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	return count, nil
+}
+
+// CountActiveUsers returns number of active users
+func (r *userRepository) CountActiveUsers() (int, error) {
+	ctx, cancel := database.WithShortTimeout()
+	defer cancel()
+
+	var count int
+	query := `SELECT COUNT(*) FROM users WHERE is_active = true`
+
+	err := r.db.QueryRowContext(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count active users: %w", err)
+	}
+
+	return count, nil
+}
+
+// CountVerifiedUsers returns number of verified users
+func (r *userRepository) CountVerifiedUsers() (int, error) {
+	ctx, cancel := database.WithShortTimeout()
+	defer cancel()
+
+	var count int
+	query := `SELECT COUNT(*) FROM users WHERE email_verified = true`
+
+	err := r.db.QueryRowContext(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count verified users: %w", err)
+	}
+
+	return count, nil
 }
