@@ -1,4 +1,3 @@
-// src/features/auth/components/AdminLogin.tsx
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Form, Input, Button, Card, Typography } from 'antd'
@@ -23,12 +22,8 @@ export const AdminLogin = () => {
       
       setUser(user)
 
-      console.log('BEFORE setUser - store state:', useAuthStore.getState())
-      setUser(user)
-      console.log('AFTER setUser - store state:', useAuthStore.getState())
-
       toast.success('Login successful!')
-      // navigate('/')
+      navigate('/')
     } catch (error: any) {
       const errorMsg = error.response?.data?.error || 'Login failed'
       

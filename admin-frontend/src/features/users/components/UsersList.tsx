@@ -1,4 +1,3 @@
-// src/features/users/components/UsersList.tsx
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -123,18 +122,18 @@ export const UsersList = () => {
                   { value: 'admin', label: 'Admin' },
                   { value: 'moderator', label: 'Moderator' },
                 ]}
-                disabled={updateRoleMutation.isLoading}
+                disabled={updateRoleMutation.isPending}
               />
               <Button
                 size="small"
                 type="primary"
                 onClick={() => updateRoleMutation.mutate({ userId: record.id, role: editingRole.role })}
-                loading={updateRoleMutation.isLoading}
-                disabled={updateRoleMutation.isLoading}
+                loading={updateRoleMutation.isPending}
+                disabled={updateRoleMutation.isPending}
               >
                 Save
               </Button>
-              <Button size="small" onClick={() => setEditingRole(null)} disabled={updateRoleMutation.isLoading}>
+              <Button size="small" onClick={() => setEditingRole(null)} disabled={updateRoleMutation.isPending}>
                 Cancel
               </Button>
             </Space>
@@ -168,7 +167,7 @@ export const UsersList = () => {
           onChange={(checked) =>
             updateStatusMutation.mutate({ userId: record.id, isActive: checked })
           }
-          loading={updateStatusMutation.isLoading}
+          loading={updateStatusMutation.isPending}
         />
       ),
     },
@@ -209,12 +208,12 @@ export const UsersList = () => {
           onConfirm={() => deleteMutation.mutate(record.id)}
           okText="Yes"
           cancelText="No"
-          disabled={deleteMutation.isLoading}
+          disabled={deleteMutation.isPending}
         >
           <Button
             danger
             icon={<DeleteOutlined />}
-            loading={deleteMutation.isLoading}
+            loading={deleteMutation.isPending}
             block
           >
             Delete

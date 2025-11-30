@@ -1,7 +1,5 @@
-// src/features/dashboard/components/Dashboard.tsx
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import toast from 'react-hot-toast'
 import { adminAnalyticsApi } from '../../../api/adminApi'
 import type { AdminAnalytics } from '../../../types'
 import {
@@ -23,9 +21,6 @@ export const Dashboard = () => {
     queryFn: async () => {
       const response = await adminAnalyticsApi.getAnalytics()
       return response.data as EnhancedAnalytics
-    },
-    onError: () => {
-      toast.error('Failed to load analytics')
     },
   })
 
