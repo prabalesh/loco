@@ -21,6 +21,7 @@ import toast from 'react-hot-toast'
 import dayjs from 'dayjs'
 import type { User } from '../../../types'
 import type { ColumnsType } from 'antd/es/table'
+import { Check, X } from 'lucide-react'
 
 export const UsersList = () => {
   const queryClient = useQueryClient()
@@ -131,10 +132,10 @@ export const UsersList = () => {
                 loading={updateRoleMutation.isPending}
                 disabled={updateRoleMutation.isPending}
               >
-                Save
+                <Check />
               </Button>
               <Button size="small" onClick={() => setEditingRole(null)} disabled={updateRoleMutation.isPending}>
-                Cancel
+                <X />
               </Button>
             </Space>
           )
