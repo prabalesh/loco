@@ -10,6 +10,7 @@ import { ProtectedRoute } from './components/common/ProtectedRoute'
 import { useAuthStore } from './features/auth/store/authStore'
 import { useEffect, useState } from 'react'
 import { adminAuthApi } from './api/adminApi'
+import ProblemList from './features/problems/components/ProblemList'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -72,6 +73,7 @@ function App() {
             >
               <Route path="/" element={<Dashboard />} />
               <Route path="/users" element={<UsersList />} />
+              <Route path="/problems" element={<ProblemList />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />
