@@ -120,7 +120,7 @@ export const UsersList = () => {
                 options={[
                   { value: 'user', label: 'User' },
                   { value: 'admin', label: 'Admin' },
-                  { value: 'moderator', label: 'Moderator' },
+                  { value: 'moderator', label: 'Mod' },
                 ]}
                 disabled={updateRoleMutation.isPending}
               />
@@ -226,6 +226,13 @@ export const UsersList = () => {
   return (
     <div className="max-w-full">
       <h1 className="text-3xl font-semibold text-gray-900 mb-8">User Management</h1>
+      <Button
+        type="default"
+        onClick={() => queryClient.invalidateQueries({ queryKey: ['admin-users'] })}
+        loading={isLoading}
+      >
+        Refresh
+      </Button>
       <Table
         bordered
         rowKey="id"
