@@ -27,7 +27,7 @@ export const UsersList = () => {
   const queryClient = useQueryClient()
   const [editingRole, setEditingRole] = useState<{ userId: number; role: string } | null>(null)
 
-  const { data: users, isLoading } = useQuery({
+  const { data: users, isFetching, refetch } = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
       const response = await adminUsersApi.getAll()
@@ -229,8 +229,8 @@ export const UsersList = () => {
       <h1 className="text-3xl font-semibold text-gray-900 mb-8">User Management</h1>
       <Button
         type="default"
-        onClick={() => queryClient.invalidateQueries({ queryKey: ['admin-users'] })}
-        loading={isLoading}
+        onClick={() => refetch()}
+        loading={isFetching}
       >
         Refresh
       </Button>
@@ -239,7 +239,7 @@ export const UsersList = () => {
         rowKey="id"
         columns={columns}
         dataSource={users}
-        loading={isLoading}
+        loading={isFetching}
         pagination={{ pageSize: 10, showSizeChanger: true }}
         scroll={{ x: 900 }}
         className="shadow-lg rounded-lg"
