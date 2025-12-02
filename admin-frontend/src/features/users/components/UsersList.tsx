@@ -21,12 +21,13 @@ import toast from 'react-hot-toast'
 import dayjs from 'dayjs'
 import type { User } from '../../../types'
 import type { ColumnsType } from 'antd/es/table'
+import { Check, X } from 'lucide-react'
 
 export const UsersList = () => {
   const queryClient = useQueryClient()
   const [editingRole, setEditingRole] = useState<{ userId: number; role: string } | null>(null)
 
-  const { data: users, isLoading } = useQuery({
+  const { data: users, isFetching, refetch } = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
       const response = await adminUsersApi.getAll()
@@ -120,7 +121,7 @@ export const UsersList = () => {
                 options={[
                   { value: 'user', label: 'User' },
                   { value: 'admin', label: 'Admin' },
-                  { value: 'moderator', label: 'Moderator' },
+                  { value: 'moderator', label: 'Mod' },
                 ]}
                 disabled={updateRoleMutation.isPending}
               />
@@ -131,10 +132,10 @@ export const UsersList = () => {
                 loading={updateRoleMutation.isPending}
                 disabled={updateRoleMutation.isPending}
               >
-                Save
+                <Check />
               </Button>
               <Button size="small" onClick={() => setEditingRole(null)} disabled={updateRoleMutation.isPending}>
-                Cancel
+                <X />
               </Button>
             </Space>
           )
@@ -226,12 +227,19 @@ export const UsersList = () => {
   return (
     <div className="max-w-full">
       <h1 className="text-3xl font-semibold text-gray-900 mb-8">User Management</h1>
+      <Button
+        type="default"
+        onClick={() => refetch()}
+        loading={isFetching}
+      >
+        Refresh
+      </Button>
       <Table
         bordered
         rowKey="id"
         columns={columns}
         dataSource={users}
-        loading={isLoading}
+        loading={isFetching}
         pagination={{ pageSize: 10, showSizeChanger: true }}
         scroll={{ x: 900 }}
         className="shadow-lg rounded-lg"

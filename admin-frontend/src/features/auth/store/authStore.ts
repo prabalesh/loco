@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
 import type { User } from '../../../types'
 
 interface AuthState {
@@ -10,16 +9,10 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      isAuthenticated: false,
-      setUser: (user) => set({ user, isAuthenticated: !!user }),
-      logout: () => set({ user: null, isAuthenticated: false }),
-    }),
-    {
-      name: 'admin-auth-storage',
-      storage: createJSONStorage(() => localStorage), // Explicitly set storage
-    }
-  )
+  (set) => ({
+    user: null,
+    isAuthenticated: false,
+    setUser: (user) => set({ user, isAuthenticated: !!user }),
+    logout: () => set({ user: null, isAuthenticated: false }),
+  })
 )

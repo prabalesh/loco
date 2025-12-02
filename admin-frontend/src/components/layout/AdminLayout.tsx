@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Users,
   Shield,
+  Code2,
 } from 'lucide-react'
 import { useAuthStore } from '../../features/auth/store/authStore'
 import { adminAuthApi } from '../../api/adminApi'
@@ -42,6 +43,12 @@ export const AdminLayout = () => {
       icon: <Users className="w-5 h-5" />,
       label: 'Users',
       onClick: () => navigate('/users'),
+    },
+    {
+      key: '/problems',
+      icon: <Code2 className="w-5 h-5" />,
+      label: 'Problems',
+      onClick: () => navigate('/problems'),
     },
   ]
 

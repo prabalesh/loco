@@ -98,6 +98,7 @@ func main() {
 
 func initializeDependencies(db *database.Database, logger *zap.Logger, cfg *config.Config) *router.Dependencies {
 	userRepo := postgres.NewUserRepository(db)
+	problemRepo := postgres.NewProblemRepository(db)
 
 	jwtService := auth.NewJWTService(cfg.JWT.AccessTokenSecret, cfg.JWT.RefreshTokenSecret, cfg.JWT.AccessTokenExpiration, cfg.JWT.RefreshTokenExpiration)
 	emailService := email.NewEmailService(cfg, logger)
@@ -107,11 +108,23 @@ func initializeDependencies(db *database.Database, logger *zap.Logger, cfg *conf
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtService, emailService, cfg, logger)
 	userUsecase := usecase.NewUserUsecase(userRepo, logger)
 	adminUsecase := usecase.NewAdminUsecase(userRepo, logger)
+	problemUsecase := usecase.NewProblemUsecase(problemRepo, cfg, logger)
 
 	authHanlder := handler.NewAuthHandler(authUsecase, logger, cfg, cookieManager)
 	userHandler := handler.NewUserHandler(userUsecase, logger)
 	adminAuthHandler := handler.NewAdminAuthHandler(authUsecase, logger, cfg, cookieManager)
 	adminHandler := handler.NewAdminHandler(adminUsecase, logger)
+	problemHandler := handler.NewProblemHandler(problemUsecase, logger, cfg)
 
-	return &router.Dependencies{Log: logger, Cfg: cfg, Db: db, JWTService: jwtService, AuthHandler: authHanlder, UserHandler: userHandler, AdminHandler: adminHandler, AdminAuthHandler: adminAuthHandler}
+	return &router.Dependencies{
+		Log:              logger,
+		Cfg:              cfg,
+		Db:               db,
+		JWTService:       jwtService,
+		AuthHandler:      authHanlder,
+		UserHandler:      userHandler,
+		AdminHandler:     adminHandler,
+		AdminAuthHandler: adminAuthHandler,
+		ProblemHandler:   problemHandler,
+	}
 }

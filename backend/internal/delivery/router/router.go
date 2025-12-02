@@ -23,6 +23,7 @@ type Dependencies struct {
 
 	AdminHandler     *handler.AdminHandler
 	AdminAuthHandler *handler.AdminAuthHandler
+	ProblemHandler   *handler.ProblemHandler
 }
 
 func SetupRouter(deps *Dependencies) http.Handler {
@@ -30,44 +31,57 @@ func SetupRouter(deps *Dependencies) http.Handler {
 
 	mux.HandleFunc("GET /health", healthHandler())
 
-	// auth handler
+	// ========== AUTH ROUTES ==========
 	mux.HandleFunc("POST /auth/register", deps.AuthHandler.Register)
 	mux.HandleFunc("POST /auth/login", deps.AuthHandler.Login)
 	mux.HandleFunc("POST /auth/verify-email", deps.AuthHandler.VerifyEmail)
 	mux.HandleFunc("POST /auth/resend-verification", deps.AuthHandler.ResendVerificationEmail)
 	mux.HandleFunc("POST /auth/refresh", deps.AuthHandler.RefreshToken)
 	mux.HandleFunc("POST /auth/logout", deps.AuthHandler.Logout)
-
 	mux.HandleFunc("POST /auth/forgot-password", deps.AuthHandler.ForgotPassword)
 	mux.HandleFunc("POST /auth/reset-password", deps.AuthHandler.ResetPassword)
 
-	// protected routes
+	// Protected auth routes
 	authMiddleware := middleware.Auth(deps.JWTService, deps.Log)
-
 	mux.Handle("GET /auth/me", authMiddleware(http.HandlerFunc(deps.AuthHandler.GetMe)))
 
-	// User profile routes
+	// ========== USER ROUTES ==========
 	mux.Handle("GET /users/me", authMiddleware(http.HandlerFunc(deps.UserHandler.GetProfile)))
 	mux.Handle("GET /users/{username}", authMiddleware(http.HandlerFunc(deps.UserHandler.GetProfileByUsername)))
 
+	// ========== PROBLEM ROUTES (PUBLIC) ========== ⭐ NEW
+	mux.HandleFunc("GET /problems", deps.ProblemHandler.ListProblems)
+	mux.HandleFunc("GET /problems/{identifier}", deps.ProblemHandler.GetProblem)
+
 	// Other protected routes
-	mux.Handle("GET /problems", authMiddleware(http.HandlerFunc(placeholderHandler("Problems"))))
 	mux.Handle("GET /submissions", authMiddleware(http.HandlerFunc(placeholderHandler("Submissions"))))
 
-	// Admin routes
+	// ========== ADMIN ROUTES ==========
 	adminAuthMiddleware := middleware.RequireAdminAuth(deps.JWTService, deps.Log)
 
+	// Admin auth
 	mux.HandleFunc("POST /admin/auth/login", deps.AdminAuthHandler.AdminLogin)
 	mux.HandleFunc("POST /admin/auth/logout", deps.AdminAuthHandler.AdminLogout)
 	mux.HandleFunc("POST /admin/auth/refresh", deps.AdminAuthHandler.AdminRefreshToken)
 	mux.Handle("GET /admin/auth/me", adminAuthMiddleware(http.HandlerFunc(deps.AdminAuthHandler.GetAdminProfile)))
 
+	// Admin user management
 	mux.Handle("GET /admin/users", adminAuthMiddleware(http.HandlerFunc(deps.AdminHandler.ListUsers)))
 	mux.Handle("GET /admin/users/{id}", adminAuthMiddleware(http.HandlerFunc(deps.AdminHandler.GetUser)))
 	mux.Handle("DELETE /admin/users/{id}", adminAuthMiddleware(http.HandlerFunc(deps.AdminHandler.DeleteUser)))
 	mux.Handle("PATCH /admin/users/{id}/role", adminAuthMiddleware(http.HandlerFunc(deps.AdminHandler.UpdateUserRole)))
 	mux.Handle("PATCH /admin/users/{id}/status", adminAuthMiddleware(http.HandlerFunc(deps.AdminHandler.UpdateUserStatus)))
 	mux.Handle("GET /admin/analytics", adminAuthMiddleware(http.HandlerFunc(deps.AdminHandler.GetAnalytics)))
+
+	// ========== ADMIN PROBLEM ROUTES ========== ⭐ NEW
+	mux.Handle("GET /admin/problems", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.ListAllProblems)))
+	mux.Handle("POST /admin/problems", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.CreateProblem)))
+	mux.Handle("GET /admin/problems/{id}", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.GetProblem)))
+	mux.Handle("PUT /admin/problems/{id}", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.UpdateProblem)))
+	mux.Handle("DELETE /admin/problems/{id}", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.DeleteProblem)))
+	mux.Handle("POST /admin/problems/{id}/publish", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.PublishProblem)))
+	mux.Handle("POST /admin/problems/{id}/archive", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.ArchiveProblem)))
+	mux.Handle("GET /admin/problems/stats", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.GetProblemStats)))
 
 	handler := middleware.Logging(deps.Log)(mux)
 	handler = middleware.CORS(deps.Log, deps.Cfg.CORS.AllowedOrigins)(handler)
