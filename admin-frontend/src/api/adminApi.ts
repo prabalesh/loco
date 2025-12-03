@@ -1,6 +1,7 @@
 import axios from './axios'
 import type { User, AdminAnalytics, LoginCredentials, Language } from '../types'
 import type { Response, SimpleResponse } from '../types/repsonse'
+import type { CreateOrUpdateLanguageRequest } from '../types/request'
 
 export const adminAuthApi = {
   login: (credentials: LoginCredentials) =>
@@ -28,9 +29,13 @@ export const adminUsersApi = {
 }
 
 export const adminLanguagesApi = {
-  getAll: () => axios.get<Response<Language[]>>(`/admin/languages`),
+  getAll: () => axios.get<Response<Language[]>>("/admin/languages"),
+  create: (values: CreateOrUpdateLanguageRequest) => axios.post<Response<Language>>("/admin/languages", values),
+  update: (id: number, values: CreateOrUpdateLanguageRequest) => axios.put<Response<Language>>(`/admin/languages/${id}`, values),
+  getById: (id: number) => axios.get<Response<Language>>(`/admin/languages/${id}`),
   activate: (id: number) => axios.post<SimpleResponse>(`/admin/languages/${id}/activate`),
   deactivate: (id: number) => axios.post<SimpleResponse>(`/admin/languages/${id}/deactivate`),
+  delete: (id: number) => axios.delete<SimpleResponse>(`/admin/languages/${id}`)
 }
 
 export const adminAnalyticsApi = {

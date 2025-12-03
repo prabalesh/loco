@@ -18,6 +18,7 @@ export interface ExecutorConfig {
 export interface Language {
   id: number
   language_id: string
+  version: string
   name: string
   is_active: boolean
   extension: string
@@ -25,6 +26,10 @@ export interface Language {
   executor_config: ExecutorConfig
   created_at: Date
   updated_at: Date
+}
+
+export interface Problem {
+  
 }
 
 export interface AdminAnalytics {
