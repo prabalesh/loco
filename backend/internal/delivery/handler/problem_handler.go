@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -67,14 +68,16 @@ func (h *ProblemHandler) ListProblems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := map[string]interface{}{
-		"problems": problems,
-		"total":    total,
-		"page":     req.Page,
-		"limit":    req.Limit,
+	response := PaginatedResponse[[]*domain.Problem]{
+		Data:  problems,
+		Total: total,
+		Page:  req.Page,
+		Limit: req.Limit,
 	}
 
-	RespondJSON(w, http.StatusOK, response)
+	fmt.Println(response)
+
+	RespondPaginatedJSON(w, http.StatusOK, response)
 }
 
 // ========== ADMIN ENDPOINTS ==========
@@ -247,14 +250,14 @@ func (h *ProblemHandler) ListAllProblems(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	response := map[string]interface{}{
-		"problems": problems,
-		"total":    total,
-		"page":     req.Page,
-		"limit":    req.Limit,
+	response := PaginatedResponse[[]*domain.Problem]{
+		Data:  problems,
+		Total: total,
+		Page:  req.Page,
+		Limit: req.Limit,
 	}
 
-	RespondJSON(w, http.StatusOK, response)
+	RespondPaginatedJSON(w, http.StatusOK, response)
 }
 
 // PublishProblem changes problem status to published (admin only)

@@ -9,6 +9,19 @@ type Response[T any] struct {
 	Data T `json:"data"`
 }
 
+type PaginatedResponse[T any] struct {
+	Total int `json:"total"`
+	Page  int `json:"page"`
+	Limit int `json:"limit"`
+	Data  T   `json:"data"`
+}
+
+func RespondPaginatedJSON[T any](w http.ResponseWriter, status int, data T) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
+
 func RespondJSON[T any](w http.ResponseWriter, status int, data T) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
