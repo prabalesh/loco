@@ -24,6 +24,7 @@ type Dependencies struct {
 	AdminHandler     *handler.AdminHandler
 	AdminAuthHandler *handler.AdminAuthHandler
 	ProblemHandler   *handler.ProblemHandler
+	LanguageHandler  *handler.LanguageHandler
 }
 
 func SetupRouter(deps *Dependencies) http.Handler {
@@ -49,9 +50,13 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	mux.Handle("GET /users/me", authMiddleware(http.HandlerFunc(deps.UserHandler.GetProfile)))
 	mux.Handle("GET /users/{username}", authMiddleware(http.HandlerFunc(deps.UserHandler.GetProfileByUsername)))
 
-	// ========== PROBLEM ROUTES (PUBLIC) ========== ⭐ NEW
+	// ========== PROBLEM ROUTES (PUBLIC) ==========
 	mux.HandleFunc("GET /problems", deps.ProblemHandler.ListProblems)
 	mux.HandleFunc("GET /problems/{identifier}", deps.ProblemHandler.GetProblem)
+
+	// // ========== LANGUAGE ROUTES (PUBLIC)
+	// mux.HandleFunc("GET /languages", deps.LanguageHandler.ListActiveLanguages)
+	// mux.HandleFunc("GET /languages/{identifier}", deps.LanguageHandler.GetLanguage)
 
 	// Other protected routes
 	mux.Handle("GET /submissions", authMiddleware(http.HandlerFunc(placeholderHandler("Submissions"))))
@@ -73,7 +78,7 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	mux.Handle("PATCH /admin/users/{id}/status", adminAuthMiddleware(http.HandlerFunc(deps.AdminHandler.UpdateUserStatus)))
 	mux.Handle("GET /admin/analytics", adminAuthMiddleware(http.HandlerFunc(deps.AdminHandler.GetAnalytics)))
 
-	// ========== ADMIN PROBLEM ROUTES ========== ⭐ NEW
+	// ========== ADMIN PROBLEM ROUTES ==========
 	mux.Handle("GET /admin/problems", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.ListAllProblems)))
 	mux.Handle("POST /admin/problems", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.CreateProblem)))
 	mux.Handle("GET /admin/problems/{id}", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.GetProblem)))
@@ -82,6 +87,16 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	mux.Handle("POST /admin/problems/{id}/publish", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.PublishProblem)))
 	mux.Handle("POST /admin/problems/{id}/archive", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.ArchiveProblem)))
 	mux.Handle("GET /admin/problems/stats", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.GetProblemStats)))
+
+	// ========== ADMIN LANGUAGE ROUTES
+	mux.Handle("POST /admin/languages", adminAuthMiddleware(http.HandlerFunc(deps.LanguageHandler.CreateLanguage)))
+	mux.Handle("GET /admin/languages", adminAuthMiddleware(http.HandlerFunc(deps.LanguageHandler.ListLanguages)))
+	mux.Handle("GET /admin/languages/active", adminAuthMiddleware(http.HandlerFunc(deps.LanguageHandler.ListActiveLanguages)))
+	mux.Handle("GET /admin/languages/{id}", adminAuthMiddleware(http.HandlerFunc(deps.LanguageHandler.GetLanguage)))
+	mux.Handle("PUT /admin/languages/{id}", adminAuthMiddleware(http.HandlerFunc(deps.LanguageHandler.UpdateLanguage)))
+	mux.Handle("DELETE /admin/languages/{id}", adminAuthMiddleware(http.HandlerFunc(deps.LanguageHandler.DeleteLanguage)))
+	mux.Handle("POST /admin/languages/{id}/activate", adminAuthMiddleware(http.HandlerFunc(deps.LanguageHandler.ActivateLanguage)))
+	mux.Handle("POST /admin/languages/{id}/deactivate", adminAuthMiddleware(http.HandlerFunc(deps.LanguageHandler.DeactivateLanguage)))
 
 	handler := middleware.Logging(deps.Log)(mux)
 	handler = middleware.CORS(deps.Log, deps.Cfg.CORS.AllowedOrigins)(handler)

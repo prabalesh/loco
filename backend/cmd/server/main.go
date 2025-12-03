@@ -99,6 +99,7 @@ func main() {
 func initializeDependencies(db *database.Database, logger *zap.Logger, cfg *config.Config) *router.Dependencies {
 	userRepo := postgres.NewUserRepository(db)
 	problemRepo := postgres.NewProblemRepository(db)
+	languageRepo := postgres.NewLanguageRepository(db) // ⭐ NEW
 
 	jwtService := auth.NewJWTService(cfg.JWT.AccessTokenSecret, cfg.JWT.RefreshTokenSecret, cfg.JWT.AccessTokenExpiration, cfg.JWT.RefreshTokenExpiration)
 	emailService := email.NewEmailService(cfg, logger)
@@ -109,12 +110,14 @@ func initializeDependencies(db *database.Database, logger *zap.Logger, cfg *conf
 	userUsecase := usecase.NewUserUsecase(userRepo, logger)
 	adminUsecase := usecase.NewAdminUsecase(userRepo, logger)
 	problemUsecase := usecase.NewProblemUsecase(problemRepo, cfg, logger)
+	languageUsecase := usecase.NewLanguageUsecase(languageRepo, cfg, logger) // ⭐ NEW
 
 	authHanlder := handler.NewAuthHandler(authUsecase, logger, cfg, cookieManager)
 	userHandler := handler.NewUserHandler(userUsecase, logger)
 	adminAuthHandler := handler.NewAdminAuthHandler(authUsecase, logger, cfg, cookieManager)
 	adminHandler := handler.NewAdminHandler(adminUsecase, logger)
 	problemHandler := handler.NewProblemHandler(problemUsecase, logger, cfg)
+	languageHandler := handler.NewLanguageHandler(languageUsecase, logger, cfg) // ⭐ NEW
 
 	return &router.Dependencies{
 		Log:              logger,
@@ -126,5 +129,6 @@ func initializeDependencies(db *database.Database, logger *zap.Logger, cfg *conf
 		AdminHandler:     adminHandler,
 		AdminAuthHandler: adminAuthHandler,
 		ProblemHandler:   problemHandler,
+		LanguageHandler:  languageHandler, // ⭐ NEW
 	}
 }
