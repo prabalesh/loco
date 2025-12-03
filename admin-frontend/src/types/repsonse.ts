@@ -1,13 +1,8 @@
-export interface Pagination {
+export interface PaginatedResponse<T> {
+  data: T;
   page: number;
   limit: number;
-  totalItems: number;
-  totalPages: number;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  pagination: Pagination;
+  total: number;
 }
 
 export interface Response<T> {

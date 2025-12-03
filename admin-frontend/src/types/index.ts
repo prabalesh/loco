@@ -29,7 +29,24 @@ export interface Language {
 }
 
 export interface Problem {
-  
+  id: number
+  title: string
+  slug: string
+  description: string
+  difficulty: "easy" | "medium" | "hard"
+  time_limit: number
+  memory_limit: number
+  validator_type: "exact_match"
+  input_format: string
+  output_format: string
+  constraints: string
+  status: "draft" | "published"
+  is_active: boolean
+  acceptance_rate: number
+  total_submissions: 0
+  total_accepted: number
+  created_at: Date
+  updated_at: Date
 }
 
 export interface AdminAnalytics {
