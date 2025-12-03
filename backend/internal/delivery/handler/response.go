@@ -5,10 +5,14 @@ import (
 	"net/http"
 )
 
-func RespondJSON(w http.ResponseWriter, status int, data interface{}) {
+type Response[T any] struct {
+	Data T `json:"data"`
+}
+
+func RespondJSON[T any](w http.ResponseWriter, status int, data T) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+	json.NewEncoder(w).Encode(Response[T]{Data: data})
 }
 
 func RespondError(w http.ResponseWriter, status int, message string) {
