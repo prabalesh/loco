@@ -1,6 +1,6 @@
-// src/api/adminApi.ts
 import axios from './axios'
-import type { User, AdminAnalytics, LoginCredentials } from '../types'
+import type { User, AdminAnalytics, LoginCredentials, Language } from '../types'
+import type { Response, SimpleResponse } from '../types/repsonse'
 
 export const adminAuthApi = {
   login: (credentials: LoginCredentials) =>
@@ -14,7 +14,7 @@ export const adminAuthApi = {
 }
 
 export const adminUsersApi = {
-  getAll: () => axios.get<User[]>('/admin/users'),
+  getAll: () => axios.get<Response<User[]>>('/admin/users'),
 
   getById: (id: number) => axios.get<User>(`/admin/users/${id}`),
 
@@ -25,6 +25,12 @@ export const adminUsersApi = {
 
   updateStatus: (id: number, isActive: boolean) =>
     axios.patch(`/admin/users/${id}/status`, { is_active: isActive }),
+}
+
+export const adminLanguagesApi = {
+  getAll: () => axios.get<Response<Language[]>>(`/admin/languages`),
+  activate: (id: number) => axios.post<SimpleResponse>(`/admin/languages/${id}/activate`),
+  deactivate: (id: number) => axios.post<SimpleResponse>(`/admin/languages/${id}/deactivate`),
 }
 
 export const adminAnalyticsApi = {
