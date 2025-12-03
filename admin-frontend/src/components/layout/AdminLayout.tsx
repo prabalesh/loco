@@ -9,6 +9,7 @@ import {
   Users,
   Shield,
   Code2,
+  Globe,
 } from 'lucide-react'
 import { useAuthStore } from '../../features/auth/store/authStore'
 import { adminAuthApi } from '../../api/adminApi'
@@ -49,6 +50,12 @@ export const AdminLayout = () => {
       icon: <Code2 className="w-5 h-5" />,
       label: 'Problems',
       onClick: () => navigate('/problems'),
+    },
+    {
+      key: '/languages',
+      icon: <Globe className="w-5 h-5" />,
+      label: 'Languages',
+      onClick: () => navigate('/languages'),
     },
   ]
 

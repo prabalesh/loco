@@ -11,6 +11,7 @@ import { useAuthStore } from './features/auth/store/authStore'
 import { useEffect, useState } from 'react'
 import { adminAuthApi } from './api/adminApi'
 import ProblemList from './features/problems/components/ProblemList'
+import LanguageList from './features/languages/components/LangageList'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,6 +75,7 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/users" element={<UsersList />} />
               <Route path="/problems" element={<ProblemList />} />
+              <Route path="/languages" element={<LanguageList />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />
