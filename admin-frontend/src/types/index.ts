@@ -1,4 +1,3 @@
-// src/types/index.ts
 export interface User {
   id: number
   email: string
@@ -8,6 +7,24 @@ export interface User {
   email_verified: boolean
   created_at: string
   updated_at: string
+}
+
+export interface ExecutorConfig {
+  docker_image: string
+  memory_limit: number
+  timeout: number
+}
+
+export interface Language {
+  id: number
+  language_id: string
+  name: string
+  is_active: boolean
+  extension: string
+  default_template: string
+  executor_config: ExecutorConfig
+  created_at: Date
+  updated_at: Date
 }
 
 export interface AdminAnalytics {
