@@ -30,7 +30,7 @@ func NewLanguageHandler(languageUsecase *usecase.LanguageUsecase, logger *zap.Lo
 
 // GetLanguage retrieves a single language (public endpoint)
 func (h *LanguageHandler) GetLanguage(w http.ResponseWriter, r *http.Request) {
-	identifier := r.PathValue("identifier") // Can be ID or language_id
+	identifier := r.PathValue("id") // Can be ID or language_id
 
 	language, err := h.languageUsecase.GetLanguage(identifier)
 	if err != nil {
