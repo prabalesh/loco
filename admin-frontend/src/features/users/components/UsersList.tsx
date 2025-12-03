@@ -27,13 +27,15 @@ export const UsersList = () => {
   const queryClient = useQueryClient()
   const [editingRole, setEditingRole] = useState<{ userId: number; role: string } | null>(null)
 
-  const { data: users, isFetching, refetch } = useQuery({
+  const { data, isFetching, refetch } = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
       const response = await adminUsersApi.getAll()
       return response.data
     },
   })
+
+  const users = data?.data || []
 
   const deleteMutation = useMutation({
     mutationFn: (userId: number) => adminUsersApi.deleteUser(userId),
