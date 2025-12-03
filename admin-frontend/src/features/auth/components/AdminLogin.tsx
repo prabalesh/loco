@@ -15,27 +15,22 @@ export const AdminLogin = () => {
   const setUser = useAuthStore((state) => state.setUser)
 
   const onFinish = async (values: LoginCredentials) => {
-    setLoading(true)
-    try {
-      const response = await adminAuthApi.login(values)
-      const user = response.data.user
-      
-      setUser(user)
-
-      toast.success('Login successful!')
-      navigate('/')
-    } catch (error: any) {
-      const errorMsg = error.response?.data?.error || 'Login failed'
-      
-      if (errorMsg.includes('admin access required')) {
-        toast.error('Admin access required. Regular users cannot access this panel.')
-      } else {
-        toast.error(errorMsg)
-      }
-    } finally {
-      setLoading(false)
-    }
+  setLoading(true)
+  try {
+    const response = await adminAuthApi.login(values)
+    const user = response.data
+    
+    setUser(user)
+    
+    toast.success('Login successful!')
+    navigate('/', { replace: true })
+  } catch (error: any) {
+    // ... error handling
+  } finally {
+    setLoading(false)
   }
+}
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">

@@ -25,27 +25,32 @@ const queryClient = new QueryClient({
 function App() {
   const [isLoading, setIsLoading] = useState(true)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const logout = useAuthStore((state) => state.logout)
 
   const setUser = useAuthStore((s) => s.setUser)
 
   useEffect(() => {
-    // Give Zustand persist time to rehydrate from localStorage
     const timer = setTimeout(() => setIsLoading(false), 100)
     return () => clearTimeout(timer)
   }, [])
 
   useEffect(() => {
-    const fetchMe = async () => {
-        try {
-          const user = (await adminAuthApi.getProfile()).data
-          setUser(user)
-        } catch (err) {
-          console.error('Auth check failed:', err)
+    const initAuth = async () => {
+      try {
+        const response = await adminAuthApi.getProfile()
+        setUser(response.data)
+      } catch (err: any) {
+        if (err?.response?.status === 401) {
+          logout()
         }
+        console.error('Auth check failed:', err)
+      } finally {
+        setIsLoading(false)
       }
+    }
 
-      fetchMe()
-  }, [])
+    initAuth()
+  }, [setUser, logout])
 
   if (isLoading) {
     return (
