@@ -1,7 +1,7 @@
 import axios from './axios'
-import type { User, AdminAnalytics, LoginCredentials, Language } from '../types'
-import type { Response, SimpleResponse } from '../types/repsonse'
-import type { CreateOrUpdateLanguageRequest } from '../types/request'
+import type { User, AdminAnalytics, LoginCredentials, Language, Problem } from '../types'
+import type { PaginatedResponse, Response, SimpleResponse } from '../types/repsonse'
+import type { CreateOrUpdateLanguageRequest, CreateOrUpdateProblemRequest } from '../types/request'
 
 export const adminAuthApi = {
   login: (credentials: LoginCredentials) =>
@@ -36,6 +36,15 @@ export const adminLanguagesApi = {
   activate: (id: number) => axios.post<SimpleResponse>(`/admin/languages/${id}/activate`),
   deactivate: (id: number) => axios.post<SimpleResponse>(`/admin/languages/${id}/deactivate`),
   delete: (id: number) => axios.delete<SimpleResponse>(`/admin/languages/${id}`)
+}
+
+export const adminProblemApi = {
+  getAll: () => axios.get<PaginatedResponse<Problem[]>>("/admin/problems"),
+  create: (values: CreateOrUpdateProblemRequest) =>
+    axios.post<Problem>("/admin/problems", values),
+  update: (id: number, values: CreateOrUpdateProblemRequest) =>
+    axios.put<Problem>(`/admin/problems/${id}`, values),
+  delete: (id: number) => axios.delete<void>(`/admin/problems/${id}`),
 }
 
 export const adminAnalyticsApi = {
