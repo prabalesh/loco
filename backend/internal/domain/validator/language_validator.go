@@ -111,6 +111,7 @@ func isValidLanguageID(id string) bool {
 		"java":       true,
 		"go":         true,
 		"rust":       true,
+		"brainfuck":  true,
 	}
 	return validIDs[strings.ToLower(id)]
 }
@@ -124,6 +125,7 @@ func isValidExtension(ext string) bool {
 		".java": true,
 		".go":   true,
 		".rs":   true,
+		".bf":   true,
 	}
 	return validExts[ext]
 }
