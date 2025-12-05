@@ -53,7 +53,7 @@ export const adminTestcaseApi = {
     axios.get<PaginatedResponse<TestCase[]>>(`/admin/problems/${problemId}/test-cases`),
   create: (problemId: number, data: CreateTestCaseRequest) =>
     axios.post<Response<TestCase>>(`/admin/problems/${problemId}/test-cases`, data),
-  update: (problemId: number, testcaseId: number, data: CreateTestCaseRequest) =>
+  update: (testcaseId: number, data: CreateTestCaseRequest) =>
     axios.put<Response<TestCase>>(`/admin/test-cases/${testcaseId}`, data),
   delete: (problemId: number, testcaseId: number) =>
     axios.delete(`/admin/problems/${problemId}/test-cases/${testcaseId}`),

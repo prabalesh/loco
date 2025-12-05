@@ -40,7 +40,7 @@ export default function TestCaseList({ problemId }: TestCaseListProps) {
 
   const updateMutation = useMutation({
     mutationFn: ({ testcaseId, values }: { testcaseId: number; values: CreateTestCaseRequest }) =>
-      adminTestcaseApi.update(problemId, testcaseId, values),
+      adminTestcaseApi.update(testcaseId, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["testcases", problemId] });
       toast.success("Test case updated");
@@ -142,7 +142,7 @@ export default function TestCaseList({ problemId }: TestCaseListProps) {
       title: "Actions",
       key: "actions",
       width: 120,
-      render: (_, record: TestCase) => (
+      render: (_:unknown, record: TestCase) => (
         <div className="flex space-x-1">
           <Button
             type="link"
