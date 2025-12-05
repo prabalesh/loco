@@ -33,7 +33,7 @@ func NewProblemHandler(problemUsecase *usecase.ProblemUsecase, logger *zap.Logge
 
 // GetProblem retrieves a single problem (public endpoint)
 func (h *ProblemHandler) GetProblem(w http.ResponseWriter, r *http.Request) {
-	identifier := r.PathValue("identifier") // Can be ID or slug
+	identifier := r.PathValue("id") // Can be ID or slug
 
 	problem, err := h.problemUsecase.GetProblem(identifier)
 	if err != nil {

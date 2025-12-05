@@ -25,6 +25,7 @@ type Dependencies struct {
 	AdminAuthHandler *handler.AdminAuthHandler
 	ProblemHandler   *handler.ProblemHandler
 	LanguageHandler  *handler.LanguageHandler
+	TestCaseHandler  *handler.TestCaseHandler // Add this
 }
 
 func SetupRouter(deps *Dependencies) http.Handler {
@@ -53,6 +54,10 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	// ========== PROBLEM ROUTES (PUBLIC) ==========
 	mux.HandleFunc("GET /problems", deps.ProblemHandler.ListProblems)
 	mux.HandleFunc("GET /problems/{identifier}", deps.ProblemHandler.GetProblem)
+
+	// ========== TEST CASE ROUTES (PUBLIC) ==========
+	// Public route for getting sample test cases
+	mux.HandleFunc("GET /problems/{problem_id}/test-cases/samples", deps.TestCaseHandler.GetSampleTestCases)
 
 	// // ========== LANGUAGE ROUTES (PUBLIC)
 	// mux.HandleFunc("GET /languages", deps.LanguageHandler.ListActiveLanguages)
@@ -88,7 +93,16 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	mux.Handle("POST /admin/problems/{id}/archive", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.ArchiveProblem)))
 	mux.Handle("GET /admin/problems/stats", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.GetProblemStats)))
 
-	// ========== ADMIN LANGUAGE ROUTES
+	// ========== ADMIN TEST CASE ROUTES ==========
+	mux.Handle("POST /admin/problems/{problem_id}/test-cases", adminAuthMiddleware(http.HandlerFunc(deps.TestCaseHandler.CreateTestCase)))
+	mux.Handle("GET /admin/problems/{problem_id}/test-cases", adminAuthMiddleware(http.HandlerFunc(deps.TestCaseHandler.ListTestCases)))
+	mux.Handle("GET /admin/problems/{problem_id}/test-cases/count", adminAuthMiddleware(http.HandlerFunc(deps.TestCaseHandler.CountTestCasesByProblem)))
+	mux.Handle("DELETE /admin/problems/{problem_id}/test-cases", adminAuthMiddleware(http.HandlerFunc(deps.TestCaseHandler.DeleteAllTestCases)))
+	mux.Handle("POST /admin/problems/{problem_id}/test-cases/reorder", adminAuthMiddleware(http.HandlerFunc(deps.TestCaseHandler.ReorderTestCases)))
+	mux.Handle("PUT /admin/test-cases/{id}", adminAuthMiddleware(http.HandlerFunc(deps.TestCaseHandler.UpdateTestCase)))
+	mux.Handle("DELETE /admin/test-cases/{id}", adminAuthMiddleware(http.HandlerFunc(deps.TestCaseHandler.DeleteTestCase)))
+
+	// ========== ADMIN LANGUAGE ROUTES ==========
 	mux.Handle("POST /admin/languages", adminAuthMiddleware(http.HandlerFunc(deps.LanguageHandler.CreateLanguage)))
 	mux.Handle("GET /admin/languages", adminAuthMiddleware(http.HandlerFunc(deps.LanguageHandler.ListLanguages)))
 	mux.Handle("GET /admin/languages/active", adminAuthMiddleware(http.HandlerFunc(deps.LanguageHandler.ListActiveLanguages)))
