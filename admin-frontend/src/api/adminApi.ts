@@ -1,7 +1,7 @@
 import axios from './axios'
-import type { User, AdminAnalytics, LoginCredentials, Language, Problem } from '../types'
+import type { User, AdminAnalytics, LoginCredentials, Language, Problem, TestCase } from '../types'
 import type { PaginatedResponse, Response, SimpleResponse } from '../types/repsonse'
-import type { CreateOrUpdateLanguageRequest, CreateOrUpdateProblemRequest } from '../types/request'
+import type { CreateOrUpdateLanguageRequest, CreateOrUpdateProblemRequest, CreateTestCaseRequest } from '../types/request'
 
 export const adminAuthApi = {
   login: (credentials: LoginCredentials) =>
@@ -40,12 +40,24 @@ export const adminLanguagesApi = {
 
 export const adminProblemApi = {
   getAll: () => axios.get<PaginatedResponse<Problem[]>>("/admin/problems"),
+  getById: (id: number) => axios.get<Response<Problem>>(`/admin/problems/${id}`),
   create: (values: CreateOrUpdateProblemRequest) =>
     axios.post<Problem>("/admin/problems", values),
   update: (id: number, values: CreateOrUpdateProblemRequest) =>
     axios.put<Problem>(`/admin/problems/${id}`, values),
   delete: (id: number) => axios.delete<void>(`/admin/problems/${id}`),
 }
+
+export const adminTestcaseApi = {
+  getAll: (problemId: number) => 
+    axios.get<PaginatedResponse<TestCase[]>>(`/admin/problems/${problemId}/test-cases`),
+  create: (problemId: number, data: CreateTestCaseRequest) =>
+    axios.post<Response<TestCase>>(`/admin/problems/${problemId}/test-cases`, data),
+  update: (problemId: number, testcaseId: number, data: CreateTestCaseRequest) =>
+    axios.put<Response<TestCase>>(`/admin/test-cases/${testcaseId}`, data),
+  delete: (problemId: number, testcaseId: number) =>
+    axios.delete(`/admin/problems/${problemId}/test-cases/${testcaseId}`),
+};
 
 export const adminAnalyticsApi = {
   getAnalytics: () => axios.get<AdminAnalytics>('/admin/analytics'),

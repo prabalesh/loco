@@ -49,6 +49,18 @@ export interface Problem {
   updated_at: Date
 }
 
+export interface TestCase {
+  id: number;
+  problem_id: number;
+  input: string;
+  expected_output: string;
+  is_hidden: boolean;
+  is_sample: boolean;
+  order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AdminAnalytics {
   total_users: number
   active_users: number

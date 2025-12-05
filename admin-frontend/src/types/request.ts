@@ -20,3 +20,12 @@ export interface CreateOrUpdateProblemRequest {
   status: "draft" | "published";
   is_active: boolean;
 }
+
+export interface CreateTestCaseRequest {
+  problem_id: number;
+  input: string;
+  expected_output: string;
+  is_hidden?: boolean;
+  is_sample?: boolean;
+  order?: number;
+}

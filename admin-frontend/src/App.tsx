@@ -12,6 +12,8 @@ import { useEffect, useState } from 'react'
 import { adminAuthApi } from './api/adminApi'
 import ProblemList from './features/problems/components/ProblemList'
 import LanguageList from './features/languages/components/LangageList'
+import ProblemTestCases from './features/problems/pages/ProblemTestCases'
+import CreateProblem from './features/problems/pages/CreateProblem'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -80,7 +82,10 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/users" element={<UsersList />} />
               <Route path="/problems" element={<ProblemList />} />
+              <Route path="/problems/create" element={<CreateProblem />} />
+              <Route path="/problems/edit/:id" element={<CreateProblem />} />
               <Route path="/languages" element={<LanguageList />} />
+              <Route path="/problems/:problemId/testcases" element={<ProblemTestCases />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

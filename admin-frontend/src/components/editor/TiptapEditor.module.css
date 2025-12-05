@@ -1,0 +1,163 @@
+.editor ul {
+  list-style-type: disc !important;
+  padding-left: 1.5rem;
+  margin: 1rem 0;
+}
+
+.editor ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem;
+  margin: 1rem 0;
+}
+
+.editor li {
+  display: list-item !important;
+  margin-left: 1rem;
+}
+
+.editor li p {
+  margin: 0;
+}
+
+.editor h1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin: 0.67em 0;
+}
+
+.editor h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 0.75em 0;
+}
+
+.editor h3 {
+  font-size: 1.17em;
+  font-weight: bold;
+  margin: 0.83em 0;
+}
+
+.editor p {
+  margin: 1em 0;
+}
+
+.editor mark {
+  background-color: #fef08a;
+  padding: 0.125em 0;
+}
+
+.editor strong {
+  font-weight: bold;
+}
+
+.editor em {
+  font-style: italic;
+}
+
+/* Inline code styling */
+.editor code.inline-code {
+  background-color: #f3f4f6;
+  color: #ef4444;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 500;
+}
+
+/* Code block styling */
+.editor pre {
+  background: #1e293b;
+  color: #e2e8f0;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+
+.editor pre code {
+  color: inherit;
+  padding: 0;
+  background: none;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Syntax highlighting colors for code blocks */
+.editor .hljs-comment,
+.editor .hljs-quote {
+  color: #64748b;
+  font-style: italic;
+}
+
+.editor .hljs-keyword,
+.editor .hljs-selector-tag,
+.editor .hljs-subst {
+  color: #c084fc;
+}
+
+.editor .hljs-number,
+.editor .hljs-literal,
+.editor .hljs-variable,
+.editor .hljs-template-variable {
+  color: #fb923c;
+}
+
+.editor .hljs-string,
+.editor .hljs-doctag {
+  color: #4ade80;
+}
+
+.editor .hljs-title,
+.editor .hljs-section,
+.editor .hljs-selector-id {
+  color: #60a5fa;
+  font-weight: bold;
+}
+
+.editor .hljs-type,
+.editor .hljs-class .hljs-title {
+  color: #fbbf24;
+}
+
+.editor .hljs-tag,
+.editor .hljs-name,
+.editor .hljs-attribute {
+  color: #f472b6;
+}
+
+.editor .hljs-regexp,
+.editor .hljs-link {
+  color: #34d399;
+}
+
+.editor .hljs-symbol,
+.editor .hljs-bullet {
+  color: #a78bfa;
+}
+
+.editor .hljs-built_in,
+.editor .hljs-builtin-name {
+  color: #38bdf8;
+}
+
+.editor .hljs-meta {
+  color: #64748b;
+}
+
+.editor .hljs-deletion {
+  background: #fecaca;
+}
+
+.editor .hljs-addition {
+  background: #bbf7d0;
+}
+
+.editor .hljs-emphasis {
+  font-style: italic;
+}
+
+.editor .hljs-strong {
+  font-weight: bold;
+}
