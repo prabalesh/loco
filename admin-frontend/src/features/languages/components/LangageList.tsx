@@ -310,7 +310,7 @@ export default function LanguageList() {
                     </Form.Item>
                     
                     <Form.Item
-                        name="template"
+                        name="default_template"
                         label="Default Template"
                         rules={[{ required: true, message: 'Please enter default template' }]}
                     >

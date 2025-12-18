@@ -12,14 +12,12 @@ func ValidateCreateLanguageRequest(req *domain.CreateLanguageRequest) map[string
 
 	if req.LanguageID == "" {
 		errors["language_id"] = "language_id is required"
-	} else if !isValidLanguageID(req.LanguageID) {
-		errors["language_id"] = "invalid language_id format (python, cpp, javascript, java, go, rust, c)"
 	}
 
 	if req.Name == "" {
 		errors["name"] = "name is required"
-	} else if len(req.Name) < 2 || len(req.Name) > 50 {
-		errors["name"] = "name must be 2-50 characters"
+	} else if len(req.Name) < 1 || len(req.Name) > 50 {
+		errors["name"] = "name must be 1-50 characters"
 	}
 
 	if req.Version == "" {
@@ -32,8 +30,6 @@ func ValidateCreateLanguageRequest(req *domain.CreateLanguageRequest) map[string
 		errors["extension"] = "extension is required"
 	} else if !strings.HasPrefix(req.Extension, ".") {
 		errors["extension"] = "extension must start with dot (e.g., .py, .cpp)"
-	} else if !isValidExtension(req.Extension) {
-		errors["extension"] = "invalid extension (allowed: .py, .cpp, .js, .java, .c, .go, .rs)"
 	}
 
 	if req.DefaultTemplate != "" && len(req.DefaultTemplate) > 5000 {
@@ -75,11 +71,11 @@ func ValidateUpdateLanguageRequest(req *domain.UpdateLanguageRequest) map[string
 		errors["general"] = "at least one field must be provided for update"
 	}
 
-	if req.LanguageID != "" && !isValidLanguageID(req.LanguageID) {
-		errors["language_id"] = "invalid language_id format (python, cpp, javascript, java, go, rust, c)"
+	if req.LanguageID == "" {
+		errors["language_id"] = "language id is required"
 	}
 
-	if req.Name != "" && (len(req.Name) < 2 || len(req.Name) > 50) {
+	if req.Name != "" && (len(req.Name) < 1 || len(req.Name) > 50) {
 		errors["name"] = "name must be 2-50 characters"
 	}
 
@@ -90,8 +86,6 @@ func ValidateUpdateLanguageRequest(req *domain.UpdateLanguageRequest) map[string
 	if req.Extension != "" {
 		if !strings.HasPrefix(req.Extension, ".") {
 			errors["extension"] = "extension must start with dot (e.g., .py, .cpp)"
-		} else if !isValidExtension(req.Extension) {
-			errors["extension"] = "invalid extension (allowed: .py, .cpp, .js, .java, .c, .go, .rs)"
 		}
 	}
 
@@ -100,32 +94,4 @@ func ValidateUpdateLanguageRequest(req *domain.UpdateLanguageRequest) map[string
 	}
 
 	return errors
-}
-
-func isValidLanguageID(id string) bool {
-	validIDs := map[string]bool{
-		"python":     true,
-		"cpp":        true,
-		"c":          true,
-		"javascript": true,
-		"java":       true,
-		"go":         true,
-		"rust":       true,
-		"brainfuck":  true,
-	}
-	return validIDs[strings.ToLower(id)]
-}
-
-func isValidExtension(ext string) bool {
-	validExts := map[string]bool{
-		".py":   true,
-		".cpp":  true,
-		".c":    true,
-		".js":   true,
-		".java": true,
-		".go":   true,
-		".rs":   true,
-		".bf":   true,
-	}
-	return validExts[ext]
 }
