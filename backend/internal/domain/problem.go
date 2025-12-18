@@ -11,6 +11,7 @@ type Problem struct {
 	Difficulty      string    `json:"difficulty" db:"difficulty"`
 	TimeLimit       int       `json:"time_limit" db:"time_limit"`
 	MemoryLimit     int       `json:"memory_limit" db:"memory_limit"`
+	CurrentStep     int       `json:"current_step" db:"current_step"`
 	ValidatorType   string    `json:"validator_type" db:"validator_type"`
 	InputFormat     string    `json:"input_format" db:"input_format"`
 	OutputFormat    string    `json:"output_format" db:"output_format"`
