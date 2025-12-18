@@ -14,3 +14,14 @@ export const ROUTES = {
   }
 } as const
 
+export const PROBLEM_STEPS = [{
+  label: 'Metadata',
+}, {
+  label: 'Test Cases',
+}, {
+  label: 'Languages',
+}, {
+  label: 'Validate',
+}, {
+  label: 'Publish',
+}]
