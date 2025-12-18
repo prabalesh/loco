@@ -36,6 +36,7 @@ export interface Problem {
   difficulty: "easy" | "medium" | "hard"
   time_limit: number
   memory_limit: number
+  current_step: 1 | 2 | 3 | 4
   validator_type: "exact_match"
   input_format: string
   output_format: string

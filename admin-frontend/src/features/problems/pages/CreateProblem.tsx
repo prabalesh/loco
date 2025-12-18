@@ -6,6 +6,7 @@ import ProblemPreview from "./ProblemPreview"
 import type { CreateOrUpdateProblemRequest } from "../../../types/request"
 import { adminProblemApi } from "../../../api/adminApi"
 import toast from "react-hot-toast"
+import { ProblemStepper } from "../components/ProblemStepper"
 
 export default function CreateProblem() {
   const { id } = useParams()
@@ -132,10 +133,13 @@ export default function CreateProblem() {
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b px-6 py-4">
-        <h1 className="text-2xl font-bold">
+      <div className="bg-white border-b px-6 py-4 text-center">
+        <h1 className="text-3xl font-bold mb-4">
           {isEditMode ? "Edit Problem" : "Create Problem"}
         </h1>
+        <div>
+          <ProblemStepper currentStep={1} model="validate" />
+        </div>
       </div>
 
       {/* Main Content */}

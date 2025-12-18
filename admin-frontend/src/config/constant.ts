@@ -5,4 +5,12 @@ export const ROUTES = {
   DASHBOARD: '/',
   USERS: '/users',
   ANALYTICS: '/analytics',
+  PROBLEMS: {
+    HOME: '/problems',
+    CREATE: '/problems/create',
+    TESTCASES: (id:number) => `/problems/${id}/testcases`,
+    LANGUAGES: (id:number) => `/problems/${id}/languages`,
+    VALIDATE: (id:number) => `/problems/${id}/validate`
+  }
 } as const
+
