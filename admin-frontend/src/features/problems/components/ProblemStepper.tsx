@@ -1,6 +1,5 @@
 import {Box, Step, StepLabel, Stepper} from "@mui/material"
-
-const steps = ['Metadata', 'Test Cases', 'Languages', 'Validate', 'Publish']
+import { PROBLEM_STEPS } from "../../../config/constant";
 
 export type ProblemStepperStep = 1 | 2 | 3| 4
 
@@ -19,7 +18,7 @@ export const ProblemStepper = ({currentStep, model} : ProblemStepperProps) => {
     return (
         <Box sx={{width: '100%', mb: 3}}>
             <Stepper activeStep={activeStep} alternativeLabel>
-                {steps.map(step => (<Step key={step}><StepLabel>{step}</StepLabel></Step>))}
+                {PROBLEM_STEPS.map(step => (<Step key={step.label}><StepLabel>{step.label}</StepLabel></Step>))}
             </Stepper>
         </Box>
     )
