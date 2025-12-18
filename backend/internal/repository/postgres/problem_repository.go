@@ -329,7 +329,7 @@ func (r *problemRepository) List(filters interfaces.ProblemFilters) ([]*domain.P
 	// Fetch problems
 	query := fmt.Sprintf(`
         SELECT id, title, slug, description, difficulty,
-               time_limit, memory_limit, validator_type,
+               time_limit, memory_limit, current_step, validator_type,
                status, visibility, is_active,
                acceptance_rate, total_submissions, total_accepted,
                created_at, updated_at
@@ -358,6 +358,7 @@ func (r *problemRepository) List(filters interfaces.ProblemFilters) ([]*domain.P
 			&problem.Difficulty,
 			&problem.TimeLimit,
 			&problem.MemoryLimit,
+			&problem.CurrentStep,
 			&problem.ValidatorType,
 			&problem.Status,
 			&problem.Visibility,
