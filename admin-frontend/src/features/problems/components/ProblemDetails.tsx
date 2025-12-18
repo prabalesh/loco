@@ -30,17 +30,6 @@ export default function ProblemDetails({ problem }: ProblemDetailsProps) {
           {problem.acceptance_rate.toFixed(1)}%
         </Descriptions.Item>
       </Descriptions>
-
-      <div className="space-y-4">
-        <div>
-          <h3 className="font-semibold mb-2">Description</h3>
-          <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm">{problem.description}</div>
-        </div>
-        <div>
-          <h3 className="font-semibold mb-2">Constraints</h3>
-          <div className="bg-blue-50 p-4 rounded-lg font-mono text-sm">{problem.constraints}</div>
-        </div>
-      </div>
     </div>
   );
 }

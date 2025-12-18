@@ -5,6 +5,7 @@ import { Spin, Alert } from "antd";
 import { adminProblemApi } from "../../../api/adminApi";
 import TestCaseList from "../components/TestCasetList";
 import ProblemDetails from "../components/ProblemDetails";
+import { ProblemStepper } from "../components/ProblemStepper";
 
 export default function ProblemTestCases() {
   const { problemId } = useParams<{ problemId: string }>();
@@ -21,17 +22,17 @@ export default function ProblemTestCases() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Test Cases - {problem.data.title}</h1>
+      <div className="text-center">
+        <h1 className="text-3xl font-bold mb-4">Test Cases - {problem.data.title}</h1>
+        <div>
+          <ProblemStepper currentStep={2} model="validate" />
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* LEFT: Problem Details */}
+      <div className="">
         <div className="bg-white rounded-lg shadow-lg p-6">
           <ProblemDetails problem={problem.data} />
         </div>
-
-        {/* RIGHT: Test Cases */}
         <div className="bg-white rounded-lg shadow-lg p-6">
           <TestCaseList problemId={Number(problemId)} />
         </div>

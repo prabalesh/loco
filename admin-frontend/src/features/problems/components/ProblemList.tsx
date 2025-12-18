@@ -12,6 +12,8 @@ import toast from "react-hot-toast"
 import { useNavigate } from "react-router-dom"
 import type { Problem } from "../../../types"
 import { adminProblemApi } from "../../../api/adminApi"
+import { PROBLEM_STEPS, ROUTES } from "../../../config/constant"
+import { Play } from "lucide-react"
 
 export default function ProblemList() {
   const navigate = useNavigate()
@@ -40,17 +42,10 @@ export default function ProblemList() {
 
   const columns: ColumnsType<Problem> = [
     {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-      width: 70,
-      sorter: (a, b) => a.id - b.id,
-      render: (id) => <span className="font-mono text-gray-600">#{id}</span>,
-    },
-    {
       title: "Title",
       dataIndex: "title",
       key: "title",
+      width: 150,
       render: (title, record) => (
         <div>
           <div className="font-semibold text-gray-900">{title}</div>
@@ -92,6 +87,24 @@ export default function ProblemList() {
       ),
     },
     {
+      title: "Current Step",
+      dataIndex: "current_step",
+      key: "current_step",
+      width: 120,
+      filters: [
+        { text: "Metadata", value: 1 },
+        { text: "Testcases", value: 2 },
+        { text: "Languages", value: 3 },
+        { text: "Validate", value: 4 },
+      ],
+      onFilter: (value, record) => record.status === value,
+      render: (status) => (
+        <Tag>
+          {PROBLEM_STEPS[status-1].label}
+        </Tag>
+      ),
+    },
+    {
       title: "Active",
       dataIndex: "is_active",
       key: "is_active",
@@ -103,36 +116,9 @@ export default function ProblemList() {
       ),
     },
     {
-      title: "Limits",
-      key: "limits",
-      width: 160,
-      render: (_, record) => (
-        <div className="text-xs text-gray-600">
-          <div>⏱️ Time: {record.time_limit}ms</div>
-          <div>💾 Memory: {record.memory_limit}MB</div>
-        </div>
-      ),
-    },
-    {
-      title: "Acceptance",
-      key: "acceptance",
-      width: 160,
-      sorter: (a, b) => a.acceptance_rate - b.acceptance_rate,
-      render: (_, record) => (
-        <div className="text-xs text-gray-600">
-          <div className="font-semibold">
-            {record.acceptance_rate.toFixed(1)}%
-          </div>
-          <div>
-            {record.total_accepted}/{record.total_submissions} AC
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Created",
-      dataIndex: "created_at",
-      key: "created_at",
+      title: "Updated",
+      dataIndex: "updated_at",
+      key: "updated_at",
       width: 150,
       sorter: (a, b) => dayjs(a.created_at).unix() - dayjs(b.created_at).unix(),
       render: (date) => (
@@ -156,6 +142,32 @@ export default function ProblemList() {
             onClick={() => navigate(`/problems/edit/${record.id}`)}
           >
             Edit
+          </Button>
+          <Button
+            type="primary"
+            ghost
+            size="small"
+            icon={<Play className="h-4 w-4" />}
+            onClick={() => {
+              let link = "";
+              switch(record.current_step) {
+                case 1:
+                  link = ROUTES.PROBLEMS.TESTCASES(record.id)
+                  break
+                case 2:
+                  link = ROUTES.PROBLEMS.LANGUAGES(record.id)
+                  break
+                case 3:
+                  link = ROUTES.PROBLEMS.VALIDATE(record.id)
+                  break
+                case 4:
+                  link = ROUTES.PROBLEMS.VALIDATE(record.id)
+                  break
+              }
+              navigate(link)
+            }}
+          >
+            Resume
           </Button>
           <Popconfirm
             title="Delete Problem"
