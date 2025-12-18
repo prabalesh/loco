@@ -10,6 +10,7 @@ type ProblemRepository interface {
 	GetBySlug(slug string) (*domain.Problem, error)
 	List(filters ProblemFilters) ([]*domain.Problem, int, error)
 	SlugExists(slug string) (bool, error)
+	UpdateCurrentStep(id int, newCurrentStep int) error
 	UpdateStats(id int, acceptanceRate float64, totalSubmissions, totalAccepted int) error
 	UpdateStatus(id int, status string) error
 	CountProblems() (int, error)

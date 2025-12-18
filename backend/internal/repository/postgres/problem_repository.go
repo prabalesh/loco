@@ -412,6 +412,34 @@ func (r *problemRepository) TitleExists(title string) (bool, error) {
 	return exists, nil
 }
 
+func (r *problemRepository) UpdateCurrentStep(id int, newCurrentStep int) error {
+	ctx, cancel := database.WithShortTimeout()
+	defer cancel()
+
+	query := `
+		UPDATE problems
+		SET current_step = $1
+		updated_at = NOW()
+		WHERE id = $2
+	`
+
+	result, err := r.db.ExecContext(ctx, query, newCurrentStep, id)
+	if err != nil {
+		return fmt.Errorf("failed to update current step status: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("problem not found")
+	}
+
+	return nil
+}
+
 func (r *problemRepository) UpdateStats(id int, acceptanceRate float64, totalSubmissions, totalAccepted int) error {
 	ctx, cancel := database.WithShortTimeout()
 	defer cancel()
