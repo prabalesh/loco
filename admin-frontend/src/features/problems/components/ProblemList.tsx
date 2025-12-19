@@ -1,231 +1,329 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import type { ColumnsType } from "antd/es/table"
-import { Button, Table, Tag, Popconfirm } from "antd"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  ExclamationCircleOutlined,
-} from "@ant-design/icons"
-import dayjs from "dayjs"
-import toast from "react-hot-toast"
-import { useNavigate } from "react-router-dom"
-import type { Problem } from "../../../types"
-import { adminProblemApi } from "../../../api/adminApi"
-import { PROBLEM_STEPS, ROUTES } from "../../../config/constant"
-import { Play } from "lucide-react"
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Typography,
+  TablePagination,
+  IconButton,
+  Stack,
+  Box,
+  useTheme,
+  alpha,
+} from "@mui/material";
+import {
+  Add as PlusOutlined,
+  Edit as EditOutlined,
+  Delete as DeleteOutlined,
+} from "@mui/icons-material";
+import dayjs from "dayjs";
+import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import { adminProblemApi } from "../../../api/adminApi";
+import { PROBLEM_STEPS, ROUTES } from "../../../config/constant";
+import { Play } from "lucide-react";
+import { useState } from "react";
 
 export default function ProblemList() {
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const theme = useTheme();
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id: number | null; title: string }>({
+    open: false,
+    id: null,
+    title: "",
+  });
 
-  const { data, isFetching } = useQuery({
+  const { data } = useQuery({
     queryKey: ["admin-problems"],
     queryFn: async () => {
-      const res = await adminProblemApi.getAll()
-      return res.data
+      const res = await adminProblemApi.getAll();
+      return res.data;
     },
-  })
+  });
 
-  const problems = data?.data || []
+  const problems = data?.data || [];
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => adminProblemApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-problems"] })
-      toast.success("Problem deleted successfully")
+      queryClient.invalidateQueries({ queryKey: ["admin-problems"] });
+      toast.success("Problem deleted successfully");
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error?.message || "Failed to delete problem")
+      toast.error(error.response?.data?.error?.message || "Failed to delete problem");
     },
-  })
+  });
 
-  const columns: ColumnsType<Problem> = [
-    {
-      title: "Title",
-      dataIndex: "title",
-      key: "title",
-      width: 150,
-      render: (title, record) => (
-        <div>
-          <div className="font-semibold text-gray-900">{title}</div>
-          <div className="text-xs text-gray-500 font-mono">{record.slug}</div>
-        </div>
-      ),
-    },
-    {
-      title: "Difficulty",
-      dataIndex: "difficulty",
-      key: "difficulty",
-      width: 120,
-      filters: [
-        { text: "Easy", value: "easy" },
-        { text: "Medium", value: "medium" },
-        { text: "Hard", value: "hard" },
-      ],
-      onFilter: (value, record) => record.difficulty === value,
-      render: (difficulty) => {
-        const color =
-          difficulty === "easy" ? "green" : difficulty === "medium" ? "orange" : "red"
-        return <Tag color={color}>{difficulty.toUpperCase()}</Tag>
-      },
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      width: 120,
-      filters: [
-        { text: "Draft", value: "draft" },
-        { text: "Published", value: "published" },
-      ],
-      onFilter: (value, record) => record.status === value,
-      render: (status) => (
-        <Tag color={status === "published" ? "blue" : "default"}>
-          {status.toUpperCase()}
-        </Tag>
-      ),
-    },
-    {
-      title: "Current Step",
-      dataIndex: "current_step",
-      key: "current_step",
-      width: 120,
-      filters: [
-        { text: "Metadata", value: 1 },
-        { text: "Testcases", value: 2 },
-        { text: "Languages", value: 3 },
-        { text: "Validate", value: 4 },
-      ],
-      onFilter: (value, record) => record.status === value,
-      render: (status) => (
-        <Tag>
-          {PROBLEM_STEPS[status-1].label}
-        </Tag>
-      ),
-    },
-    {
-      title: "Active",
-      dataIndex: "is_active",
-      key: "is_active",
-      width: 100,
-      render: (isActive: boolean) => (
-        <Tag color={isActive ? "green" : "red"}>
-          {isActive ? "YES" : "NO"}
-        </Tag>
-      ),
-    },
-    {
-      title: "Updated",
-      dataIndex: "updated_at",
-      key: "updated_at",
-      width: 150,
-      sorter: (a, b) => dayjs(a.created_at).unix() - dayjs(b.created_at).unix(),
-      render: (date) => (
-        <span className="text-xs text-gray-600">
-          {dayjs(date).format("MMM DD, YYYY")}
-        </span>
-      ),
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      width: 150,
-      fixed: "right",
-      render: (_, record) => (
-        <div className="flex gap-2">
-          <Button
-            type="primary"
-            ghost
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => navigate(`/problems/edit/${record.id}`)}
-          >
-            Edit
-          </Button>
-          <Button
-            type="primary"
-            ghost
-            size="small"
-            icon={<Play className="h-4 w-4" />}
-            onClick={() => {
-              let link = "";
-              switch(record.current_step) {
-                case 1:
-                  link = ROUTES.PROBLEMS.TESTCASES(record.id)
-                  break
-                case 2:
-                  link = ROUTES.PROBLEMS.LANGUAGES(record.id)
-                  break
-                case 3:
-                  link = ROUTES.PROBLEMS.VALIDATE(record.id)
-                  break
-                case 4:
-                  link = ROUTES.PROBLEMS.VALIDATE(record.id)
-                  break
-              }
-              navigate(link)
-            }}
-          >
-            Resume
-          </Button>
-          <Popconfirm
-            title="Delete Problem"
-            description={`Delete "${record.title}"?`}
-            icon={<ExclamationCircleOutlined style={{ color: "red" }} />}
-            onConfirm={() => deleteMutation.mutate(record.id)}
-            okText="Delete"
-            okButtonProps={{ danger: true }}
-            cancelText="Cancel"
-          >
-            <Button
-              danger
-              size="small"
-              icon={<DeleteOutlined />}
-              loading={deleteMutation.isPending}
-            />
-          </Popconfirm>
-        </div>
-      ),
-    },
-  ]
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const handleConfirmDelete = (id: number, title: string) => {
+    setConfirmDelete({ open: true, id, title });
+  };
+
+  const handleCloseConfirm = () => {
+    setConfirmDelete({ open: false, id: null, title: "" });
+  };
+
+  const handleDelete = () => {
+    if (confirmDelete.id !== null) {
+      deleteMutation.mutate(confirmDelete.id);
+    }
+    handleCloseConfirm();
+  };
+
+  const columns = [
+    { id: "title", label: "Title", minWidth: 150 },
+    { id: "difficulty", label: "Difficulty", minWidth: 120 },
+    { id: "status", label: "Status", minWidth: 120 },
+    { id: "current_step", label: "Current Step", minWidth: 120 },
+    { id: "is_active", label: "Active", minWidth: 100 },
+    { id: "updated_at", label: "Updated", minWidth: 150 },
+    { id: "actions", label: "Actions", minWidth: 150 },
+  ];
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6 p-5 bg-white rounded-lg shadow">
+    <Box sx={{ p: 3, bgcolor: "background.default" }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Problem Management</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <Typography variant="h4" component="h1" gutterBottom fontWeight="bold" color="text.primary">
+            Problem Management
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
             Manage coding problems for your platform
-          </p>
+          </Typography>
         </div>
         <Button
-          type="primary"
-          icon={<PlusOutlined />}
+          variant="contained"
+          color="primary"
+          startIcon={<PlusOutlined />}
           onClick={() => navigate("/problems/create")}
-          size="large"
+          sx={{
+            borderRadius: 2,
+            boxShadow: 1,
+            "&:hover": {
+              boxShadow: 2,
+            },
+          }}
         >
           Create Problem
         </Button>
-      </div>
+      </Stack>
 
-      <div className="bg-white rounded-lg shadow">
-        <Table
-          bordered
-          rowKey="id"
-          columns={columns}
-          dataSource={problems}
-          loading={isFetching || deleteMutation.isPending}
-          pagination={{
-            pageSize: data?.limit || 10,
-            total: data?.total,
-            showSizeChanger: true,
-            showTotal: (total) => `Total ${total} problems`,
+      <Paper
+        sx={{
+          borderRadius: 3,
+          boxShadow: 2,
+          overflow: "hidden",
+          bgcolor: "background.paper",
+        }}
+      >
+        <TableContainer>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                {columns.map((column) => (
+                  <TableCell
+                    key={column.id}
+                    sx={{
+                      fontWeight: "bold",
+                      color: "text.primary",
+                      bgcolor: "background.default",
+                      borderBottom: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                    }}
+                  >
+                    {column.label}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {problems.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((record, index) => (
+                <TableRow
+                  key={record.id}
+                  hover
+                  sx={{
+                    "&:nth-of-type(odd)": {
+                      bgcolor: alpha(theme.palette.primary.main, 0.02),
+                    },
+                    "&:hover": {
+                      bgcolor: alpha(theme.palette.primary.main, 0.08),
+                    },
+                  }}
+                >
+                  <TableCell>
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      {record.title}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      {record.slug}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={record.difficulty.toUpperCase()}
+                      color={
+                        record.difficulty === "easy"
+                          ? "success"
+                          : record.difficulty === "medium"
+                          ? "warning"
+                          : "error"
+                      }
+                      size="small"
+                      sx={{ borderRadius: 1 }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={record.status.toUpperCase()}
+                      color={record.status === "published" ? "info" : "default"}
+                      size="small"
+                      sx={{ borderRadius: 1 }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={PROBLEM_STEPS[record.current_step - 1]?.label || ""}
+                      size="small"
+                      sx={{ borderRadius: 1 }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={record.is_active ? "YES" : "NO"}
+                      color={record.is_active ? "success" : "error"}
+                      size="small"
+                      sx={{ borderRadius: 1 }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="caption" color="textSecondary">
+                      {dayjs(record.updated_at).format("MMM DD, YYYY")}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={1}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<EditOutlined />}
+                        onClick={() => navigate(`/problems/edit/${record.id}`)}
+                        sx={{
+                          borderRadius: 1,
+                          borderColor: "primary.main",
+                          color: "primary.main",
+                          "&:hover": {
+                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                          },
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<Play style={{ width: 16, height: 16 }} />}
+                        onClick={() => {
+                          let link = "";
+                          switch (record.current_step) {
+                            case 1:
+                              link = ROUTES.PROBLEMS.TESTCASES(record.id);
+                              break;
+                            case 2:
+                              link = ROUTES.PROBLEMS.LANGUAGES(record.id);
+                              break;
+                            case 3:
+                            case 4:
+                              link = ROUTES.PROBLEMS.VALIDATE(record.id);
+                              break;
+                          }
+                          navigate(link);
+                        }}
+                        sx={{
+                          borderRadius: 1,
+                          borderColor: "secondary.main",
+                          color: "secondary.main",
+                          "&:hover": {
+                            bgcolor: alpha(theme.palette.secondary.main, 0.1),
+                          },
+                        }}
+                      >
+                        Resume
+                      </Button>
+                      <IconButton
+                        color="error"
+                        size="small"
+                        onClick={() => handleConfirmDelete(record.id, record.title)}
+                        disabled={deleteMutation.isPending}
+                        sx={{
+                          borderRadius: 1,
+                          "&:hover": {
+                            bgcolor: alpha(theme.palette.error.main, 0.1),
+                          },
+                        }}
+                      >
+                        <DeleteOutlined />
+                      </IconButton>
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={data?.total || 0}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          labelRowsPerPage="Rows per page"
+          labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
+          sx={{
+            borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            bgcolor: "background.default",
           }}
-          scroll={{ x: 1400 }}
-          size="middle"
         />
-      </div>
-    </div>
-  )
+      </Paper>
+
+      <Dialog open={confirmDelete.open} onClose={handleCloseConfirm}>
+        <DialogTitle sx={{ fontWeight: "bold" }}>Delete Problem</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete <strong>"{confirmDelete.title}"</strong>?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseConfirm} color="inherit">
+            Cancel
+          </Button>
+          <Button onClick={handleDelete} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
 }
