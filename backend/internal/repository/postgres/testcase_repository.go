@@ -55,10 +55,9 @@ func (r *testCaseRepository) Update(testCase *domain.TestCase) error {
             expected_output = $2,
             is_sample = $3,
             validation_config = $4,
-            order_index = $5,
-            updated_at = NOW()
+            order_index = $5
         WHERE id = $6
-        RETURNING updated_at
+        RETURNING created_at
     `
 
 	var updatedAt sql.NullTime
