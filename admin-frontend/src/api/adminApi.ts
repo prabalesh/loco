@@ -46,6 +46,8 @@ export const adminProblemApi = {
   update: (id: number, values: CreateOrUpdateProblemRequest) =>
     axios.put<Problem>(`/admin/problems/${id}`, values),
   delete: (id: number) => axios.delete<void>(`/admin/problems/${id}`),
+  validateTestCases: (id: number) =>
+    axios.post(`/admin/problems/${id}/test-cases/validate`),
 }
 
 export const adminTestcaseApi = {
