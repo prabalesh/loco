@@ -191,6 +191,31 @@ func (h *ProblemHandler) UpdateProblem(w http.ResponseWriter, r *http.Request) {
 	RespondJSON(w, http.StatusOK, problem)
 }
 
+func (h *ProblemHandler) ValidateTestCases(w http.ResponseWriter, r *http.Request) {
+	adminID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		RespondError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	problemID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid problem ID")
+		return
+	}
+
+	err = h.problemUsecase.ValidateTestCases(problemID, adminID)
+	if err != nil {
+		h.logger.Warn("Test case validation failed", zap.Error(err))
+		RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, map[string]string{
+		"message": "Test cases validated, problem step updated",
+	})
+}
+
 // DeleteProblem deletes a problem (admin only)
 func (h *ProblemHandler) DeleteProblem(w http.ResponseWriter, r *http.Request) {
 	// Get admin ID from context

@@ -101,6 +101,7 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	mux.Handle("POST /admin/problems/{problem_id}/test-cases/reorder", adminAuthMiddleware(http.HandlerFunc(deps.TestCaseHandler.ReorderTestCases)))
 	mux.Handle("PUT /admin/test-cases/{id}", adminAuthMiddleware(http.HandlerFunc(deps.TestCaseHandler.UpdateTestCase)))
 	mux.Handle("DELETE /admin/test-cases/{id}", adminAuthMiddleware(http.HandlerFunc(deps.TestCaseHandler.DeleteTestCase)))
+	mux.Handle("POST /admin/problems/{id}/test-cases/validate", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.ValidateTestCases)))
 
 	// ========== ADMIN LANGUAGE ROUTES ==========
 	mux.Handle("POST /admin/languages", adminAuthMiddleware(http.HandlerFunc(deps.LanguageHandler.CreateLanguage)))

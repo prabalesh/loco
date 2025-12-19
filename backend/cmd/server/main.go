@@ -100,7 +100,7 @@ func initializeDependencies(db *database.Database, logger *zap.Logger, cfg *conf
 	userRepo := postgres.NewUserRepository(db)
 	problemRepo := postgres.NewProblemRepository(db)
 	languageRepo := postgres.NewLanguageRepository(db)
-	testCaseRepo := postgres.NewTestCaseRepository(db) // ⭐ NEW
+	testCaseRepo := postgres.NewTestCaseRepository(db)
 
 	jwtService := auth.NewJWTService(cfg.JWT.AccessTokenSecret, cfg.JWT.RefreshTokenSecret, cfg.JWT.AccessTokenExpiration, cfg.JWT.RefreshTokenExpiration)
 	emailService := email.NewEmailService(cfg, logger)
@@ -110,7 +110,7 @@ func initializeDependencies(db *database.Database, logger *zap.Logger, cfg *conf
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtService, emailService, cfg, logger)
 	userUsecase := usecase.NewUserUsecase(userRepo, logger)
 	adminUsecase := usecase.NewAdminUsecase(userRepo, logger)
-	problemUsecase := usecase.NewProblemUsecase(problemRepo, cfg, logger)
+	problemUsecase := usecase.NewProblemUsecase(problemRepo, testCaseRepo, cfg, logger)
 	languageUsecase := usecase.NewLanguageUsecase(languageRepo, cfg, logger)
 	testCaseUsecase := usecase.NewTestCaseUsecase(testCaseRepo, problemRepo, cfg, logger)
 

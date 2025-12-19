@@ -16,16 +16,18 @@ import (
 )
 
 type ProblemUsecase struct {
-	problemRepo interfaces.ProblemRepository
-	cfg         *config.Config
-	logger      *zap.Logger
+	problemRepo  interfaces.ProblemRepository
+	testcaseRepo interfaces.TestCaseRepository
+	cfg          *config.Config
+	logger       *zap.Logger
 }
 
-func NewProblemUsecase(problemRepo interfaces.ProblemRepository, cfg *config.Config, logger *zap.Logger) *ProblemUsecase {
+func NewProblemUsecase(problemRepo interfaces.ProblemRepository, testcaseRepo interfaces.TestCaseRepository, cfg *config.Config, logger *zap.Logger) *ProblemUsecase {
 	return &ProblemUsecase{
-		problemRepo: problemRepo,
-		cfg:         cfg,
-		logger:      logger,
+		problemRepo:  problemRepo,
+		testcaseRepo: testcaseRepo,
+		cfg:          cfg,
+		logger:       logger,
 	}
 }
 
@@ -203,6 +205,30 @@ func (u *ProblemUsecase) UpdateProblem(problemID int, req *domain.UpdateProblemR
 	)
 
 	return problem, nil
+}
+
+func (u *ProblemUsecase) ValidateTestCases(problemID int, adminID int) error {
+	count, err := u.testcaseRepo.CountByProblemID(problemID)
+	if err != nil {
+		return errors.New("failed to count test cases")
+	}
+
+	if count < 2 {
+		return errors.New("at least 2 test cases are required")
+	}
+
+	// Update problem's current_step to 2
+	err = u.problemRepo.UpdateCurrentStep(problemID, 2)
+	if err != nil {
+		return errors.New("failed to update problem step")
+	}
+
+	u.logger.Info("Problem test cases validated and step updated",
+		zap.Int("problem_id", problemID),
+		zap.Int("admin_id", adminID),
+	)
+
+	return nil
 }
 
 // DeleteProblem deletes a problem
