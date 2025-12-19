@@ -418,7 +418,7 @@ func (r *problemRepository) UpdateCurrentStep(id int, newCurrentStep int) error 
 
 	query := `
 		UPDATE problems
-		SET current_step = $1
+		SET current_step = $1,
 		updated_at = NOW()
 		WHERE id = $2
 	`
