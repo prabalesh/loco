@@ -14,6 +14,7 @@ import ProblemList from './features/problems/components/ProblemList'
 import LanguageList from './features/languages/components/LangageList'
 import ProblemTestCases from './features/problems/pages/ProblemTestCases'
 import CreateProblem from './features/problems/pages/CreateProblem'
+import ProblemLanguage from './features/problems/pages/ProblemLanguage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -86,8 +87,8 @@ function App() {
               <Route path="/problems/edit/:id" element={<CreateProblem />} />
               <Route path="/languages" element={<LanguageList />} />
               <Route path="/problems/:problemId/testcases" element={<ProblemTestCases />} />
+              <Route path="/problems/:problemId/languages" element={<ProblemLanguage />} />
             </Route>
-
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
