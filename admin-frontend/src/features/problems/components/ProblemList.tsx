@@ -68,7 +68,7 @@ export default function ProblemList() {
     },
   });
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
   };
 
@@ -158,7 +158,7 @@ export default function ProblemList() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {problems.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((record, index) => (
+              {problems.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((record, _) => (
                 <TableRow
                   key={record.id}
                   hover

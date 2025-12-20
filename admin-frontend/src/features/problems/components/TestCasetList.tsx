@@ -26,8 +26,6 @@ import {
   Add as PlusOutlined,
   Edit as EditOutlined,
   Delete as DeleteOutlined,
-  Visibility as EyeOutlined,
-  VisibilityOff as EyeInvisibleOutlined,
 } from "@mui/icons-material";
 import { useState } from "react";
 import toast from "react-hot-toast";
