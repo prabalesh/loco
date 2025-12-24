@@ -30,6 +30,7 @@ export const adminUsersApi = {
 
 export const adminLanguagesApi = {
   getAll: () => axios.get<Response<Language[]>>("/admin/languages"),
+  getAllActive: () => axios.get<Response<Language[]>>("/admin/languages/active"),
   create: (values: CreateOrUpdateLanguageRequest) => axios.post<Response<Language>>("/admin/languages", values),
   update: (id: number, values: CreateOrUpdateLanguageRequest) => axios.put<Response<Language>>(`/admin/languages/${id}`, values),
   getById: (id: number) => axios.get<Response<Language>>(`/admin/languages/${id}`),
