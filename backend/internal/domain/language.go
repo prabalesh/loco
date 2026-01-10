@@ -45,13 +45,13 @@ func (ec *ExecutorConfig) Scan(value interface{}) error {
 
 // ProblemLanguage represents the many-to-many relationship between problems and languages
 type ProblemLanguage struct {
-	ProblemID      int        `json:"problem_id" db:"problem_id"`
-	LanguageID     int        `json:"language_id" db:"language_id"`
-	Language       *Language  `json:"language,omitempty"`                             // populated via JOIN
-	CustomTemplate *string    `json:"custom_template,omitempty" db:"custom_template"` // nullable
-	IsEnabled      bool       `json:"is_enabled" db:"is_enabled"`
-	IsVerified     bool       `json:"is_verified" db:"is_verified"`
-	VerifiedAt     *time.Time `json:"verified_at,omitempty" db:"verified_at"` // nullable
-	OrderIndex     int        `json:"order_index" db:"order_index"`
-	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
+	ProblemID    int        `json:"problem_id" db:"problem_id"`
+	LanguageID   int        `json:"language_id" db:"language_id"`
+	FunctionCode string     `json:"function_code" db:"function_code"`
+	MainCode     string     `json:"main_code" db:"main_code"`
+	SolutionCode string     `json:"solution_code" db:"solution_code"`
+	IsValidated  bool       `json:"is_validated" db:"is_validated"`
+	ValidatedAt  *time.Time `json:"validated_at,omitempty" db:"validated_at"`
+	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
 }

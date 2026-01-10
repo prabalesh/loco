@@ -2,6 +2,8 @@ import axios from './axios'
 import type { User, AdminAnalytics, LoginCredentials, Language, Problem, TestCase } from '../types'
 import type { PaginatedResponse, Response, SimpleResponse } from '../types/repsonse'
 import type { CreateOrUpdateLanguageRequest, CreateOrUpdateProblemRequest, CreateTestCaseRequest } from '../types/request'
+import type { CreateProblemLanguageRequest, ProblemLanguage, UpdateProblemLanguageRequest, ValidationResult } from '../types/problemLanguage'
+
 
 export const adminAuthApi = {
   login: (credentials: LoginCredentials) =>
@@ -13,6 +15,7 @@ export const adminAuthApi = {
 
   getProfile: () => axios.get<User>('/admin/auth/me'),
 }
+
 
 export const adminUsersApi = {
   getAll: () => axios.get<Response<User[]>>('/admin/users'),
@@ -28,6 +31,7 @@ export const adminUsersApi = {
     axios.patch(`/admin/users/${id}/status`, { is_active: isActive }),
 }
 
+
 export const adminLanguagesApi = {
   getAll: () => axios.get<Response<Language[]>>("/admin/languages"),
   getAllActive: () => axios.get<Response<Language[]>>("/admin/languages/active"),
@@ -38,6 +42,7 @@ export const adminLanguagesApi = {
   deactivate: (id: number) => axios.post<SimpleResponse>(`/admin/languages/${id}/deactivate`),
   delete: (id: number) => axios.delete<SimpleResponse>(`/admin/languages/${id}`)
 }
+
 
 export const adminProblemApi = {
   getAll: () => axios.get<PaginatedResponse<Problem[]>>("/admin/problems"),
@@ -51,6 +56,7 @@ export const adminProblemApi = {
     axios.post(`/admin/problems/${id}/test-cases/validate`),
 }
 
+
 export const adminTestcaseApi = {
   getAll: (problemId: number) => 
     axios.get<PaginatedResponse<TestCase[]>>(`/admin/problems/${problemId}/test-cases`),
@@ -61,6 +67,35 @@ export const adminTestcaseApi = {
   delete: (problemId: number, testcaseId: number) =>
     axios.delete(`/admin/problems/${problemId}/test-cases/${testcaseId}`),
 };
+
+
+// NEW: Problem Languages API
+export const adminProblemLanguagesApi = {
+  // Get all languages configured for a problem
+  getAll: (problemId: number) =>
+    axios.get<Response<ProblemLanguage[]>>(`/admin/problems/${problemId}/languages`),
+
+  // Get specific language configuration for a problem
+  getById: (problemId: number, languageId: number) =>
+    axios.get<Response<ProblemLanguage>>(`/admin/problems/${problemId}/languages/${languageId}`),
+
+  // Create new language configuration for a problem
+  create: (problemId: number, data: CreateProblemLanguageRequest) =>
+    axios.post<Response<ProblemLanguage>>(`/admin/problems/${problemId}/languages`, data),
+
+  // Update existing language configuration
+  update: (problemId: number, languageId: number, data: UpdateProblemLanguageRequest) =>
+    axios.put<Response<ProblemLanguage>>(`/admin/problems/${problemId}/languages/${languageId}`, data),
+
+  // Delete language configuration
+  delete: (problemId: number, languageId: number) =>
+    axios.delete<SimpleResponse>(`/admin/problems/${problemId}/languages/${languageId}`),
+
+  // Validate language configuration with test cases
+  validate: (problemId: number, languageId: number) =>
+    axios.post<Response<ValidationResult>>(`/admin/problems/${problemId}/languages/${languageId}/validate`),
+};
+
 
 export const adminAnalyticsApi = {
   getAnalytics: () => axios.get<AdminAnalytics>('/admin/analytics'),

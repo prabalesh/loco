@@ -1,264 +1,181 @@
-import { useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useState, useCallback, useEffect } from "react";
 import {
-  Box,
   Container,
   Paper,
   Typography,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Tabs,
-  Tab,
-  Alert,
-  Chip,
+  Box,
   CircularProgress,
 } from "@mui/material";
-import Editor from "@monaco-editor/react";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { ProblemStepper } from "../components/ProblemStepper";
-import { adminLanguagesApi } from "../../../api/adminApi";
-import type { Language } from "../../../types";
-
-type ProblemLanguage = {
-  language_id: number;
-  language_name: string;
-  function_code: string;
-  main_code: string;
-  solution_code: string;
-  is_validated: boolean;
-};
-
-type EditorTab = "function" | "main" | "solution";
+import { useAvailableLanguages } from "../hooks/useAvailableLanguages";
+import { useProblemLanguages } from "../hooks/useProblemLanguages";
+import { useEditorState } from "../hooks/useEditorState";
+import { useLanguageManager } from "../hooks/useLanguageManager";
+import { LanguageSelector } from "../components/LanguageSelector";
+import { LanguageChips } from "../components/LanguageChips";
+import { CodeEditor } from "../components/CodeEditor";
+import { EmptyEditorState } from "../components/EmptyEditorState";
+import { AlertMessage } from "../components/AlertMessage";
 
 export default function ProblemLanguage() {
   const { problemId } = useParams<{ problemId: string }>();
+  const navigate = useNavigate();
 
-  const [availableLanguages, setAvailableLanguages] = useState<Language[]>([]);
-  const [problemLanguages, setProblemLanguages] = useState<ProblemLanguage[]>([]);
+  // Fetch available languages
+  const { availableLanguages, loading: langLoading } = useAvailableLanguages();
+
+  // Fetch and manage problem languages
+  const {
+    problemLanguages,
+    loading: probLoading,
+    saving,
+    error: hookError,
+    saveLanguage,
+    deleteLanguage,
+  } = useProblemLanguages(problemId);
+
+  // Local UI state
   const [selectedLangId, setSelectedLangId] = useState<number | null>(null);
-  const [currentTab, setCurrentTab] = useState<EditorTab>("function");
-
-  const [functionCode, setFunctionCode] = useState("");
-  const [mainCode, setMainCode] = useState("");
-  const [solutionCode, setSolutionCode] = useState("");
-
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Fetch active languages
+  // Editor state management
+  const {
+    currentTab,
+    setCurrentTab,
+    editorContent,
+    updateEditorContent,
+    resetEditorContent,
+  } = useEditorState(selectedLangId, problemLanguages);
+
+  // Language utilities
+  const { unusedLanguages, getLanguageById, getEditorLanguage } =
+    useLanguageManager(availableLanguages, problemLanguages);
+
+  // Sync hook error with local error state
   useEffect(() => {
-    const fetchLanguages = async () => {
-      try {
-        const response = await adminLanguagesApi.getAllActive();
-        const languages = response.data.data.map((lang: any) => ({
-          id: lang.id,
-          name: lang.name,
-          display_name: `${lang.name.charAt(0).toUpperCase() + lang.name.slice(1)} ${lang.version}`,
-          version: lang.version,
-          extension: lang.extension,
-          default_template: lang.default_template,
-        }));
-        setAvailableLanguages(languages);
-      } catch (err) {
-        setError("Failed to load languages");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLanguages();
-  }, []);
-
-  // Fetch problem languages
-  useEffect(() => {
-    const fetchProblemLanguages = async () => {
-      if (!problemId) return;
-
-      try {
-        // TODO: Replace with actual API call
-        // const response = await fetch(`/admin/api/problems/${problemId}/languages`);
-        // const data = await response.json();
-        // setProblemLanguages(data.languages);
-
-        // Mock data for now
-        setProblemLanguages([]);
-      } catch (err) {
-        console.error("Failed to load problem languages:", err);
-        setProblemLanguages([]);
-      }
-    };
-
-    fetchProblemLanguages();
-  }, [problemId]);
-
-  // Load selected language's code into editors
-  useEffect(() => {
-    if (selectedLangId) {
-      const lang = problemLanguages.find((l) => l.language_id === selectedLangId);
-      if (lang) {
-        setFunctionCode(lang.function_code);
-        setMainCode(lang.main_code);
-        setSolutionCode(lang.solution_code);
-      }
+    if (hookError) {
+      setError(hookError);
     }
-  }, [selectedLangId, problemLanguages]);
+  }, [hookError]);
 
-  const getEditorLanguage = (langName: string) => {
-    const map: Record<string, string> = {
-      c: "c",
-      "c++": "cpp",
-      cpp: "cpp",
-      python: "python",
-      java: "java",
-    };
-    return map[langName.toLowerCase()] || "plaintext";
-  };
+  // Handle selecting a new language to add
+  const handleSelectLanguageToAdd = useCallback(
+    (langId: number) => {
+      const lang = availableLanguages.find((l) => l.id === langId);
+      if (lang) {
+        setSelectedLangId(langId);
+        resetEditorContent({
+          function: lang.default_template || "// Write starter code here",
+          main: "// Write I/O handling code here",
+          solution: "// Write your solution here",
+        });
+        setCurrentTab("function");
+        setSuccess(`${lang.name} selected. Fill in the code and click Save.`);
+        setError("");
+      }
+    },
+    [availableLanguages, resetEditorContent, setCurrentTab]
+  );
 
-  const handleSave = async () => {
+  // Handle selecting an existing language
+  const handleSelectExistingLanguage = useCallback(
+    (langId: number) => {
+      setSelectedLangId(langId);
+      setCurrentTab("function");
+      setError("");
+      setSuccess("");
+    },
+    [setCurrentTab]
+  );
+
+  // Validate input fields
+  const validateFields = useCallback(() => {
+    const { function: functionCode, main: mainCode, solution: solutionCode } = editorContent;
+
+    if (!functionCode.trim()) {
+      setError("Function code is required");
+      return false;
+    }
+
+    if (!mainCode.trim()) {
+      setError("Main code (I/O handling) is required");
+      return false;
+    }
+
+    if (!solutionCode.trim()) {
+      setError("Solution code is required");
+      return false;
+    }
+
+    return true;
+  }, [editorContent]);
+
+  // Handle save
+  const handleSave = useCallback(async () => {
     if (!selectedLangId) {
       setError("Please select a language first");
       return;
     }
 
-    if (!functionCode.trim() || !mainCode.trim() || !solutionCode.trim()) {
-      setError("All code fields are required");
+    if (!validateFields()) {
       return;
     }
 
-    try {
-      const existingLang = problemLanguages.find((l) => l.language_id === selectedLangId);
+    const { function: functionCode, main: mainCode, solution: solutionCode } = editorContent;
 
-      if (existingLang) {
-        // Update existing
-        // await fetch(`/admin/api/problems/${problemId}/languages/${selectedLangId}`, {
-        //   method: "PUT",
-        //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify({
-        //     function_code: functionCode,
-        //     main_code: mainCode,
-        //     solution_code: solutionCode,
-        //   }),
-        // });
+    const result = await saveLanguage(selectedLangId, {
+      function_code: functionCode,
+      main_code: mainCode,
+      solution_code: solutionCode,
+    });
 
-        setProblemLanguages((prev) =>
-          prev.map((l) =>
-            l.language_id === selectedLangId
-              ? {
-                  ...l,
-                  function_code: functionCode,
-                  main_code: mainCode,
-                  solution_code: solutionCode,
-                  is_validated: false,
-                }
-              : l
-          )
-        );
-        setSuccess("Language updated successfully");
-      } else {
-        // Create new
-        // await fetch(`/admin/api/problems/${problemId}/languages`, {
-        //   method: "POST",
-        //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify({
-        //     language_id: selectedLangId,
-        //     function_code: functionCode,
-        //     main_code: mainCode,
-        //     solution_code: solutionCode,
-        //   }),
-        // });
+    if (result.success) {
+      setSuccess(result.message);
+      setError("");
+    } else {
+      setError(result.message);
+      setSuccess("");
+    }
+  }, [selectedLangId, editorContent, saveLanguage, validateFields]);
 
-        const selectedAvailableLang = availableLanguages.find((l) => l.id === selectedLangId);
-        if (selectedAvailableLang) {
-          const newProblemLang: ProblemLanguage = {
-            language_id: selectedLangId,
-            language_name: selectedAvailableLang.name,
-            function_code: functionCode,
-            main_code: mainCode,
-            solution_code: solutionCode,
-            is_validated: false,
-          };
-          setProblemLanguages([...problemLanguages, newProblemLang]);
-          setSuccess("Language added successfully");
+  // Handle delete
+  const handleDelete = useCallback(
+    async (langId: number) => {
+      if (!window.confirm("Are you sure you want to remove this language?")) {
+        return;
+      }
+
+      const result = await deleteLanguage(langId);
+
+      if (result.success) {
+        if (selectedLangId === langId) {
+          setSelectedLangId(null);
+          resetEditorContent({ function: "", main: "", solution: "" });
         }
+        setSuccess(result.message);
+        setError("");
+      } else {
+        setError(result.message);
+        setSuccess("");
       }
-
-      setError("");
-    } catch (err) {
-      setError("Failed to save");
-      console.error(err);
-    }
-  };
-
-  const handleDelete = async (langId: number) => {
-    if (!window.confirm("Are you sure you want to remove this language?")) {
-      return;
-    }
-
-    try {
-      // await fetch(`/admin/api/problems/${problemId}/languages/${langId}`, {
-      //   method: "DELETE",
-      // });
-
-      setProblemLanguages((prev) => prev.filter((l) => l.language_id !== langId));
-      if (selectedLangId === langId) {
-        setSelectedLangId(null);
-        setFunctionCode("");
-        setMainCode("");
-        setSolutionCode("");
-      }
-      setSuccess("Language removed");
-    } catch (err) {
-      setError("Failed to remove language");
-      console.error(err);
-    }
-  };
-
-  const handleSelectLanguageToAdd = (langId: number) => {
-    const lang = availableLanguages.find((l) => l.id === langId);
-    if (lang) {
-      setSelectedLangId(langId);
-      setFunctionCode(lang.default_template || "// Write starter code here");
-      setMainCode("// Write I/O handling code here");
-      setSolutionCode("// Write your solution here");
-      setCurrentTab("function");
-      setSuccess(`${lang.name} selected. Fill in the code and click Save.`);
-      setError("");
-    }
-  };
-
-  const handleSelectExistingLanguage = (langId: number) => {
-    setSelectedLangId(langId);
-    setCurrentTab("function");
-    setError("");
-  };
-
-  const getCurrentCode = () => {
-    if (currentTab === "function") return functionCode;
-    if (currentTab === "main") return mainCode;
-    return solutionCode;
-  };
-
-  const handleEditorChange = (value: string | undefined) => {
-    const code = value || "";
-    if (currentTab === "function") setFunctionCode(code);
-    else if (currentTab === "main") setMainCode(code);
-    else setSolutionCode(code);
-  };
-
-  const selectedLang =
-    problemLanguages.find((l) => l.language_id === selectedLangId) ||
-    (selectedLangId ? availableLanguages.find((l) => l.id === selectedLangId) : null);
-
-  const unusedLanguages = availableLanguages.filter(
-    (al) => !problemLanguages.some((pl) => pl.language_id === al.id)
+    },
+    [selectedLangId, deleteLanguage, resetEditorContent]
   );
 
-  if (loading) {
+  // Handle navigation
+  const handleBack = useCallback(() => {
+    navigate(`/admin/problems/${problemId}/test-cases`);
+  }, [navigate, problemId]);
+
+  const handleContinue = useCallback(() => {
+    navigate(`/admin/problems/${problemId}/validate`);
+  }, [navigate, problemId]);
+
+  // Loading state
+  if (langLoading || probLoading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, display: "flex", justifyContent: "center" }}>
         <CircularProgress />
@@ -266,10 +183,24 @@ export default function ProblemLanguage() {
     );
   }
 
+  // Get current language details
+  const selectedLang = selectedLangId ? getLanguageById(selectedLangId) : null;
+  const languageName =
+    (selectedLang as any)?.display_name ||
+    (selectedLang as any)?.name ||
+    "Selected Language";
+  const editorLanguage = selectedLang
+    ? getEditorLanguage(
+        (selectedLang as any)?.language_name || (selectedLang as any)?.name || ""
+      )
+    : "plaintext";
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      {/* Stepper */}
       <ProblemStepper currentStep={3} model="validate" />
 
+      {/* Header */}
       <Paper sx={{ p: 3, mb: 2 }}>
         <Typography variant="h5" gutterBottom>
           Configure Languages
@@ -279,121 +210,54 @@ export default function ProblemLanguage() {
         </Typography>
       </Paper>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess("")}>
-          {success}
-        </Alert>
-      )}
+      {/* Alerts */}
+      <AlertMessage message={error} severity="error" onClose={() => setError("")} />
+      <AlertMessage message={success} severity="success" onClose={() => setSuccess("")} />
 
+      {/* Main Content */}
       <Paper sx={{ p: 3 }}>
-        {/* Language selector */}
+        {/* Language Selection Section */}
         <Box sx={{ mb: 3 }}>
-          <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 2 }}>
-            <FormControl sx={{ minWidth: 250 }}>
-              <InputLabel>Add a language</InputLabel>
-              <Select
-                value=""
-                onChange={(e) => {
-                    const langId = Number(e.target.value);
-                    if (langId) handleSelectLanguageToAdd(langId);
-                }}
-                label="Add a language"
-                disabled={unusedLanguages.length === 0}
-              >
-                {unusedLanguages.map((lang) => (
-                  <MenuItem key={lang.id} value={lang.id}>
-                    {lang.name + "(" + lang.version + ")"}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+          <LanguageSelector
+            unusedLanguages={unusedLanguages}
+            onSelectLanguage={handleSelectLanguageToAdd}
+            hasAddedLanguages={problemLanguages.length > 0}
+          />
 
-            {unusedLanguages.length === 0 && problemLanguages.length > 0 && (
-              <Typography variant="body2" color="text.secondary">
-                All languages added
-              </Typography>
-            )}
-          </Box>
-
-          {/* Added languages as chips */}
-          {problemLanguages.length > 0 && (
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Added Languages:
-              </Typography>
-              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                {problemLanguages.map((lang) => (
-                  <Chip
-                    key={lang.language_id}
-                    label={lang.language_name}
-                    onClick={() => handleSelectExistingLanguage(lang.language_id)}
-                    onDelete={() => handleDelete(lang.language_id)}
-                    color={selectedLangId === lang.language_id ? "primary" : "default"}
-                    icon={lang.is_validated ? <CheckCircleOutlineIcon /> : undefined}
-                  />
-                ))}
-              </Box>
-            </Box>
-          )}
+          <LanguageChips
+            languages={problemLanguages}
+            selectedLangId={selectedLangId}
+            onSelectLanguage={handleSelectExistingLanguage}
+            onDeleteLanguage={handleDelete}
+          />
         </Box>
 
-        {/* Code editor */}
+        {/* Code Editor Section */}
         {selectedLangId ? (
-          <>
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-              <Typography variant="h6">
-                {(selectedLang as any)?.display_name || "Selected Language"}
-              </Typography>
-              <Button variant="contained" onClick={handleSave}>
-                Save
-              </Button>
-            </Box>
-
-            <Tabs value={currentTab} onChange={(_, val) => setCurrentTab(val)} sx={{ mb: 2 }}>
-              <Tab label="Function Code (User sees)" value="function" />
-              <Tab label="Main Code (I/O)" value="main" />
-              <Tab label="Solution Code (Validator)" value="solution" />
-            </Tabs>
-
-            <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden" }}>
-              <Editor
-                height="500px"
-                language={getEditorLanguage(
-                  (selectedLang as any)?.language_name || (selectedLang as any)?.name || ""
-                )}
-                value={getCurrentCode()}
-                onChange={handleEditorChange}
-                theme="vs-dark"
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  lineNumbers: "on",
-                  scrollBeyondLastLine: false,
-                }}
-              />
-            </Box>
-          </>
+          <CodeEditor
+            languageName={languageName}
+            editorLanguage={editorLanguage}
+            currentTab={currentTab}
+            editorContent={editorContent}
+            onTabChange={setCurrentTab}
+            onCodeChange={(code) => updateEditorContent(currentTab, code)}
+            onSave={handleSave}
+            saving={saving}
+          />
         ) : (
-          <Box sx={{ textAlign: "center", py: 8, color: "text.secondary" }}>
-            <Typography>Select a language from the dropdown above to start</Typography>
-          </Box>
+          <EmptyEditorState />
         )}
       </Paper>
 
       {/* Navigation */}
       <Box sx={{ mt: 3, display: "flex", justifyContent: "space-between" }}>
-        <Button variant="outlined" onClick={() => window.history.back()}>
+        <Button variant="outlined" onClick={handleBack}>
           Back
         </Button>
         <Button
           variant="contained"
           disabled={problemLanguages.length === 0}
-          onClick={() => (window.location.href = `/admin/problems/${problemId}/validate`)}
+          onClick={handleContinue}
         >
           Continue to Validate
         </Button>
