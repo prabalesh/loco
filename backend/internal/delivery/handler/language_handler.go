@@ -119,7 +119,7 @@ func (h *LanguageHandler) CreateLanguage(w http.ResponseWriter, r *http.Request)
 
 	h.logger.Info("Language created successfully",
 		zap.Int("language_id", language.ID),
-		zap.String("language_id", language.LanguageID),
+		zap.String("language_id", language.Slug),
 		zap.Int("admin_id", adminID),
 	)
 

@@ -1,12 +1,11 @@
 package postgres
 
 import (
-	"context"
-	"database/sql"
 	"fmt"
 
+	"gorm.io/gorm"
+
 	"github.com/prabalesh/loco/backend/internal/domain"
-	"github.com/prabalesh/loco/backend/internal/usecase/interfaces"
 	"github.com/prabalesh/loco/backend/pkg/database"
 )
 
@@ -14,68 +13,31 @@ type languageRepository struct {
 	db *database.Database
 }
 
-func NewLanguageRepository(db *database.Database) interfaces.LanguageRepository {
+func NewLanguageRepository(db *database.Database) domain.LanguageRepository {
 	return &languageRepository{db: db}
 }
 
-func (r *languageRepository) Create(ctx context.Context, lang *domain.Language) error {
-	ctx, cancel := database.WithLongTimeout()
-	defer cancel()
-
-	query := `
-        INSERT INTO languages (language_id, name, version, extension, default_template, is_active, executor_config)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING id, created_at, updated_at
-    `
-
-	err := r.db.QueryRowContext(ctx, query,
-		lang.LanguageID,
-		lang.Name,
-		lang.Version,
-		lang.Extension,
-		lang.DefaultTemplate,
-		lang.IsActive,
-		lang.ExecutorConfig,
-	).Scan(&lang.ID, &lang.CreatedAt, &lang.UpdatedAt)
-
-	if err != nil {
-		if isUniqueViolation(err) {
-			if containsField(err, "language_id") {
-				return fmt.Errorf("language ID already exists")
+func (r *languageRepository) Create(lang *domain.Language) error {
+	result := r.db.DB.Create(lang)
+	if result.Error != nil {
+		if isUniqueViolation(result.Error) {
+			if containsField(result.Error, "slug") || containsField(result.Error, "language_id") {
+				return fmt.Errorf("language Slug already exists")
 			}
 		}
-		return fmt.Errorf("failed to create language: %w", err)
+		return fmt.Errorf("failed to create language: %w", result.Error)
 	}
-
 	return nil
 }
 
-func (r *languageRepository) GetByID(ctx context.Context, id int) (*domain.Language, error) {
+func (r *languageRepository) GetByID(id int) (*domain.Language, error) {
 	ctx, cancel := database.WithShortTimeout()
 	defer cancel()
 
 	lang := &domain.Language{}
+	err := r.db.DB.WithContext(ctx).First(lang, id).Error
 
-	query := `
-        SELECT id, language_id, name, version, extension, default_template, 
-               is_active, executor_config, created_at, updated_at
-        FROM languages WHERE id = $1
-    `
-
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&lang.ID,
-		&lang.LanguageID,
-		&lang.Name,
-		&lang.Version,
-		&lang.Extension,
-		&lang.DefaultTemplate,
-		&lang.IsActive,
-		&lang.ExecutorConfig,
-		&lang.CreatedAt,
-		&lang.UpdatedAt,
-	)
-
-	if err == sql.ErrNoRows {
+	if err == gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("language not found")
 	}
 
@@ -86,191 +48,77 @@ func (r *languageRepository) GetByID(ctx context.Context, id int) (*domain.Langu
 	return lang, nil
 }
 
-func (r *languageRepository) GetByLanguageID(ctx context.Context, languageID string) (*domain.Language, error) {
+func (r *languageRepository) GetBySlug(slug string) (*domain.Language, error) {
 	ctx, cancel := database.WithShortTimeout()
 	defer cancel()
 
 	lang := &domain.Language{}
+	err := r.db.DB.WithContext(ctx).Where("slug = ?", slug).First(lang).Error
 
-	query := `
-        SELECT id, language_id, name, version, extension, default_template, 
-               is_active, executor_config, created_at, updated_at
-        FROM languages WHERE language_id = $1
-    `
-
-	err := r.db.QueryRowContext(ctx, query, languageID).Scan(
-		&lang.ID,
-		&lang.LanguageID,
-		&lang.Name,
-		&lang.Version,
-		&lang.Extension,
-		&lang.DefaultTemplate,
-		&lang.IsActive,
-		&lang.ExecutorConfig,
-		&lang.CreatedAt,
-		&lang.UpdatedAt,
-	)
-
-	if err == sql.ErrNoRows {
+	if err == gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("language not found")
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get language by language_id: %w", err)
+		return nil, fmt.Errorf("failed to get language by slug: %w", err)
 	}
 
 	return lang, nil
 }
 
-func (r *languageRepository) Update(ctx context.Context, lang *domain.Language) error {
+func (r *languageRepository) Update(lang *domain.Language) error {
 	ctx, cancel := database.WithMediumTimeout()
 	defer cancel()
 
-	query := `
-        UPDATE languages SET
-            language_id = $1,
-            name = $2,
-            version = $3,
-            extension = $4,
-            default_template = $5,
-            is_active = $6,
-            executor_config = $7,
-            updated_at = NOW()
-        WHERE id = $8
-        RETURNING updated_at
-    `
+	result := r.db.DB.WithContext(ctx).Model(&domain.Language{}).Where("id = ?", lang.ID).Updates(lang)
 
-	err := r.db.QueryRowContext(ctx, query,
-		lang.LanguageID,
-		lang.Name,
-		lang.Version,
-		lang.Extension,
-		lang.DefaultTemplate,
-		lang.IsActive,
-		lang.ExecutorConfig,
-		lang.ID,
-	).Scan(&lang.UpdatedAt)
-
-	if err == sql.ErrNoRows {
-		return fmt.Errorf("language not found")
+	if result.Error != nil {
+		return fmt.Errorf("failed to update language: %w", result.Error)
 	}
 
-	if err != nil {
-		return fmt.Errorf("failed to update language: %w", err)
-	}
-
-	return nil
-}
-
-func (r *languageRepository) Delete(ctx context.Context, id int) error {
-	ctx, cancel := database.WithMediumTimeout()
-	defer cancel()
-
-	query := `DELETE FROM languages WHERE id = $1`
-
-	result, err := r.db.ExecContext(ctx, query, id)
-	if err != nil {
-		return fmt.Errorf("failed to delete language: %w", err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-
-	if rowsAffected == 0 {
+	if result.RowsAffected == 0 {
 		return fmt.Errorf("language not found")
 	}
 
 	return nil
 }
 
-func (r *languageRepository) ListActive() ([]*domain.Language, error) {
+func (r *languageRepository) Delete(id int) error {
 	ctx, cancel := database.WithMediumTimeout()
 	defer cancel()
 
-	query := `
-        SELECT id, language_id, name, version, extension, default_template, 
-               is_active, executor_config, created_at, updated_at
-        FROM languages 
-        WHERE is_active = true
-        ORDER BY name ASC
-    `
+	result := r.db.DB.WithContext(ctx).Delete(&domain.Language{}, id)
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete language: %w", result.Error)
+	}
 
-	rows, err := r.db.QueryContext(ctx, query)
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("language not found")
+	}
+
+	return nil
+}
+
+func (r *languageRepository) ListActive() ([]domain.Language, error) {
+	ctx, cancel := database.WithMediumTimeout()
+	defer cancel()
+
+	var languages []domain.Language
+	err := r.db.DB.WithContext(ctx).Where("is_active = ?", true).Order("name ASC").Find(&languages).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to list active languages: %w", err)
 	}
-	defer rows.Close()
-
-	var languages []*domain.Language
-	for rows.Next() {
-		var lang domain.Language
-		err := rows.Scan(
-			&lang.ID,
-			&lang.LanguageID,
-			&lang.Name,
-			&lang.Version,
-			&lang.Extension,
-			&lang.DefaultTemplate,
-			&lang.IsActive,
-			&lang.ExecutorConfig,
-			&lang.CreatedAt,
-			&lang.UpdatedAt,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan language: %w", err)
-		}
-		languages = append(languages, &lang)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating languages: %w", err)
-	}
-
 	return languages, nil
 }
 
-func (r *languageRepository) List() ([]*domain.Language, error) {
+func (r *languageRepository) GetAll() ([]domain.Language, error) {
 	ctx, cancel := database.WithMediumTimeout()
 	defer cancel()
 
-	query := `
-        SELECT id, language_id, name, version, extension, default_template, 
-               is_active, executor_config, created_at, updated_at
-        FROM languages 
-    `
-
-	rows, err := r.db.QueryContext(ctx, query)
+	var languages []domain.Language
+	err := r.db.DB.WithContext(ctx).Find(&languages).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to list languages: %w", err)
 	}
-	defer rows.Close()
-
-	var languages []*domain.Language
-	for rows.Next() {
-		var lang domain.Language
-		err := rows.Scan(
-			&lang.ID,
-			&lang.LanguageID,
-			&lang.Name,
-			&lang.Version,
-			&lang.Extension,
-			&lang.DefaultTemplate,
-			&lang.IsActive,
-			&lang.ExecutorConfig,
-			&lang.CreatedAt,
-			&lang.UpdatedAt,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan language: %w", err)
-		}
-		languages = append(languages, &lang)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating languages: %w", err)
-	}
-
 	return languages, nil
 }

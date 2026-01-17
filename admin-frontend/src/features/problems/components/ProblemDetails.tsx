@@ -1,4 +1,4 @@
-import { Tag, Descriptions } from "antd";
+import { Chip, Typography, Box, Grid } from "@mui/material";
 import type { Problem } from "../../../types";
 
 interface ProblemDetailsProps {
@@ -7,29 +7,62 @@ interface ProblemDetailsProps {
 
 export default function ProblemDetails({ problem }: ProblemDetailsProps) {
   const getDifficultyColor = (difficulty: Problem["difficulty"]) => {
-    return difficulty === "easy" ? "green" : difficulty === "medium" ? "orange" : "red";
+    return difficulty === "easy" ? "success" : difficulty === "medium" ? "warning" : "error";
   };
 
+  const getStatusColor = (status: string) => {
+    return status === "published" ? "primary" : "default";
+  }
+
+  const DetailItem = ({ label, children }: { label: string, children: React.ReactNode }) => (
+    <Grid container spacing={1} sx={{ py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+      <Grid size={{ xs: 4, sm: 3 }}>
+        <Typography variant="body2" color="text.secondary" fontWeight="medium">
+          {label}
+        </Typography>
+      </Grid>
+      <Grid size={{ xs: 8, sm: 9 }}>
+        <Box>{children}</Box>
+      </Grid>
+    </Grid>
+  );
+
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">{problem.title}</h2>
-      
-      <Descriptions column={1} className="mb-6">
-        <Descriptions.Item label="Slug">{problem.slug}</Descriptions.Item>
-        <Descriptions.Item label="Difficulty">
-          <Tag color={getDifficultyColor(problem.difficulty)}>{problem.difficulty.toUpperCase()}</Tag>
-        </Descriptions.Item>
-        <Descriptions.Item label="Status">
-          <Tag color={problem.status === "published" ? "blue" : "default"}>
-            {problem.status.toUpperCase()}
-          </Tag>
-        </Descriptions.Item>
-        <Descriptions.Item label="Time Limit">{problem.time_limit}ms</Descriptions.Item>
-        <Descriptions.Item label="Memory Limit">{problem.memory_limit}MB</Descriptions.Item>
-        <Descriptions.Item label="Acceptance">
-          {problem.acceptance_rate.toFixed(1)}%
-        </Descriptions.Item>
-      </Descriptions>
-    </div>
+    <Box>
+      <Typography variant="h5" fontWeight="bold" gutterBottom>
+        {problem.title}
+      </Typography>
+
+      <Box sx={{ mb: 3 }}>
+        <DetailItem label="Slug">
+          <Typography variant="body2">{problem.slug}</Typography>
+        </DetailItem>
+        <DetailItem label="Difficulty">
+          <Chip
+            label={problem.difficulty.toUpperCase()}
+            color={getDifficultyColor(problem.difficulty)}
+            size="small"
+            variant="outlined"
+          />
+        </DetailItem>
+        <DetailItem label="Status">
+          <Chip
+            label={problem.status.toUpperCase()}
+            color={getStatusColor(problem.status) as any}
+            size="small"
+            variant="outlined"
+          />
+        </DetailItem>
+        <DetailItem label="Time Limit">
+          <Typography variant="body2">{problem.time_limit}ms</Typography>
+        </DetailItem>
+        <DetailItem label="Memory Limit">
+          <Typography variant="body2">{problem.memory_limit}MB</Typography>
+        </DetailItem>
+        <DetailItem label="Acceptance">
+          <Typography variant="body2">{problem.acceptance_rate.toFixed(1)}%</Typography>
+        </DetailItem>
+      </Box>
+    </Box>
   );
 }

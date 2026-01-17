@@ -16,16 +16,29 @@ import (
 )
 
 type ProblemHandler struct {
-	problemUsecase *usecase.ProblemUsecase
-	logger         *zap.Logger
-	cfg            *config.Config
+	problemUsecase         *usecase.ProblemUsecase
+	problemLanguageUsecase *usecase.ProblemLanguageUsecase
+	languageUsecase        *usecase.LanguageUsecase
+	submissionUsecase      *usecase.SubmissionUsecase
+	logger                 *zap.Logger
+	cfg                    *config.Config
 }
 
-func NewProblemHandler(problemUsecase *usecase.ProblemUsecase, logger *zap.Logger, cfg *config.Config) *ProblemHandler {
+func NewProblemHandler(
+	problemUsecase *usecase.ProblemUsecase,
+	problemLanguageUsecase *usecase.ProblemLanguageUsecase,
+	languageUsecase *usecase.LanguageUsecase,
+	submissionUsecase *usecase.SubmissionUsecase,
+	logger *zap.Logger,
+	cfg *config.Config,
+) *ProblemHandler {
 	return &ProblemHandler{
-		problemUsecase: problemUsecase,
-		logger:         logger,
-		cfg:            cfg,
+		problemUsecase:         problemUsecase,
+		problemLanguageUsecase: problemLanguageUsecase,
+		languageUsecase:        languageUsecase,
+		submissionUsecase:      submissionUsecase,
+		logger:                 logger,
+		cfg:                    cfg,
 	}
 }
 
@@ -354,6 +367,176 @@ func (h *ProblemHandler) GetProblemStats(w http.ResponseWriter, r *http.Request)
 	}
 
 	RespondJSON(w, http.StatusOK, stats)
+}
+
+// ========== PROBLEM LANGUAGE ENDPOINTS ==========
+
+// ListProblemLanguages lists all languages supported by a problem
+func (h *ProblemHandler) ListProblemLanguages(w http.ResponseWriter, r *http.Request) {
+	problemID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid problem ID")
+		return
+	}
+
+	languages, err := h.problemLanguageUsecase.ListByProblem(problemID)
+	if err != nil {
+		h.logger.Error("Failed to list problem languages", zap.Error(err), zap.Int("problem_id", problemID))
+		RespondError(w, http.StatusInternalServerError, "failed to retrieve languages")
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, languages)
+}
+
+// CreateProblemLanguage adds a language configuration to a problem
+func (h *ProblemHandler) CreateProblemLanguage(w http.ResponseWriter, r *http.Request) {
+	problemID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid problem ID")
+		return
+	}
+
+	var req domain.CreateProblemLanguageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	pl, err := h.problemLanguageUsecase.Create(problemID, &req)
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	RespondJSON(w, http.StatusCreated, pl)
+}
+
+// UpdateProblemLanguage updates an existing language configuration for a problem
+func (h *ProblemHandler) UpdateProblemLanguage(w http.ResponseWriter, r *http.Request) {
+	problemID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid problem ID")
+		return
+	}
+
+	languageID, err := strconv.Atoi(r.PathValue("language_id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid language ID")
+		return
+	}
+
+	var req domain.UpdateProblemLanguageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	pl, err := h.problemLanguageUsecase.Update(problemID, languageID, &req)
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, pl)
+}
+
+// DeleteProblemLanguage removes a language configuration from a problem
+func (h *ProblemHandler) DeleteProblemLanguage(w http.ResponseWriter, r *http.Request) {
+	problemID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid problem ID")
+		return
+	}
+
+	languageID, err := strconv.Atoi(r.PathValue("language_id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid language ID")
+		return
+	}
+
+	if err := h.problemLanguageUsecase.Delete(problemID, languageID); err != nil {
+		RespondError(w, http.StatusInternalServerError, "failed to delete configuration")
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, map[string]string{"message": "Configuration deleted"})
+}
+
+// ValidateProblemLanguage triggers validation for a specific language configuration
+func (h *ProblemHandler) ValidateProblemLanguage(w http.ResponseWriter, r *http.Request) {
+	adminID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		RespondError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	problemID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid problem ID")
+		return
+	}
+
+	languageID, err := strconv.Atoi(r.PathValue("language_id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid language ID")
+		return
+	}
+
+	// 1. Get the ProblemLanguage to retrieve Code
+	pl, err := h.problemLanguageUsecase.GetByProblemAndLanguage(problemID, languageID)
+	if err != nil {
+		RespondError(w, http.StatusNotFound, "language configuration not found")
+		return
+	}
+
+	if pl.SolutionCode == "" {
+		RespondError(w, http.StatusBadRequest, "solution code is required for validation")
+		return
+	}
+
+	// 3. Trigger validation
+	submission, err := h.submissionUsecase.Validate(adminID, problemID, languageID, pl.SolutionCode)
+	if err != nil {
+		h.logger.Error("Problem language validation failed", zap.Error(err), zap.Int("problem_id", problemID), zap.Int("language_id", languageID))
+		RespondError(w, http.StatusInternalServerError, "failed to start validation")
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, submission)
+}
+
+// PreviewProblemLanguage returns the combined code for preview
+func (h *ProblemHandler) PreviewProblemLanguage(w http.ResponseWriter, r *http.Request) {
+	problemID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid problem ID")
+		return
+	}
+
+	languageID, err := strconv.Atoi(r.PathValue("language_id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid language ID")
+		return
+	}
+
+	pl, err := h.problemLanguageUsecase.GetByProblemAndLanguage(problemID, languageID)
+	if err != nil {
+		RespondError(w, http.StatusNotFound, "language configuration not found")
+		return
+	}
+
+	lang, err := h.languageUsecase.GetLanguage(strconv.Itoa(languageID))
+	if err != nil {
+		RespondError(w, http.StatusNotFound, "language not found")
+		return
+	}
+
+	combinedCode := pl.GetCombinedCode(lang.DefaultTemplate, "")
+
+	RespondJSON(w, http.StatusOK, map[string]string{
+		"combined_code": combinedCode,
+	})
 }
 
 // ========== HELPER FUNCTIONS ==========

@@ -4,25 +4,25 @@ import "time"
 
 // Problem entity
 type Problem struct {
-	ID              int       `json:"id" db:"id"`
-	Title           string    `json:"title" db:"title"`
-	Slug            string    `json:"slug" db:"slug"`
-	Description     string    `json:"description" db:"description"`
-	Difficulty      string    `json:"difficulty" db:"difficulty"`
-	TimeLimit       int       `json:"time_limit" db:"time_limit"`
-	MemoryLimit     int       `json:"memory_limit" db:"memory_limit"`
-	CurrentStep     int       `json:"current_step" db:"current_step"`
-	ValidatorType   string    `json:"validator_type" db:"validator_type"`
-	InputFormat     string    `json:"input_format" db:"input_format"`
-	OutputFormat    string    `json:"output_format" db:"output_format"`
-	Constraints     string    `json:"constraints" db:"constraints"`
-	Status          string    `json:"status" db:"status"`
-	Visibility      string    `json:"visibility" db:"visibility"`
-	IsActive        bool      `json:"is_active" db:"is_active"`
-	AcceptanceRate  float64   `json:"acceptance_rate" db:"acceptance_rate"`
-	TotalSubmission int       `json:"total_submissions" db:"total_submissions"`
-	TotalAccepted   int       `json:"total_accepted" db:"total_accepted"`
-	CreatedBy       *int      `json:"created_by" db:"created_by"`
-	CreatedAt       time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
+	ID              int       `json:"id" gorm:"primaryKey"`
+	Title           string    `json:"title" gorm:"size:255;not null;index"`
+	Slug            string    `json:"slug" gorm:"size:255;not null;uniqueIndex"`
+	Description     string    `json:"description" gorm:"type:text"`
+	Difficulty      string    `json:"difficulty" gorm:"size:50;default:'medium'"`
+	TimeLimit       int       `json:"time_limit" gorm:"default:1000"`
+	MemoryLimit     int       `json:"memory_limit" gorm:"default:256"`
+	CurrentStep     int       `json:"current_step" gorm:"default:1"`
+	ValidatorType   string    `json:"validator_type" gorm:"size:50;default:'exact'"`
+	InputFormat     string    `json:"input_format" gorm:"type:text"`
+	OutputFormat    string    `json:"output_format" gorm:"type:text"`
+	Constraints     string    `json:"constraints" gorm:"type:text"`
+	Status          string    `json:"status" gorm:"size:50;default:'draft'"`
+	Visibility      string    `json:"visibility" gorm:"size:50;default:'private'"`
+	IsActive        bool      `json:"is_active" gorm:"default:true"`
+	AcceptanceRate  float64   `json:"acceptance_rate" gorm:"default:0.0"`
+	TotalSubmission int       `json:"total_submissions" gorm:"default:0"`
+	TotalAccepted   int       `json:"total_accepted" gorm:"default:0"`
+	CreatedBy       *int      `json:"created_by" gorm:"index"`
+	CreatedAt       time.Time `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt       time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }

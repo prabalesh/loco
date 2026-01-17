@@ -1,20 +1,23 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ConfigProvider, Spin } from 'antd'
+import { ThemeProvider, createTheme, CssBaseline, CircularProgress, Box } from '@mui/material'
 import { Toaster } from 'react-hot-toast'
-import { AdminLogin } from './features/auth/components/AdminLogin'
-import { Dashboard } from './features/dashboard/components/Dashboard'
-import { UsersList } from './features/users/components/UsersList'
+import { lazy, Suspense, useEffect, useState } from 'react'
+
+const AdminLogin = lazy(() => import('./features/auth/components/AdminLogin').then(m => ({ default: m.AdminLogin })))
+const Dashboard = lazy(() => import('./features/dashboard/components/Dashboard').then(m => ({ default: m.Dashboard })))
+const UsersList = lazy(() => import('./features/users/components/UsersList').then(m => ({ default: m.UsersList })))
+const ProblemList = lazy(() => import('./features/problems/components/ProblemList'))
+const LanguageList = lazy(() => import('./features/languages/components/LanguageList'))
+const CreateProblem = lazy(() => import('./features/problems/pages/CreateProblem'))
+const ProblemTestCases = lazy(() => import('./features/problems/pages/ProblemTestCases'))
+const ProblemLanguage = lazy(() => import('./features/problems/pages/ProblemLanguage'))
+const ProblemValidate = lazy(() => import('./features/problems/pages/ProblemValidate'))
+
 import { AdminLayout } from './components/layout/AdminLayout'
-import { ProtectedRoute } from './components/common/ProtectedRoute'
+import { ProtectedRoute } from './features/auth/components/ProtectedRoute'
 import { useAuthStore } from './features/auth/store/authStore'
-import { useEffect, useState } from 'react'
-import { adminAuthApi } from './api/adminApi'
-import ProblemList from './features/problems/components/ProblemList'
-import LanguageList from './features/languages/components/LangageList'
-import ProblemTestCases from './features/problems/pages/ProblemTestCases'
-import CreateProblem from './features/problems/pages/CreateProblem'
-import ProblemLanguage from './features/problems/pages/ProblemLanguage'
+import { adminAuthApi } from './lib/api/admin'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,6 +27,26 @@ const queryClient = new QueryClient({
     },
   },
 })
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#6366f1',
+    },
+  },
+  typography: {
+    fontFamily: "'Inter', sans-serif",
+  },
+  shape: {
+    borderRadius: 8,
+  },
+})
+
+const PageLoader = () => (
+  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
+    <CircularProgress size={40} thickness={4} />
+  </Box>
+)
 
 function App() {
   const [isLoading, setIsLoading] = useState(true)
@@ -41,7 +64,7 @@ function App() {
     const initAuth = async () => {
       try {
         const response = await adminAuthApi.getProfile()
-        setUser(response.data)
+        setUser(response.data.data)
       } catch (err: any) {
         if (err?.response?.status === 401) {
           logout()
@@ -57,44 +80,48 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Spin size="large" />
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <CircularProgress size={48} />
+      </Box>
     )
   }
 
   return (
-    <ConfigProvider theme={{ token: { colorPrimary: '#1890ff' } }}>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <Routes>
-            <Route
-              path="/login"
-              element={isAuthenticated? <Navigate to="/" replace /> : <AdminLogin />}
-            />
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route
+                path="/login"
+                element={isAuthenticated ? <Navigate to="/" replace /> : <AdminLogin />}
+              />
 
-            <Route
-              element={
-                <ProtectedRoute>
-                  <AdminLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/users" element={<UsersList />} />
-              <Route path="/problems" element={<ProblemList />} />
-              <Route path="/problems/create" element={<CreateProblem />} />
-              <Route path="/problems/edit/:id" element={<CreateProblem />} />
-              <Route path="/languages" element={<LanguageList />} />
-              <Route path="/problems/:problemId/testcases" element={<ProblemTestCases />} />
-              <Route path="/problems/:problemId/languages" element={<ProblemLanguage />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+              <Route
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/users" element={<UsersList />} />
+                <Route path="/problems" element={<ProblemList />} />
+                <Route path="/problems/create" element={<CreateProblem />} />
+                <Route path="/problems/edit/:id" element={<CreateProblem />} />
+                <Route path="/languages" element={<LanguageList />} />
+                <Route path="/problems/:problemId/testcases" element={<ProblemTestCases />} />
+                <Route path="/problems/:problemId/languages" element={<ProblemLanguage />} />
+                <Route path="/problems/:problemId/validate" element={<ProblemValidate />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
         <Toaster position="top-right" />
       </QueryClientProvider>
-    </ConfigProvider>
+    </ThemeProvider>
   )
 }
 

@@ -12,7 +12,7 @@ import {
   Globe,
 } from 'lucide-react'
 import { useAuthStore } from '../../features/auth/store/authStore'
-import { adminAuthApi } from '../../api/adminApi'
+import { adminAuthApi } from '../../lib/api/admin'
 import toast from 'react-hot-toast'
 
 export const AdminLayout = () => {
@@ -63,9 +63,8 @@ export const AdminLayout = () => {
     <div className="min-h-screen flex bg-gray-50">
       {/* Sidebar */}
       <aside
-        className={`flex flex-col bg-white border-r border-gray-200 transition-width duration-300 ${
-          collapsed ? 'w-20' : 'w-56'
-        }`}
+        className={`flex flex-col bg-white border-r border-gray-200 transition-width duration-300 ${collapsed ? 'w-20' : 'w-56'
+          }`}
       >
         <div className="flex items-center justify-center h-16 border-b border-gray-200">
           <Shield className="text-blue-600 w-7 h-7" />
@@ -79,9 +78,8 @@ export const AdminLayout = () => {
               <button
                 key={key}
                 onClick={onClick}
-                className={`flex items-center w-full px-3 py-2 rounded-md text-left text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  isActive ? 'bg-blue-100 font-medium' : ''
-                }`}
+                className={`flex items-center w-full px-3 py-2 rounded-md text-left text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 ${isActive ? 'bg-blue-100 font-medium' : ''
+                  }`}
               >
                 <span>{icon}</span>
                 {!collapsed && <span className="ml-3">{label}</span>}

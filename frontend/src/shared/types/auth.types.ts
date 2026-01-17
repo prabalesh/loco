@@ -1,3 +1,10 @@
+export interface UserStats {
+  total_submissions: number
+  accepted_submissions: number
+  problems_solved: number
+  acceptance_rate: number
+}
+
 export interface User {
   id: number
   email: string
@@ -5,6 +12,7 @@ export interface User {
   role: string
   email_verified: boolean
   created_at: string
+  stats?: UserStats
 }
 
 export interface PublicUser {
@@ -12,6 +20,7 @@ export interface PublicUser {
   username: string
   is_verified: boolean
   created_at: string
+  stats?: UserStats
 }
 
 export interface RegisterRequest {

@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/prabalesh/loco/backend/internal/infrastructure/auth"
@@ -62,7 +61,6 @@ func RequireAdminAuth(jwtService *auth.JWTService, logger *zap.Logger) func(http
 				zap.String("path", r.URL.Path),
 			)
 
-			fmt.Println("went from here")
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

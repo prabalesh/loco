@@ -65,6 +65,60 @@ func Auth(jwtService *auth.JWTService, logger *zap.Logger) func(http.Handler) ht
 	}
 }
 
+// RegularOrAdminAuth middleware validates either regular accessToken OR adminAccessToken
+func RegularOrAdminAuth(jwtService *auth.JWTService, logger *zap.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var token string
+			isAdmin := false
+
+			// 1. Try regular access token
+			if cookie, err := r.Cookie("accessToken"); err == nil {
+				token = cookie.Value
+			}
+
+			// 2. If not found, try admin access token
+			if token == "" {
+				if cookie, err := r.Cookie("adminAccessToken"); err == nil {
+					token = cookie.Value
+					isAdmin = true
+				}
+			}
+
+			if token == "" {
+				logger.Warn("No regular or admin access token cookie found")
+				respondUnauthorized(w, "unauthorized: no access token")
+				return
+			}
+
+			// Validate token
+			claims, err := jwtService.ValidateToken(token, false)
+			if err != nil {
+				logger.Warn("Invalid access token",
+					zap.Error(err),
+					zap.Bool("is_admin_cookie", isAdmin),
+				)
+				respondUnauthorized(w, "unauthorized: invalid token")
+				return
+			}
+
+			// If it was an admin cookie, ensure it has the admin role
+			if isAdmin && claims.Role != "admin" {
+				logger.Warn("Admin cookie used but role is not admin", zap.Int("user_id", claims.UserID))
+				respondForbidden(w, "forbidden: admin access required")
+				return
+			}
+
+			// Add user info to context
+			ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
+			ctx = context.WithValue(ctx, UserEmailKey, claims.Email)
+			ctx = context.WithValue(ctx, UserRoleKey, claims.Role)
+
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
 // OptionalAuth middleware tries to authenticate but doesn't fail if no token
 func OptionalAuth(jwtService *auth.JWTService, logger *zap.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {

@@ -78,7 +78,7 @@ export const UserProfilePage = () => {
 
             {/* Badges */}
             <div className="flex flex-wrap gap-2 mt-6">
-              
+
               {/* Only show verification for own profile */}
               {user.is_verified && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
@@ -91,18 +91,18 @@ export const UserProfilePage = () => {
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <Card className="p-6 text-center">
-              <div className="text-3xl font-bold text-blue-600 mb-2">0</div>
+              <div className="text-3xl font-bold text-blue-600 mb-2">{user.stats?.problems_solved || 0}</div>
               <div className="text-gray-600 font-medium">Problems Solved</div>
             </Card>
 
             <Card className="p-6 text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">0</div>
+              <div className="text-3xl font-bold text-green-600 mb-2">{user.stats?.total_submissions || 0}</div>
               <div className="text-gray-600 font-medium">Submissions</div>
             </Card>
 
             <Card className="p-6 text-center">
-              <div className="text-3xl font-bold text-purple-600 mb-2">-</div>
-              <div className="text-gray-600 font-medium">Global Rank</div>
+              <div className="text-3xl font-bold text-purple-600 mb-2">{(user.stats?.acceptance_rate || 0).toFixed(1)}%</div>
+              <div className="text-gray-600 font-medium">Acceptance Rate</div>
             </Card>
           </div>
 

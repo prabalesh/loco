@@ -3,6 +3,7 @@ package domain
 // Request DTOs
 type CreateProblemRequest struct {
 	Title         string `json:"title"`
+	Slug          string `json:"slug"`
 	Description   string `json:"description"`
 	Difficulty    string `json:"difficulty"`
 	TimeLimit     int    `json:"time_limit"`
@@ -13,10 +14,12 @@ type CreateProblemRequest struct {
 	Constraints   string `json:"constraints"`
 	Status        string `json:"status"`
 	Visibility    string `json:"visibility"`
+	IsActive      bool   `json:"is_active"`
 }
 
 type UpdateProblemRequest struct {
 	Title         string `json:"title"`
+	Slug          string `json:"slug"`
 	Description   string `json:"description"`
 	Difficulty    string `json:"difficulty"`
 	TimeLimit     int    `json:"time_limit"`
@@ -27,6 +30,7 @@ type UpdateProblemRequest struct {
 	Constraints   string `json:"constraints"`
 	Status        string `json:"status"`
 	Visibility    string `json:"visibility"`
+	IsActive      *bool  `json:"is_active"`
 }
 
 type ListProblemsRequest struct {

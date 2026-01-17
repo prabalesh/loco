@@ -1,267 +1,336 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { useState, useCallback, useEffect } from "react";
+import { useParams, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Container,
-  Paper,
-  Typography,
+  Card,
   Button,
-  Box,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Tabs,
+  Tab,
+  Alert,
   CircularProgress,
-} from "@mui/material";
-import { ProblemStepper } from "../components/ProblemStepper";
-import { useAvailableLanguages } from "../hooks/useAvailableLanguages";
-import { useProblemLanguages } from "../hooks/useProblemLanguages";
-import { useEditorState } from "../hooks/useEditorState";
-import { useLanguageManager } from "../hooks/useLanguageManager";
-import { LanguageSelector } from "../components/LanguageSelector";
-import { LanguageChips } from "../components/LanguageChips";
-import { CodeEditor } from "../components/CodeEditor";
-import { EmptyEditorState } from "../components/EmptyEditorState";
-import { AlertMessage } from "../components/AlertMessage";
+  Chip,
+  Stack,
+  Box,
+  Typography,
+  CardHeader,
+  CardContent,
+  Divider,
+  AlertTitle
+} from '@mui/material'
+import {
+  Save as SaveIcon,
+  ArrowBack as ArrowBackIcon,
+  ArrowForward as ArrowForwardIcon
+} from '@mui/icons-material'
+import Editor from '@monaco-editor/react'
+import toast from 'react-hot-toast'
+import { adminLanguagesApi, adminProblemLanguagesApi } from '../../../lib/api/admin'
+import { ProblemStepper } from '../components/ProblemStepper'
+
+interface Language {
+  id: number
+  name: string
+  language_id: string
+  extension: string
+  default_template?: string
+}
+
+interface ProblemLanguage {
+  problem_id: number
+  language_id: number
+  function_code: string
+  main_code: string
+  solution_code: string
+  language?: Language
+}
 
 export default function ProblemLanguage() {
-  const { problemId } = useParams<{ problemId: string }>();
-  const navigate = useNavigate();
+  const { problemId } = useParams<{ problemId: string }>()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
-  // Fetch available languages
-  const { availableLanguages, loading: langLoading } = useAvailableLanguages();
+  const [selectedLanguageId, setSelectedLanguageId] = useState<number | null>(null)
+  const [functionCode, setFunctionCode] = useState('')
+  const [mainCode, setMainCode] = useState('')
+  const [solutionCode, setSolutionCode] = useState('')
+  const [activeTab, setActiveTab] = useState('function')
 
-  // Fetch and manage problem languages
-  const {
-    problemLanguages,
-    loading: probLoading,
-    saving,
-    error: hookError,
-    saveLanguage,
-    deleteLanguage,
-  } = useProblemLanguages(problemId);
+  // Fetch all available languages
+  const { data: languagesData, isLoading: languagesLoading } = useQuery({
+    queryKey: ['languages', 'active'],
+    queryFn: () => adminLanguagesApi.getAllActive(),
+  })
 
-  // Local UI state
-  const [selectedLangId, setSelectedLangId] = useState<number | null>(null);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  // Fetch problem languages
+  const { data: problemLanguagesData, isLoading: problemLanguagesLoading } = useQuery({
+    queryKey: ['problem-languages', problemId],
+    queryFn: () => adminProblemLanguagesApi.getAll(String(problemId)),
+  })
 
-  // Editor state management
-  const {
-    currentTab,
-    setCurrentTab,
-    editorContent,
-    updateEditorContent,
-    resetEditorContent,
-  } = useEditorState(selectedLangId, problemLanguages);
+  const languages = languagesData?.data?.data || []
+  const problemLanguages = problemLanguagesData?.data?.data || []
 
-  // Language utilities
-  const { unusedLanguages, getLanguageById, getEditorLanguage } =
-    useLanguageManager(availableLanguages, problemLanguages);
+  // Get languages not yet added to this problem
+  const availableLanguages = languages.filter(
+    (lang) => !problemLanguages.some((pl) => pl.language_id === lang.id)
+  )
 
-  // Sync hook error with local error state
-  useEffect(() => {
-    if (hookError) {
-      setError(hookError);
-    }
-  }, [hookError]);
-
-  // Handle selecting a new language to add
-  const handleSelectLanguageToAdd = useCallback(
-    (langId: number) => {
-      const lang = availableLanguages.find((l) => l.id === langId);
-      if (lang) {
-        setSelectedLangId(langId);
-        resetEditorContent({
-          function: lang.default_template || "// Write starter code here",
-          main: "// Write I/O handling code here",
-          solution: "// Write your solution here",
-        });
-        setCurrentTab("function");
-        setSuccess(`${lang.name} selected. Fill in the code and click Save.`);
-        setError("");
+  // Save/Update mutation
+  const saveMutation = useMutation({
+    mutationFn: async (data: { language_id: number; function_code: string; main_code: string; solution_code: string }) => {
+      const existing = problemLanguages.find((pl) => pl.language_id === data.language_id)
+      if (existing) {
+        return adminProblemLanguagesApi.update(String(problemId), data.language_id, data)
+      } else {
+        return adminProblemLanguagesApi.create(String(problemId), data)
       }
     },
-    [availableLanguages, resetEditorContent, setCurrentTab]
-  );
-
-  // Handle selecting an existing language
-  const handleSelectExistingLanguage = useCallback(
-    (langId: number) => {
-      setSelectedLangId(langId);
-      setCurrentTab("function");
-      setError("");
-      setSuccess("");
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['problem-languages', problemId] })
+      toast.success('Language configuration saved successfully!')
     },
-    [setCurrentTab]
-  );
+    onError: () => {
+      toast.error('Failed to save language configuration')
+    },
+  })
 
-  // Validate input fields
-  const validateFields = useCallback(() => {
-    const { function: functionCode, main: mainCode, solution: solutionCode } = editorContent;
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (languageId: number) => adminProblemLanguagesApi.delete(String(problemId), languageId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['problem-languages', problemId] })
+      toast.success('Language removed successfully!')
+      if (selectedLanguageId === deleteMutation.variables) {
+        setSelectedLanguageId(null)
+        resetEditor()
+      }
+    },
+    onError: () => {
+      toast.error('Failed to remove language')
+    },
+  })
 
-    if (!functionCode.trim()) {
-      setError("Function code is required");
-      return false;
+  const resetEditor = () => {
+    setFunctionCode('')
+    setMainCode('')
+    setSolutionCode('')
+    setActiveTab('function')
+  }
+
+  // Load language data when selected
+  useEffect(() => {
+    if (selectedLanguageId) {
+      const problemLang = problemLanguages.find((pl) => pl.language_id === selectedLanguageId)
+      const lang = languages.find((l) => l.id === selectedLanguageId)
+
+      if (problemLang) {
+        // Load existing configuration
+        setFunctionCode(problemLang.function_code || '')
+        setMainCode(problemLang.main_code || '')
+        setSolutionCode(problemLang.solution_code || '')
+      } else if (lang) {
+        // Initialize with template
+        setFunctionCode(lang.default_template || '// Write starter code here')
+        setMainCode('// Write I/O handling code here')
+        setSolutionCode('// Write your solution here')
+      }
+    }
+  }, [selectedLanguageId, problemLanguages, languages])
+
+  const handleSave = () => {
+    if (!selectedLanguageId) {
+      toast.error('Please select a language')
+      return
     }
 
-    if (!mainCode.trim()) {
-      setError("Main code (I/O handling) is required");
-      return false;
+    if (!functionCode.trim() || !mainCode.trim() || !solutionCode.trim()) {
+      toast.error('All code sections are required')
+      return
     }
 
-    if (!solutionCode.trim()) {
-      setError("Solution code is required");
-      return false;
-    }
-
-    return true;
-  }, [editorContent]);
-
-  // Handle save
-  const handleSave = useCallback(async () => {
-    if (!selectedLangId) {
-      setError("Please select a language first");
-      return;
-    }
-
-    if (!validateFields()) {
-      return;
-    }
-
-    const { function: functionCode, main: mainCode, solution: solutionCode } = editorContent;
-
-    const result = await saveLanguage(selectedLangId, {
+    saveMutation.mutate({
+      language_id: selectedLanguageId,
       function_code: functionCode,
       main_code: mainCode,
       solution_code: solutionCode,
-    });
-
-    if (result.success) {
-      setSuccess(result.message);
-      setError("");
-    } else {
-      setError(result.message);
-      setSuccess("");
-    }
-  }, [selectedLangId, editorContent, saveLanguage, validateFields]);
-
-  // Handle delete
-  const handleDelete = useCallback(
-    async (langId: number) => {
-      if (!window.confirm("Are you sure you want to remove this language?")) {
-        return;
-      }
-
-      const result = await deleteLanguage(langId);
-
-      if (result.success) {
-        if (selectedLangId === langId) {
-          setSelectedLangId(null);
-          resetEditorContent({ function: "", main: "", solution: "" });
-        }
-        setSuccess(result.message);
-        setError("");
-      } else {
-        setError(result.message);
-        setSuccess("");
-      }
-    },
-    [selectedLangId, deleteLanguage, resetEditorContent]
-  );
-
-  // Handle navigation
-  const handleBack = useCallback(() => {
-    navigate(`/admin/problems/${problemId}/test-cases`);
-  }, [navigate, problemId]);
-
-  const handleContinue = useCallback(() => {
-    navigate(`/admin/problems/${problemId}/validate`);
-  }, [navigate, problemId]);
-
-  // Loading state
-  if (langLoading || probLoading) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, display: "flex", justifyContent: "center" }}>
-        <CircularProgress />
-      </Container>
-    );
+    })
   }
 
-  // Get current language details
-  const selectedLang = selectedLangId ? getLanguageById(selectedLangId) : null;
-  const languageName =
-    (selectedLang as any)?.display_name ||
-    (selectedLang as any)?.name ||
-    "Selected Language";
-  const editorLanguage = selectedLang
-    ? getEditorLanguage(
-        (selectedLang as any)?.language_name || (selectedLang as any)?.name || ""
-      )
-    : "plaintext";
+  const handleDelete = (languageId: number) => {
+    if (window.confirm('Are you sure you want to remove this language?')) {
+      deleteMutation.mutate(languageId)
+    }
+  }
+
+  const handleLanguageSelect = (langId: number) => {
+    setSelectedLanguageId(langId)
+  }
+
+  const getLanguageName = (langId: number) => {
+    return languages.find((l) => l.id === langId)?.name || 'Unknown'
+  }
+
+  const getEditorLanguage = (langId: number) => {
+    const lang = languages.find((l) => l.id === langId)
+    return lang?.language_id || 'plaintext'
+  }
+
+  if (languagesLoading || problemLanguagesLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+        <CircularProgress size={60} />
+      </Box>
+    )
+  }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Stepper */}
-      <ProblemStepper currentStep={3} model="validate" />
-
+    <Stack spacing={4} sx={{ p: 4 }}>
       {/* Header */}
-      <Paper sx={{ p: 3, mb: 2 }}>
-        <Typography variant="h5" gutterBottom>
+      <Box textAlign="center">
+        <Typography variant="h4" fontWeight="bold" gutterBottom>
           Configure Languages
         </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Add boilerplate code and solution for each language
-        </Typography>
-      </Paper>
+        <ProblemStepper currentStep={3} model="validate" problemId={problemId || "create"} />
+      </Box>
 
-      {/* Alerts */}
-      <AlertMessage message={error} severity="error" onClose={() => setError("")} />
-      <AlertMessage message={success} severity="success" onClose={() => setSuccess("")} />
+      {/* Language Selection */}
+      <Card variant="outlined">
+        <CardHeader title="Select Language" />
+        <Divider />
+        <CardContent>
+          <Stack spacing={3}>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <FormControl fullWidth sx={{ maxWidth: 300 }}>
+                <InputLabel id="language-add-label">Add a language</InputLabel>
+                <Select
+                  labelId="language-add-label"
+                  label="Add a language"
+                  value=""
+                  onChange={(e) => handleLanguageSelect(Number(e.target.value))}
+                  disabled={availableLanguages.length === 0}
+                >
+                  {availableLanguages.map((lang) => (
+                    <MenuItem key={lang.id} value={lang.id}>
+                      {lang.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Typography variant="body2" color="text.secondary">
+                {availableLanguages.length === 0 ? 'All languages added' : `${availableLanguages.length} available`}
+              </Typography>
+            </Box>
 
-      {/* Main Content */}
-      <Paper sx={{ p: 3 }}>
-        {/* Language Selection Section */}
-        <Box sx={{ mb: 3 }}>
-          <LanguageSelector
-            unusedLanguages={unusedLanguages}
-            onSelectLanguage={handleSelectLanguageToAdd}
-            hasAddedLanguages={problemLanguages.length > 0}
+            {/* Added Languages */}
+            {problemLanguages.length > 0 && (
+              <Box>
+                <Typography variant="subtitle2" gutterBottom color="text.secondary">
+                  Configured Languages:
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  {problemLanguages.map((pl) => (
+                    <Chip
+                      key={pl.language_id}
+                      label={getLanguageName(pl.language_id)}
+                      color={selectedLanguageId === pl.language_id ? 'primary' : 'default'}
+                      variant={selectedLanguageId === pl.language_id ? 'filled' : 'outlined'}
+                      onDelete={() => handleDelete(pl.language_id)}
+                      onClick={() => handleLanguageSelect(pl.language_id)}
+                      sx={{ cursor: 'pointer' }}
+                    />
+                  ))}
+                </Stack>
+              </Box>
+            )}
+          </Stack>
+        </CardContent>
+      </Card>
+
+      {/* Code Editor */}
+      {selectedLanguageId ? (
+        <Card variant="outlined">
+          <CardHeader
+            title={`${getLanguageName(selectedLanguageId)} Configuration`}
+            action={
+              <Button
+                variant="contained"
+                startIcon={<SaveIcon />}
+                onClick={handleSave}
+                disabled={saveMutation.isPending}
+              >
+                Save
+              </Button>
+            }
           />
+          <Divider />
+          <CardContent>
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <AlertTitle>Code Sections</AlertTitle>
+              Function: Starter code shown to users | Main: I/O handling | Solution: Reference solution
+            </Alert>
 
-          <LanguageChips
-            languages={problemLanguages}
-            selectedLangId={selectedLangId}
-            onSelectLanguage={handleSelectExistingLanguage}
-            onDeleteLanguage={handleDelete}
-          />
-        </Box>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+              <Tabs value={activeTab} onChange={(_e, v) => setActiveTab(v)}>
+                <Tab label="Function Code" value="function" />
+                <Tab label="Main Code" value="main" />
+                <Tab label="Solution Code" value="solution" />
+              </Tabs>
+            </Box>
 
-        {/* Code Editor Section */}
-        {selectedLangId ? (
-          <CodeEditor
-            languageName={languageName}
-            editorLanguage={editorLanguage}
-            currentTab={currentTab}
-            editorContent={editorContent}
-            onTabChange={setCurrentTab}
-            onCodeChange={(code) => updateEditorContent(currentTab, code)}
-            onSave={handleSave}
-            saving={saving}
-          />
-        ) : (
-          <EmptyEditorState />
-        )}
-      </Paper>
+            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+              <Editor
+                height="400px"
+                language={getEditorLanguage(selectedLanguageId)}
+                value={activeTab === 'function' ? functionCode : activeTab === 'main' ? mainCode : solutionCode}
+                onChange={(value) => {
+                  if (activeTab === 'function') setFunctionCode(value || '')
+                  else if (activeTab === 'main') setMainCode(value || '')
+                  else setSolutionCode(value || '')
+                }}
+                theme="vs-dark"
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 14,
+                  lineNumbers: 'on',
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                }}
+              />
+            </Box>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card variant="outlined">
+          <CardContent>
+            <Typography color="text.secondary" align="center" py={4} variant="h6">
+              Select a language to configure boilerplate code
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Navigation */}
-      <Box sx={{ mt: 3, display: "flex", justifyContent: "space-between" }}>
-        <Button variant="outlined" onClick={handleBack}>
-          Back
+      <Box display="flex" justifyContent="space-between" mt={4}>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate(`/problems/${problemId}/testcases`)}
+        >
+          Back to Test Cases
         </Button>
         <Button
           variant="contained"
+          endIcon={<ArrowForwardIcon />}
+          onClick={() => navigate(`/problems/${problemId}/validate`)}
           disabled={problemLanguages.length === 0}
-          onClick={handleContinue}
         >
-          Continue to Validate
+          Continue
         </Button>
       </Box>
-    </Container>
-  );
+    </Stack>
+  )
 }

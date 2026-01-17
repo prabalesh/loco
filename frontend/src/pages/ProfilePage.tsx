@@ -3,18 +3,68 @@ import { User, Mail, Calendar, Shield, CheckCircle, XCircle } from 'lucide-react
 import { useProfile } from '@/features/auth/hooks/useProfile'
 import { Card } from '@/shared/components/ui/Card'
 import { Button } from '@/shared/components/ui/Button'
-import { Loading } from '@/shared/components/common/Loading'
 import { formatDistanceToNow } from 'date-fns'
+import { Skeleton } from '@/shared/components/ui/Skeleton'
 
+const ProfileSkeleton = () => (
+  <div className="min-h-screen bg-gray-50 py-6 sm:py-12">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Header Card Skeleton */}
+      <Card className="p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 w-full sm:w-auto">
+            <Skeleton className="w-16 h-16 sm:w-20 sm:h-20 rounded-full" />
+            <div className="text-center sm:text-left w-full sm:w-auto space-y-2">
+              <Skeleton className="h-8 w-48 mx-auto sm:mx-0" />
+              <div className="flex items-center justify-center sm:justify-start space-x-2">
+                <Skeleton className="h-4 w-4" />
+                <Skeleton className="h-4 w-40" />
+              </div>
+            </div>
+          </div>
+          <Skeleton className="h-9 w-32 mx-auto sm:mx-0" />
+        </div>
+        <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-4 sm:mt-6">
+          <Skeleton className="h-6 w-24 rounded-full" />
+          <Skeleton className="h-6 w-32 rounded-full" />
+        </div>
+      </Card>
+
+      {/* Stats Grid Skeleton */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
+        {[1, 2, 3].map((i) => (
+          <Card key={i} className="p-4 sm:p-6 text-center space-y-2">
+            <Skeleton className="h-10 w-12 mx-auto" />
+            <Skeleton className="h-5 w-32 mx-auto" />
+          </Card>
+        ))}
+      </div>
+
+      {/* Account Details Skeleton */}
+      <Card className="p-4 sm:p-6 lg:p-8">
+        <Skeleton className="h-7 w-48 mb-6" />
+        <div className="space-y-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 border-b border-gray-100 gap-2">
+              <div className="flex items-center space-x-3">
+                <Skeleton className="h-5 w-5" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+              <Skeleton className="h-5 w-48" />
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  </div>
+)
 
 export const ProfilePage = () => {
   const { data: user, isLoading, error } = useProfile()
 
-
   if (isLoading) {
-    return <Loading />
+    return <ProfileSkeleton />
   }
-
 
   if (error || !user) {
     return (
@@ -29,7 +79,6 @@ export const ProfilePage = () => {
       </div>
     )
   }
-
 
   return (
     <div className="min-h-screen bg-gray-50 py-6 sm:py-12">
@@ -48,7 +97,6 @@ export const ProfilePage = () => {
                   <User className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
                 </div>
 
-
                 {/* User Info */}
                 <div className="text-center sm:text-left w-full sm:w-auto">
                   <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words">
@@ -61,13 +109,11 @@ export const ProfilePage = () => {
                 </div>
               </div>
 
-
               {/* Edit Button */}
               <Button variant="outline" size="sm" className="w-full sm:w-auto">
                 Edit Profile
               </Button>
             </div>
-
 
             {/* Badges */}
             <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-4 sm:mt-6">
@@ -76,7 +122,6 @@ export const ProfilePage = () => {
                 <Shield className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                 {user.role}
               </span>
-
 
               {/* Email Verified Badge */}
               {user.email_verified ? (
@@ -93,7 +138,6 @@ export const ProfilePage = () => {
             </div>
           </Card>
 
-
           {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
             <Card className="p-4 sm:p-6 text-center">
@@ -101,12 +145,10 @@ export const ProfilePage = () => {
               <div className="text-sm sm:text-base text-gray-600 font-medium">Problems Solved</div>
             </Card>
 
-
             <Card className="p-4 sm:p-6 text-center">
               <div className="text-2xl sm:text-3xl font-bold text-green-600 mb-1 sm:mb-2">0</div>
               <div className="text-sm sm:text-base text-gray-600 font-medium">Submissions</div>
             </Card>
-
 
             <Card className="p-4 sm:p-6 text-center">
               <div className="text-2xl sm:text-3xl font-bold text-purple-600 mb-1 sm:mb-2">-</div>
@@ -114,13 +156,11 @@ export const ProfilePage = () => {
             </Card>
           </div>
 
-
           {/* Account Details */}
           <Card className="p-4 sm:p-6 lg:p-8">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
               Account Details
             </h2>
-
 
             <div className="space-y-3 sm:space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 border-b border-gray-200 gap-2 sm:gap-4">
@@ -133,7 +173,6 @@ export const ProfilePage = () => {
                 </span>
               </div>
 
-
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 border-b border-gray-200 gap-2 sm:gap-4">
                 <div className="flex items-center space-x-3">
                   <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 flex-shrink-0" />
@@ -143,7 +182,6 @@ export const ProfilePage = () => {
                   {user.email}
                 </span>
               </div>
-
 
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 border-b border-gray-200 gap-2 sm:gap-4">
                 <div className="flex items-center space-x-3">
@@ -155,7 +193,6 @@ export const ProfilePage = () => {
                 </span>
               </div>
 
-
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 border-b border-gray-200 gap-2 sm:gap-4">
                 <div className="flex items-center space-x-3">
                   <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 flex-shrink-0" />
@@ -165,7 +202,6 @@ export const ProfilePage = () => {
                   {formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}
                 </span>
               </div>
-
 
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3">
                 <div className="flex items-center space-x-3">
@@ -178,7 +214,6 @@ export const ProfilePage = () => {
               </div>
             </div>
           </Card>
-
 
           {/* Recent Activity (Placeholder) */}
           <Card className="p-4 sm:p-6 lg:p-8 mt-4 sm:mt-6">

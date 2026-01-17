@@ -8,14 +8,14 @@ import (
 
 // TestCase represents a test case (sample or hidden) for a problem
 type TestCase struct {
-	ID               int              `json:"id" db:"id"`
-	ProblemID        int              `json:"problem_id" db:"problem_id"`
-	Input            string           `json:"input" db:"input"`
-	ExpectedOutput   string           `json:"expected_output" db:"expected_output"`
-	IsSample         bool             `json:"is_sample" db:"is_sample"`
-	ValidationConfig ValidationConfig `json:"validation_config" db:"validation_config"` // JSONB
-	OrderIndex       int              `json:"order_index" db:"order_index"`
-	CreatedAt        time.Time        `json:"created_at" db:"created_at"`
+	ID               int              `json:"id" gorm:"primaryKey"`
+	ProblemID        int              `json:"problem_id" gorm:"not null;index"`
+	Input            string           `json:"input" gorm:"type:text"`
+	ExpectedOutput   string           `json:"expected_output" gorm:"type:text"`
+	IsSample         bool             `json:"is_sample" gorm:"default:false"`
+	ValidationConfig ValidationConfig `json:"validation_config" gorm:"type:jsonb;serializer:json"`
+	OrderIndex       int              `json:"order_index" gorm:"default:0"`
+	CreatedAt        time.Time        `json:"created_at" gorm:"autoCreateTime"`
 }
 
 // ValidationConfig is a custom type for JSONB handling

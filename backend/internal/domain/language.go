@@ -3,21 +3,22 @@ package domain
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"strings"
 	"time"
 )
 
 // Language represents a programming language
 type Language struct {
-	ID              int            `json:"id" db:"id"`
-	LanguageID      string         `json:"language_id" db:"language_id"` // python, cpp, javascript
-	Name            string         `json:"name" db:"name"`               // Python 3, C++
-	Version         string         `json:"version" db:"version"`
-	Extension       string         `json:"extension" db:"extension"` // .py, .cpp
-	DefaultTemplate string         `json:"default_template" db:"default_template"`
-	IsActive        bool           `json:"is_active" db:"is_active"`
-	ExecutorConfig  ExecutorConfig `json:"executor_config" db:"executor_config"` // JSONB
-	CreatedAt       time.Time      `json:"created_at" db:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at" db:"updated_at"`
+	ID              int            `json:"id" gorm:"primaryKey"`
+	Slug            string         `json:"language_id" gorm:"column:slug;size:50;not null;uniqueIndex"`
+	Name            string         `json:"name" gorm:"size:100;not null"`
+	Version         string         `json:"version" gorm:"size:50"`
+	Extension       string         `json:"extension" gorm:"size:10"`
+	DefaultTemplate string         `json:"default_template" gorm:"type:text"`
+	IsActive        bool           `json:"is_active" gorm:"default:true"`
+	ExecutorConfig  ExecutorConfig `json:"executor_config" gorm:"type:jsonb;serializer:json"`
+	CreatedAt       time.Time      `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt       time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 // ExecutorConfig is a custom type for JSONB handling
@@ -45,13 +46,43 @@ func (ec *ExecutorConfig) Scan(value interface{}) error {
 
 // ProblemLanguage represents the many-to-many relationship between problems and languages
 type ProblemLanguage struct {
-	ProblemID    int        `json:"problem_id" db:"problem_id"`
-	LanguageID   int        `json:"language_id" db:"language_id"`
-	FunctionCode string     `json:"function_code" db:"function_code"`
-	MainCode     string     `json:"main_code" db:"main_code"`
-	SolutionCode string     `json:"solution_code" db:"solution_code"`
-	IsValidated  bool       `json:"is_validated" db:"is_validated"`
-	ValidatedAt  *time.Time `json:"validated_at,omitempty" db:"validated_at"`
-	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
+	ProblemID            int        `json:"problem_id" gorm:"primaryKey"`
+	LanguageID           int        `json:"language_id" gorm:"primaryKey"`
+	LanguageName         string     `json:"language_name" gorm:"->"`
+	LanguageVersion      string     `json:"language_version" gorm:"->"`
+	FunctionCode         string     `json:"function_code" gorm:"type:text"`
+	MainCode             string     `json:"main_code" gorm:"type:text"`
+	SolutionCode         string     `json:"solution_code" gorm:"type:text"`
+	IsValidated          bool       `json:"is_validated" gorm:"default:false"`
+	ValidatedAt          *time.Time `json:"validated_at,omitempty"`
+	LastValidationStatus string     `json:"last_validation_status" gorm:"size:50"`
+	LastValidationError  string     `json:"last_validation_error" gorm:"type:text"`
+	LastPassCount        int        `json:"last_pass_count" gorm:"default:0"`
+	LastTotalCount       int        `json:"last_total_count" gorm:"default:0"`
+	CreatedAt            time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt            time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+}
+
+func (pl *ProblemLanguage) GetCombinedCode(template string, implementationCode string) string {
+	if implementationCode == "" {
+		implementationCode = pl.SolutionCode
+	}
+
+	completeCode := strings.Replace(template, "##funccodegoeshere", implementationCode, 1)
+	completeCode = strings.Replace(completeCode, "##maincodegoeshere", pl.MainCode, 1)
+
+	return completeCode
+}
+
+func (pl *ProblemLanguage) GetAdminCombinedCode(template string, implementationCode string) string {
+	if implementationCode == "" {
+		implementationCode = pl.SolutionCode
+	}
+
+	funcCode := strings.Replace(pl.FunctionCode, "##codegoeshere", pl.SolutionCode, 1)
+
+	completeCode := strings.Replace(template, "##funccodegoeshere", funcCode, 1)
+	completeCode = strings.Replace(completeCode, "##maincodegoeshere", pl.MainCode, 1)
+
+	return completeCode
 }

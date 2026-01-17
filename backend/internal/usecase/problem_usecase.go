@@ -8,21 +8,20 @@ import (
 
 	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/internal/domain/uerror"
-	"github.com/prabalesh/loco/backend/internal/domain/validator"
-	"github.com/prabalesh/loco/backend/internal/usecase/interfaces"
+	"github.com/prabalesh/loco/backend/internal/domain/validator" // This import is kept because it's used later in the file.
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/prabalesh/loco/backend/pkg/utils"
 	"go.uber.org/zap"
 )
 
 type ProblemUsecase struct {
-	problemRepo  interfaces.ProblemRepository
-	testcaseRepo interfaces.TestCaseRepository
+	problemRepo  domain.ProblemRepository
+	testcaseRepo domain.TestCaseRepository
 	cfg          *config.Config
 	logger       *zap.Logger
 }
 
-func NewProblemUsecase(problemRepo interfaces.ProblemRepository, testcaseRepo interfaces.TestCaseRepository, cfg *config.Config, logger *zap.Logger) *ProblemUsecase {
+func NewProblemUsecase(problemRepo domain.ProblemRepository, testcaseRepo domain.TestCaseRepository, cfg *config.Config, logger *zap.Logger) *ProblemUsecase {
 	return &ProblemUsecase{
 		problemRepo:  problemRepo,
 		testcaseRepo: testcaseRepo,
@@ -43,8 +42,11 @@ func (u *ProblemUsecase) CreateProblem(req *domain.CreateProblemRequest, adminID
 		return nil, &uerror.ValidationError{Errors: validationErrors}
 	}
 
-	// Generate slug from title
-	slug := generateSlug(req.Title)
+	// Generate slug from title if not provided
+	slug := req.Slug
+	if slug == "" {
+		slug = generateSlug(req.Title)
+	}
 
 	// Check if slug already exists
 	exists, err := u.problemRepo.SlugExists(slug)
@@ -102,7 +104,7 @@ func (u *ProblemUsecase) CreateProblem(req *domain.CreateProblemRequest, adminID
 		Constraints:   req.Constraints,
 		Status:        status,
 		Visibility:    visibility,
-		IsActive:      true,
+		IsActive:      req.IsActive,
 		CreatedBy:     &adminID,
 	}
 
@@ -147,7 +149,10 @@ func (u *ProblemUsecase) UpdateProblem(problemID int, req *domain.UpdateProblemR
 	// Update fields
 	if req.Title != "" {
 		problem.Title = req.Title
-		problem.Slug = generateSlug(req.Title)
+	}
+
+	if req.Slug != "" {
+		problem.Slug = req.Slug
 	}
 
 	if req.Description != "" {
@@ -188,6 +193,10 @@ func (u *ProblemUsecase) UpdateProblem(problemID int, req *domain.UpdateProblemR
 
 	if req.Visibility != "" {
 		problem.Visibility = req.Visibility
+	}
+
+	if req.IsActive != nil {
+		problem.IsActive = *req.IsActive
 	}
 
 	if err := u.problemRepo.Update(problem); err != nil {
@@ -332,7 +341,7 @@ func (u *ProblemUsecase) GetProblem(identifier string) (*domain.Problem, error) 
 
 // ListProblems retrieves problems with filters (for users - only published & public)
 func (u *ProblemUsecase) ListProblems(req *domain.ListProblemsRequest) ([]*domain.Problem, int, error) {
-	filters := interfaces.ProblemFilters{
+	filters := domain.ProblemFilters{
 		Page:       req.Page,
 		Limit:      req.Limit,
 		Difficulty: req.Difficulty,
@@ -357,7 +366,7 @@ func (u *ProblemUsecase) ListProblems(req *domain.ListProblemsRequest) ([]*domai
 
 // ListAllProblems retrieves all problems (admin - includes drafts, private)
 func (u *ProblemUsecase) ListAllProblems(req *domain.AdminListProblemsRequest) ([]*domain.Problem, int, error) {
-	filters := interfaces.ProblemFilters{
+	filters := domain.ProblemFilters{
 		Page:       req.Page,
 		Limit:      req.Limit,
 		Difficulty: req.Difficulty,

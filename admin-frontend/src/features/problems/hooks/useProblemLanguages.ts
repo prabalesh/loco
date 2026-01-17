@@ -1,10 +1,11 @@
 // hooks/useProblemLanguages.ts
 import { useState, useEffect, useCallback } from "react";
-import { adminProblemLanguagesApi } from "../../../api/adminApi";
-import type { ProblemLanguage, CreateProblemLanguageRequest, UpdateProblemLanguageRequest } from "../../../types";
+import { adminProblemLanguagesApi } from "../../../lib/api/admin";
+import type { CreateProblemLanguageRequest, UpdateProblemLanguageRequest } from "../../../types";
+import type { ProblemLanguage as ProblemLanguageType } from "../../../types/problemLanguage";
 
 export function useProblemLanguages(problemId: string | undefined) {
-  const [problemLanguages, setProblemLanguages] = useState<ProblemLanguage[]>([]);
+  const [problemLanguages, setProblemLanguages] = useState<ProblemLanguageType[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -18,7 +19,7 @@ export function useProblemLanguages(problemId: string | undefined) {
 
     const fetchProblemLanguages = async () => {
       try {
-        const response = await adminProblemLanguagesApi.getAll(Number(problemId));
+        const response = await adminProblemLanguagesApi.getAll(String(problemId));
         setProblemLanguages(response.data.data || []);
       } catch (err) {
         console.error("Failed to load problem languages:", err);
@@ -56,28 +57,24 @@ export function useProblemLanguages(problemId: string | undefined) {
         };
 
         const response = await adminProblemLanguagesApi.update(
-          Number(problemId),
+          String(problemId),
           langId,
           updateData
         );
 
-        if (response.data.success) {
-          // Update local state
-          setProblemLanguages((prev) =>
-            prev.map((l) =>
-              l.language_id === langId
-                ? { ...l, ...response.data.data }
-                : l
-            )
-          );
+        // Update local state
+        setProblemLanguages((prev) =>
+          prev.map((l) =>
+            l.language_id === langId
+              ? { ...l, ...response.data.data }
+              : l
+          )
+        );
 
-          return { 
-            success: true, 
-            message: response.data.message || "Language updated successfully" 
-          };
-        } else {
-          throw new Error(response.data.message || "Failed to update");
-        }
+        return {
+          success: true,
+          message: "Language updated successfully"
+        };
       } else {
         // CREATE new language
         const createData: CreateProblemLanguageRequest = {
@@ -88,25 +85,21 @@ export function useProblemLanguages(problemId: string | undefined) {
         };
 
         const response = await adminProblemLanguagesApi.create(
-          Number(problemId),
+          String(problemId),
           createData
         );
 
-        if (response.data.success) {
-          // Add to local state
-          setProblemLanguages((prev) => [...prev, response.data.data]);
+        // Add to local state
+        setProblemLanguages((prev) => [...prev, response.data.data]);
 
-          return { 
-            success: true, 
-            message: response.data.message || "Language added successfully" 
-          };
-        } else {
-          throw new Error(response.data.message || "Failed to create");
-        }
+        return {
+          success: true,
+          message: "Language added successfully"
+        };
       }
     } catch (err: any) {
       console.error(err);
-      const errorMessage = err.response?.data?.message || err.message || "Failed to save language";
+      const errorMessage = err.response?.data?.error?.message || err.message || "Failed to save language";
       setError(errorMessage);
       return { success: false, message: errorMessage };
     } finally {
@@ -121,24 +114,20 @@ export function useProblemLanguages(problemId: string | undefined) {
     }
 
     try {
-      const response = await adminProblemLanguagesApi.delete(
-        Number(problemId),
+      await adminProblemLanguagesApi.delete(
+        String(problemId),
         langId
       );
 
-      if (response.data.success) {
-        // Remove from local state
-        setProblemLanguages((prev) => prev.filter((l) => l.language_id !== langId));
-        return { 
-          success: true, 
-          message: response.data.message || "Language removed successfully" 
-        };
-      } else {
-        throw new Error(response.data.message || "Failed to delete");
-      }
+      // Remove from local state
+      setProblemLanguages((prev) => prev.filter((l) => l.language_id !== langId));
+      return {
+        success: true,
+        message: "Language removed successfully"
+      };
     } catch (err: any) {
       console.error(err);
-      const errorMessage = err.response?.data?.message || err.message || "Failed to remove language";
+      const errorMessage = err.response?.data?.error?.message || err.message || "Failed to remove language";
       return { success: false, message: errorMessage };
     }
   }, [problemId]);
@@ -151,31 +140,29 @@ export function useProblemLanguages(problemId: string | undefined) {
 
     try {
       const response = await adminProblemLanguagesApi.validate(
-        Number(problemId),
+        String(problemId),
         langId
       );
 
-      if (response.data.success) {
-        // Update validation status in local state
-        setProblemLanguages((prev) =>
-          prev.map((l) =>
-            l.language_id === langId
-              ? { ...l, is_validated: response.data.data.is_validated }
-              : l
-          )
-        );
+      const validationData = response.data.data;
 
-        return { 
-          success: true, 
-          message: "Validation completed",
-          data: response.data.data
-        };
-      } else {
-        throw new Error(response.data.message || "Validation failed");
-      }
+      // Update validation status in local state
+      setProblemLanguages((prev) =>
+        prev.map((l) =>
+          l.language_id === langId
+            ? { ...l, is_validated: validationData.is_validated }
+            : l
+        )
+      );
+
+      return {
+        success: true,
+        message: "Validation completed",
+        data: validationData
+      };
     } catch (err: any) {
       console.error(err);
-      const errorMessage = err.response?.data?.message || err.message || "Failed to validate language";
+      const errorMessage = err.response?.data?.error?.message || err.message || "Failed to validate language";
       return { success: false, message: errorMessage };
     }
   }, [problemId]);

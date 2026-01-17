@@ -10,13 +10,9 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/prabalesh/loco/backend/internal/delivery/cookies"
-	"github.com/prabalesh/loco/backend/internal/delivery/handler"
 	"github.com/prabalesh/loco/backend/internal/delivery/router"
-	"github.com/prabalesh/loco/backend/internal/infrastructure/auth"
-	"github.com/prabalesh/loco/backend/internal/infrastructure/email"
-	"github.com/prabalesh/loco/backend/internal/repository/postgres"
-	"github.com/prabalesh/loco/backend/internal/usecase"
+	"github.com/prabalesh/loco/backend/internal/di"
+	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/prabalesh/loco/backend/pkg/database"
 	"github.com/prabalesh/loco/backend/pkg/logger"
@@ -46,20 +42,42 @@ func main() {
 		log.Fatal("Failed to connect to database", zap.Error(err))
 	}
 	defer func() {
-		if err := db.DB.Close(); err != nil {
+		sqlDB, err := db.DB.DB()
+		if err != nil {
+			log.Error("Failed to get sql db for closing", zap.Error(err))
+			return
+		}
+		if err := sqlDB.Close(); err != nil {
 			log.Error("Failed to close database connection", zap.Error(err))
 		}
 	}()
 
-	stats := db.DB.Stats()
-	log.Info("Database connection pool initialized",
-		zap.Int("open_connections", stats.OpenConnections),
-		zap.Int("in_use", stats.InUse),
-		zap.Int("idle", stats.Idle),
-	)
+	sqlDB, err := db.DB.DB()
+	if err != nil {
+		log.Error("Failed to get sql db for stats", zap.Error(err))
+	} else {
+		stats := sqlDB.Stats()
+		log.Info("Database connection pool initialized",
+			zap.Int("open_connections", stats.OpenConnections),
+			zap.Int("in_use", stats.InUse),
+			zap.Int("idle", stats.Idle),
+		)
+	}
 
-	deps := initializeDependencies(db, log, cfg)
-	router := router.SetupRouter(deps)
+	// Auto Migrate
+	if err := db.DB.AutoMigrate(
+		&domain.User{},
+		&domain.Problem{},
+		&domain.Language{},
+		&domain.TestCase{},
+		&domain.Submission{},
+		&domain.ProblemLanguage{},
+	); err != nil {
+		log.Fatal("Failed to run auto migrations", zap.Error(err))
+	}
+
+	container := di.NewContainer(db, cfg, log)
+	router := router.SetupRouter(container.Handlers)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,
@@ -94,45 +112,4 @@ func main() {
 	}
 
 	log.Info("=== Application Stopped ===")
-}
-
-func initializeDependencies(db *database.Database, logger *zap.Logger, cfg *config.Config) *router.Dependencies {
-	userRepo := postgres.NewUserRepository(db)
-	problemRepo := postgres.NewProblemRepository(db)
-	languageRepo := postgres.NewLanguageRepository(db)
-	testCaseRepo := postgres.NewTestCaseRepository(db)
-
-	jwtService := auth.NewJWTService(cfg.JWT.AccessTokenSecret, cfg.JWT.RefreshTokenSecret, cfg.JWT.AccessTokenExpiration, cfg.JWT.RefreshTokenExpiration)
-	emailService := email.NewEmailService(cfg, logger)
-
-	cookieManager := cookies.NewCookieManager(cfg)
-
-	authUsecase := usecase.NewAuthUsecase(userRepo, jwtService, emailService, cfg, logger)
-	userUsecase := usecase.NewUserUsecase(userRepo, logger)
-	adminUsecase := usecase.NewAdminUsecase(userRepo, logger)
-	problemUsecase := usecase.NewProblemUsecase(problemRepo, testCaseRepo, cfg, logger)
-	languageUsecase := usecase.NewLanguageUsecase(languageRepo, cfg, logger)
-	testCaseUsecase := usecase.NewTestCaseUsecase(testCaseRepo, problemRepo, cfg, logger)
-
-	authHanlder := handler.NewAuthHandler(authUsecase, logger, cfg, cookieManager)
-	userHandler := handler.NewUserHandler(userUsecase, logger)
-	adminAuthHandler := handler.NewAdminAuthHandler(authUsecase, logger, cfg, cookieManager)
-	adminHandler := handler.NewAdminHandler(adminUsecase, logger)
-	problemHandler := handler.NewProblemHandler(problemUsecase, logger, cfg)
-	languageHandler := handler.NewLanguageHandler(languageUsecase, logger, cfg)
-	testCaseHandler := handler.NewTestCaseHandler(testCaseUsecase, logger, cfg)
-
-	return &router.Dependencies{
-		Log:              logger,
-		Cfg:              cfg,
-		Db:               db,
-		JWTService:       jwtService,
-		AuthHandler:      authHanlder,
-		UserHandler:      userHandler,
-		AdminHandler:     adminHandler,
-		AdminAuthHandler: adminAuthHandler,
-		ProblemHandler:   problemHandler,
-		LanguageHandler:  languageHandler,
-		TestCaseHandler:  testCaseHandler,
-	}
 }

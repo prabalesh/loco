@@ -4,16 +4,16 @@ import "time"
 
 // User entity - just the database model
 type User struct {
-	ID                              int        `json:"id" db:"id"`
-	Email                           string     `json:"email" db:"email"`
-	Username                        string     `json:"username" db:"username"`
+	ID                              int        `json:"id" db:"id" gorm:"primaryKey"`
+	Email                           string     `json:"email" db:"email" gorm:"unique"`
+	Username                        string     `json:"username" db:"username" gorm:"unique"`
 	PasswordHash                    string     `json:"-" db:"password_hash"`
 	Role                            string     `json:"role" db:"role"`
-	IsActive                        bool       `json:"is_active" db:"is_active"`
-	EmailVerified                   bool       `json:"email_verified" db:"email_verified"`
+	IsActive                        bool       `json:"is_active" db:"is_active" gorm:"default:true"`
+	EmailVerified                   bool       `json:"email_verified" db:"email_verified" gorm:"default:false"`
 	EmailVerificationToken          *string    `json:"-" db:"email_verification_token"`
 	EmailVerificationTokenExpiresAt *time.Time `json:"-" db:"email_verification_token_expires_at"`
-	EmailVerificationAttempts       int        `json:"-" db:"email_verification_attempts"`
+	EmailVerificationAttempts       int        `json:"-" db:"email_verification_attempts" gorm:"default:0"`
 	EmailVerificationLastSentAt     *time.Time `json:"-" db:"email_verification_last_sent_at"`
 	PasswordResetToken              *string    `json:"-" db:"password_reset_token"`
 	PasswordResetTokenExpiresAt     *time.Time `json:"-" db:"password_reset_token_expires_at"`
@@ -34,11 +34,20 @@ func (u *User) ToResponse() UserResponse {
 	}
 }
 
-func (u *User) ToUserProfileResponse() UserProfileResponse {
+func (u *User) ToUserProfileResponse(stats UserStats) UserProfileResponse {
 	return UserProfileResponse{
 		ID:         u.ID,
 		Username:   u.Username,
 		IsVerified: u.EmailVerified,
 		CreatedAt:  u.CreatedAt,
+		Stats:      stats,
 	}
+}
+
+// UserStats represents statistics for a user
+type UserStats struct {
+	TotalSubmissions    int     `json:"total_submissions"`
+	AcceptedSubmissions int     `json:"accepted_submissions"`
+	ProblemsSolved      int     `json:"problems_solved"`
+	AcceptanceRate      float64 `json:"acceptance_rate"`
 }

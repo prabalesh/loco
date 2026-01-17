@@ -67,6 +67,11 @@ export interface AdminAnalytics {
   active_users: number
   inactive_users: number
   verified_users: number
+  total_submissions: number
+  pending_submissions: number
+  active_workers: number
+  queue_size: number
+  submission_history?: { date: string; count: number }[]
 }
 
 export interface LoginCredentials {
@@ -77,3 +82,7 @@ export interface LoginCredentials {
 export interface ApiError {
   error: string
 }
+
+export * from './request'
+export * from './repsonse'
+export * from './problemLanguage'

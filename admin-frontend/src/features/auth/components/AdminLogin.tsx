@@ -1,94 +1,150 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Form, Input, Button, Card, Typography } from 'antd'
-import { LockOutlined, UserOutlined, SafetyCertificateOutlined } from '@ant-design/icons'
-import { adminAuthApi } from '../../../api/adminApi'
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  TextField,
+  Typography,
+  InputAdornment,
+  Alert
+} from '@mui/material'
+import {
+  LockOutlined,
+  PersonOutline,
+  SecurityOutlined
+} from '@mui/icons-material'
+import { adminAuthApi } from '../../../lib/api/admin'
 import { useAuthStore } from '../store/authStore'
 import toast from 'react-hot-toast'
 import type { LoginCredentials } from '../../../types'
 
-const { Title, Text } = Typography
-
 export const AdminLogin = () => {
   const [loading, setLoading] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+
   const navigate = useNavigate()
   const setUser = useAuthStore((state) => state.setUser)
 
-  const onFinish = async (values: LoginCredentials) => {
-  setLoading(true)
-  try {
-    const response = await adminAuthApi.login(values)
-    const user = response.data
-    
-    setUser(user)
-    
-    toast.success('Login successful!')
-    navigate('/', { replace: true })
-  } catch (error: any) {
-    // ... error handling
-  } finally {
-    setLoading(false)
-  }
-}
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
 
+    if (!email || !password) {
+      setError('Please fill in all fields')
+      return
+    }
+
+    setLoading(true)
+    const values: LoginCredentials = { email, password }
+
+    try {
+      const response = await adminAuthApi.login(values)
+      const data = response.data
+      setUser(data.data.user)
+
+      toast.success('Login successful!')
+      navigate('/', { replace: true })
+    } catch (error: any) {
+      console.error(error)
+      const msg = error.response?.data?.message || 'Login failed'
+      setError(msg)
+      toast.error(msg)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <Card className="w-full max-w-md shadow-xl">
-        <div className="text-center mb-8">
-          <SafetyCertificateOutlined className="text-6xl text-blue-600 mb-4" />
-          <Title level={2} className="mb-2">Admin Portal</Title>
-          <Text type="secondary">Sign in to access the admin dashboard</Text>
-        </div>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(to bottom right, #eff6ff, #e0e7ff)'
+      }}
+    >
+      <Card sx={{ maxWidth: 450, width: '100%', boxShadow: 3, borderRadius: 2 }}>
+        <CardContent sx={{ p: 4 }}>
+          <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <SecurityOutlined sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+            <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+              Admin Portal
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Sign in to access the admin dashboard
+            </Typography>
+          </Box>
 
-        <Form
-          name="admin-login"
-          onFinish={onFinish}
-          layout="vertical"
-          size="large"
-        >
-          <Form.Item
-            name="email"
-            rules={[
-              { required: true, message: 'Please enter your email' },
-              { type: 'email', message: 'Please enter a valid email' },
-            ]}
-          >
-            <Input
-              prefix={<UserOutlined />}
-              placeholder="Admin Email"
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Box component="form" onSubmit={handleSubmit} noValidate>
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="email"
+              label="Admin Email"
+              name="email"
+              autoComplete="email"
+              autoFocus
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <PersonOutline color="action" />
+                  </InputAdornment>
+                ),
+              }}
             />
-          </Form.Item>
-
-          <Form.Item
-            name="password"
-            rules={[{ required: true, message: 'Please enter your password' }]}
-          >
-            <Input.Password
-              prefix={<LockOutlined />}
-              placeholder="Password"
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="password"
+              label="Password"
+              type="password"
+              id="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <LockOutlined color="action" />
+                  </InputAdornment>
+                ),
+              }}
             />
-          </Form.Item>
 
-          <Form.Item>
             <Button
-              type="primary"
-              htmlType="submit"
-              loading={loading}
-              block
+              type="submit"
+              fullWidth
+              variant="contained"
               size="large"
+              sx={{ mt: 3, mb: 2, py: 1.5 }}
+              disabled={loading}
             >
-              Sign In as Admin
+              {loading ? 'Signing in...' : 'Sign In as Admin'}
             </Button>
-          </Form.Item>
-        </Form>
+          </Box>
 
-        <div className="text-center mt-4">
-          <Text type="secondary" className="text-xs">
-            Authorized personnel only. All activities are logged.
-          </Text>
-        </div>
+          <Box sx={{ textAlign: 'center', mt: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              Authorized personnel only. All activities are logged.
+            </Typography>
+          </Box>
+        </CardContent>
       </Card>
-    </div>
+    </Box>
   )
 }

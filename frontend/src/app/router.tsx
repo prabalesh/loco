@@ -11,6 +11,9 @@ import { UserProfilePage } from '@/pages/UserProfilePage'
 import { VerifyEmailPage } from '@/features/auth/pages/VerifyEmailPage'
 import { ForgotPasswordPage } from '@/features/auth/pages/ForgetPasswordPage'
 import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage'
+import { ProblemsPage } from '@/features/problems/pages/ProblemsPage'
+import { ProblemDetailPage } from '@/features/problems/pages/ProblemDetailPage'
+import { SubmissionsPage } from '@/pages/SubmissionsPage'
 
 export const router = createBrowserRouter([
   {
@@ -35,11 +38,11 @@ export const router = createBrowserRouter([
       },
       {
         path: ROUTES.PROBLEMS,
-        element: (
-          <div className="p-8 text-center">
-            <h1 className="text-3xl font-bold">Problems Page (Coming Soon)</h1>
-          </div>
-        ),
+        element: <ProblemsPage />,
+      },
+      {
+        path: '/problems/:slug',
+        element: <ProblemDetailPage />,
       },
       {
         path: ROUTES.FORGOT_PASSWORD,
@@ -62,9 +65,7 @@ export const router = createBrowserRouter([
         path: ROUTES.SUBMISSIONS,
         element: (
           <ProtectedRoute>
-            <div className="p-8 text-center">
-              <h1 className="text-3xl font-bold">Submissions Page (Coming Soon)</h1>
-            </div>
+            <SubmissionsPage />
           </ProtectedRoute>
         ),
       },

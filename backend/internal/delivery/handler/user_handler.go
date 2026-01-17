@@ -65,5 +65,5 @@ func (h *UserHandler) GetProfileByUsername(w http.ResponseWriter, r *http.Reques
 		zap.String("usernaeme", username),
 	)
 
-	RespondJSON(w, http.StatusOK, user.ToUserProfileResponse())
+	RespondJSON(w, http.StatusOK, user)
 }

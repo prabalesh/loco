@@ -8,6 +8,7 @@ import type {
   User,
   PublicUser,
 } from '../../../shared/types/auth.types'
+import type { ApiResponse } from '@/shared/types/common.types'
 
 export const authApi = {
   register: async (data: RegisterRequest): Promise<RegisterResponse> => {
@@ -39,9 +40,9 @@ export const authApi = {
     await apiClient.post(API_ENDPOINTS.AUTH.REFRESH)
   },
 
-  getUserProfile: async (userId: 'me'): Promise<User> => {
-    const response = await apiClient.get<User>(API_ENDPOINTS.USERS.PROFILE(userId))
-    return response.data
+  getUserProfile: async (userId: 'me'): Promise<User | undefined> => {
+    const response = await apiClient.get<ApiResponse<User>>(API_ENDPOINTS.USERS.PROFILE(userId))
+    return response.data.data
   },
 
   getUserByUsername: async (username: string): Promise<PublicUser> => {

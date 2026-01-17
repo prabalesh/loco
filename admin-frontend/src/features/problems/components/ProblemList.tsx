@@ -21,6 +21,7 @@ import {
   Box,
   useTheme,
   alpha,
+  Skeleton,
 } from "@mui/material";
 import {
   Add as PlusOutlined,
@@ -30,7 +31,7 @@ import {
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { adminProblemApi } from "../../../api/adminApi";
+import { adminProblemApi } from "../../../lib/api/admin";
 import { PROBLEM_STEPS, ROUTES } from "../../../config/constant";
 import { Play } from "lucide-react";
 import { useState } from "react";
@@ -47,7 +48,7 @@ export default function ProblemList() {
     title: "",
   });
 
-  const { data } = useQuery({
+  const { data, isFetching } = useQuery({
     queryKey: ["admin-problems"],
     queryFn: async () => {
       const res = await adminProblemApi.getAll();
@@ -58,7 +59,7 @@ export default function ProblemList() {
   const problems = data?.data || [];
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => adminProblemApi.delete(id),
+    mutationFn: (id: number) => adminProblemApi.delete(String(id)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-problems"] });
       toast.success("Problem deleted successfully");
@@ -158,7 +159,28 @@ export default function ProblemList() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {problems.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((record, _) => (
+              {isFetching && problems.length === 0 ? (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={`skeleton-${index}`}>
+                    <TableCell>
+                      <Skeleton variant="text" width="60%" height={24} />
+                      <Skeleton variant="text" width="40%" height={16} />
+                    </TableCell>
+                    <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
+                    <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
+                    <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
+                    <TableCell><Skeleton variant="rounded" width={40} height={24} /></TableCell>
+                    <TableCell><Skeleton variant="text" width={100} /></TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={1}>
+                        <Skeleton variant="rectangular" width={60} height={32} />
+                        <Skeleton variant="rectangular" width={60} height={32} />
+                        <Skeleton variant="circular" width={32} height={32} />
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : problems.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((record, _) => (
                 <TableRow
                   key={record.id}
                   hover
@@ -186,8 +208,8 @@ export default function ProblemList() {
                         record.difficulty === "easy"
                           ? "success"
                           : record.difficulty === "medium"
-                          ? "warning"
-                          : "error"
+                            ? "warning"
+                            : "error"
                       }
                       size="small"
                       sx={{ borderRadius: 1 }}
@@ -294,7 +316,7 @@ export default function ProblemList() {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={data?.total || 0}
+          count={problems.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

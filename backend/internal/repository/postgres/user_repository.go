@@ -1,9 +1,10 @@
 package postgres
 
 import (
-	"database/sql"
 	"fmt"
 	"time"
+
+	"gorm.io/gorm"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/pkg/database"
@@ -21,32 +22,17 @@ func (r *userRepository) Create(user *domain.User) error {
 	ctx, cancel := database.WithMediumTimeout()
 	defer cancel()
 
-	query := `
-        INSERT INTO users (email, username, password_hash, role, is_active, email_verified)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id, created_at, updated_at
-    `
-
-	err := r.db.QueryRowContext(ctx, query,
-		user.Email,
-		user.Username,
-		user.PasswordHash,
-		user.Role,
-		user.IsActive,
-		user.EmailVerified,
-	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
-
-	if err != nil {
-		// Check for unique constraint violation
-		if isUniqueViolation(err) {
-			if containsField(err, "email") {
+	result := r.db.DB.WithContext(ctx).Create(user)
+	if result.Error != nil {
+		if isUniqueViolation(result.Error) {
+			if containsField(result.Error, "email") {
 				return fmt.Errorf("email already exists")
 			}
-			if containsField(err, "username") {
+			if containsField(result.Error, "username") {
 				return fmt.Errorf("username already taken")
 			}
 		}
-		return fmt.Errorf("failed to create user: %w", err)
+		return fmt.Errorf("failed to create user: %w", result.Error)
 	}
 
 	return nil
@@ -58,31 +44,9 @@ func (r *userRepository) GetByEmail(email string) (*domain.User, error) {
 	defer cancel()
 
 	user := &domain.User{}
-	query := `
-        SELECT id, email, username, password_hash, role, is_active, 
-               email_verified, email_verification_token, 
-               email_verification_token_expires_at, email_verification_attempts,
-               email_verification_last_sent_at, created_at, updated_at
-        FROM users WHERE email = $1
-    `
+	err := r.db.DB.WithContext(ctx).Where("email = ?", email).First(user).Error
 
-	err := r.db.QueryRowContext(ctx, query, email).Scan(
-		&user.ID,
-		&user.Email,
-		&user.Username,
-		&user.PasswordHash,
-		&user.Role,
-		&user.IsActive,
-		&user.EmailVerified,
-		&user.EmailVerificationToken,
-		&user.EmailVerificationTokenExpiresAt,
-		&user.EmailVerificationAttempts,
-		&user.EmailVerificationLastSentAt,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
-	if err == sql.ErrNoRows {
+	if err == gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("user not found")
 	}
 
@@ -98,25 +62,9 @@ func (r *userRepository) GetByUsername(username string) (*domain.User, error) {
 	defer cancel()
 
 	user := &domain.User{}
-	query := `
-        SELECT id, email, username, password_hash, role, is_active,
-               email_verified, created_at, updated_at
-        FROM users WHERE username = $1
-    `
+	err := r.db.DB.WithContext(ctx).Where("username = ?", username).First(user).Error
 
-	err := r.db.QueryRowContext(ctx, query, username).Scan(
-		&user.ID,
-		&user.Email,
-		&user.Username,
-		&user.PasswordHash,
-		&user.Role,
-		&user.IsActive,
-		&user.EmailVerified,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
-	if err == sql.ErrNoRows {
+	if err == gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("user not found")
 	}
 
@@ -133,25 +81,9 @@ func (r *userRepository) GetByID(userID int) (*domain.User, error) {
 	defer cancel()
 
 	user := &domain.User{}
-	query := `
-        SELECT id, email, username, password_hash, role, is_active, 
-               email_verified, created_at, updated_at
-        FROM users WHERE id = $1
-    `
+	err := r.db.DB.WithContext(ctx).First(user, userID).Error
 
-	err := r.db.QueryRowContext(ctx, query, userID).Scan(
-		&user.ID,
-		&user.Email,
-		&user.Username,
-		&user.PasswordHash,
-		&user.Role,
-		&user.IsActive,
-		&user.EmailVerified,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
-	if err == sql.ErrNoRows {
+	if err == gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("user not found")
 	}
 
@@ -169,26 +101,17 @@ func (r *userRepository) UpdateVerificationToken(userID int, token string, expir
 	ctx, cancel := database.WithMediumTimeout()
 	defer cancel()
 
-	query := `
-        UPDATE users 
-        SET email_verification_token = $1,
-            email_verification_token_expires_at = $2,
-            email_verification_attempts = 0,
-            updated_at = NOW()
-        WHERE id = $3
-    `
+	result := r.db.DB.WithContext(ctx).Model(&domain.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+		"email_verification_token":            token,
+		"email_verification_token_expires_at": expiresAt,
+		"email_verification_attempts":         0,
+	})
 
-	result, err := r.db.ExecContext(ctx, query, token, expiresAt, userID)
-	if err != nil {
-		return fmt.Errorf("failed to update verification token: %w", err)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update verification token: %w", result.Error)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-
-	if rowsAffected == 0 {
+	if result.RowsAffected == 0 {
 		return fmt.Errorf("user not found")
 	}
 
@@ -200,24 +123,13 @@ func (r *userRepository) UpdateVerificationAttempts(userID int, attempts int) er
 	ctx, cancel := database.WithShortTimeout()
 	defer cancel()
 
-	query := `
-        UPDATE users 
-        SET email_verification_attempts = $1,
-            updated_at = NOW()
-        WHERE id = $2
-    `
+	result := r.db.DB.WithContext(ctx).Model(&domain.User{}).Where("id = ?", userID).Update("email_verification_attempts", attempts)
 
-	result, err := r.db.ExecContext(ctx, query, attempts, userID)
-	if err != nil {
-		return fmt.Errorf("failed to update verification attempts: %w", err)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update verification attempts: %w", result.Error)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-
-	if rowsAffected == 0 {
+	if result.RowsAffected == 0 {
 		return fmt.Errorf("user not found")
 	}
 
@@ -229,24 +141,13 @@ func (r *userRepository) UpdateLastSentAt(userID int, sentAt time.Time) error {
 	ctx, cancel := database.WithShortTimeout()
 	defer cancel()
 
-	query := `
-        UPDATE users 
-        SET email_verification_last_sent_at = $1,
-            updated_at = NOW()
-        WHERE id = $2
-    `
+	result := r.db.DB.WithContext(ctx).Model(&domain.User{}).Where("id = ?", userID).Update("email_verification_last_sent_at", sentAt)
 
-	result, err := r.db.ExecContext(ctx, query, sentAt, userID)
-	if err != nil {
-		return fmt.Errorf("failed to update last sent time: %w", err)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update last sent time: %w", result.Error)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-
-	if rowsAffected == 0 {
+	if result.RowsAffected == 0 {
 		return fmt.Errorf("user not found")
 	}
 
@@ -258,27 +159,18 @@ func (r *userRepository) VerifyEmail(userID int) error {
 	ctx, cancel := database.WithMediumTimeout()
 	defer cancel()
 
-	query := `
-        UPDATE users 
-        SET email_verified = true,
-            email_verification_token = NULL,
-            email_verification_token_expires_at = NULL,
-            email_verification_attempts = 0,
-            updated_at = NOW()
-        WHERE id = $1
-    `
+	result := r.db.DB.WithContext(ctx).Model(&domain.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+		"email_verified":                      true,
+		"email_verification_token":            nil,
+		"email_verification_token_expires_at": nil,
+		"email_verification_attempts":         0,
+	})
 
-	result, err := r.db.ExecContext(ctx, query, userID)
-	if err != nil {
-		return fmt.Errorf("failed to verify email: %w", err)
+	if result.Error != nil {
+		return fmt.Errorf("failed to verify email: %w", result.Error)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-
-	if rowsAffected == 0 {
+	if result.RowsAffected == 0 {
 		return fmt.Errorf("user not found")
 	}
 
@@ -289,26 +181,17 @@ func (r *userRepository) SetPasswordResetToken(userID int, token string, expires
 	ctx, cancel := database.WithMediumTimeout()
 	defer cancel()
 
-	query := `
-        UPDATE users
-        SET password_reset_token = $1,
-            password_reset_token_expires_at = $2,
-            password_reset_attempts = 0,
-            updated_at = NOW()
-        WHERE id = $3
-    `
+	result := r.db.DB.WithContext(ctx).Model(&domain.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+		"password_reset_token":            token,
+		"password_reset_token_expires_at": expiresAt,
+		"password_reset_attempts":         0,
+	})
 
-	result, err := r.db.ExecContext(ctx, query, token, expiresAt, userID)
-	if err != nil {
-		return fmt.Errorf("failed to set reset token: %w", err)
+	if result.Error != nil {
+		return fmt.Errorf("failed to set reset token: %w", result.Error)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-
-	if rowsAffected == 0 {
+	if result.RowsAffected == 0 {
 		return fmt.Errorf("user not found")
 	}
 
@@ -320,26 +203,17 @@ func (r *userRepository) ClearPasswordResetToken(userID int) error {
 	ctx, cancel := database.WithMediumTimeout()
 	defer cancel()
 
-	query := `
-        UPDATE users
-        SET password_reset_token = NULL,
-            password_reset_token_expires_at = NULL,
-            password_reset_attempts = 0,
-            updated_at = NOW()
-        WHERE id = $1
-    `
+	result := r.db.DB.WithContext(ctx).Model(&domain.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+		"password_reset_token":            nil,
+		"password_reset_token_expires_at": nil,
+		"password_reset_attempts":         0,
+	})
 
-	result, err := r.db.ExecContext(ctx, query, userID)
-	if err != nil {
-		return fmt.Errorf("failed to clear reset token: %w", err)
+	if result.Error != nil {
+		return fmt.Errorf("failed to clear reset token: %w", result.Error)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-
-	if rowsAffected == 0 {
+	if result.RowsAffected == 0 {
 		return fmt.Errorf("user not found")
 	}
 
@@ -352,28 +226,9 @@ func (r *userRepository) GetUserByResetToken(token string) (*domain.User, error)
 	defer cancel()
 
 	user := &domain.User{}
-	query := `
-        SELECT id, email, username, password_hash, role, is_active,
-               email_verified, created_at, updated_at,
-               password_reset_token, password_reset_token_expires_at, password_reset_attempts
-        FROM users WHERE password_reset_token = $1
-    `
+	err := r.db.DB.WithContext(ctx).Where("password_reset_token = ?", token).First(user).Error
 
-	err := r.db.QueryRowContext(ctx, query, token).Scan(
-		&user.ID,
-		&user.Email,
-		&user.Username,
-		&user.PasswordHash,
-		&user.Role,
-		&user.IsActive,
-		&user.EmailVerified,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-		&user.PasswordResetToken,
-		&user.PasswordResetTokenExpiresAt,
-	)
-
-	if err == sql.ErrNoRows {
+	if err == gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("invalid or expired token")
 	}
 	if err != nil {
@@ -388,9 +243,12 @@ func (r *userRepository) UpdatePassword(userID int, hashedPassword string) error
 	ctx, cancel := database.WithShortTimeout()
 	defer cancel()
 
-	query := `UPDATE users SET password_hash = $1, password_reset_token = NULL, password_reset_token_expires_at = NULL WHERE id = $2`
-	_, err := r.db.ExecContext(ctx, query, hashedPassword, userID)
-	return err
+	result := r.db.DB.WithContext(ctx).Model(&domain.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+		"password_hash":                   hashedPassword,
+		"password_reset_token":            nil,
+		"password_reset_token_expires_at": nil,
+	})
+	return result.Error
 }
 
 func (r *userRepository) GetByVerificationToken(token string) (*domain.User, error) {
@@ -398,31 +256,9 @@ func (r *userRepository) GetByVerificationToken(token string) (*domain.User, err
 	defer cancel()
 
 	user := &domain.User{}
-	query := `
-        SELECT id, email, username, password_hash, role, is_active, 
-               email_verified, email_verification_token, 
-               email_verification_token_expires_at, email_verification_attempts,
-               email_verification_last_sent_at, created_at, updated_at
-        FROM users WHERE email_verification_token = $1
-    `
+	err := r.db.DB.WithContext(ctx).Where("email_verification_token = ?", token).First(user).Error
 
-	err := r.db.QueryRowContext(ctx, query, token).Scan(
-		&user.ID,
-		&user.Email,
-		&user.Username,
-		&user.PasswordHash,
-		&user.Role,
-		&user.IsActive,
-		&user.EmailVerified,
-		&user.EmailVerificationToken,
-		&user.EmailVerificationTokenExpiresAt,
-		&user.EmailVerificationAttempts,
-		&user.EmailVerificationLastSentAt,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
-	if err == sql.ErrNoRows {
+	if err == gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("user not found")
 	}
 
@@ -439,19 +275,8 @@ func (r *userRepository) GetByPasswordResetToken(token string) (*domain.User, er
 	defer cancel()
 
 	user := &domain.User{}
-	query := `
-        SELECT id, email, username, password_hash, role, is_active,
-               password_reset_token, password_reset_token_expires_at,
-               password_reset_sent_at, created_at, updated_at
-        FROM users
-        WHERE password_reset_token = $1
-    `
-	err := r.db.QueryRowContext(ctx, query, token).Scan(
-		&user.ID, &user.Email, &user.Username, &user.PasswordHash,
-		&user.Role, &user.IsActive,
-		&user.PasswordResetToken, &user.PasswordResetTokenExpiresAt,
-		&user.PasswordResetSentAt, &user.CreatedAt, &user.UpdatedAt,
-	)
+	err := r.db.DB.WithContext(ctx).Where("password_reset_token = ?", token).First(user).Error
+
 	if err != nil {
 		return nil, fmt.Errorf("user not found for reset token")
 	}
@@ -463,9 +288,12 @@ func (r *userRepository) UpdatePasswordResetToken(userID int, token string, expi
 	ctx, cancel := database.WithShortTimeout()
 	defer cancel()
 
-	query := `UPDATE users SET password_reset_token = $1, password_reset_token_expires_at = $2, password_reset_sent_at = $3 WHERE id = $4`
-	_, err := r.db.ExecContext(ctx, query, token, expiresAt, sentAt, userID)
-	return err
+	result := r.db.DB.WithContext(ctx).Model(&domain.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+		"password_reset_token":            token,
+		"password_reset_token_expires_at": expiresAt,
+		"password_reset_sent_at":          sentAt,
+	})
+	return result.Error
 }
 
 // ========== ADMIN METHODS ==========
@@ -475,41 +303,10 @@ func (r *userRepository) GetAll() ([]*domain.User, error) {
 	ctx, cancel := database.WithMediumTimeout()
 	defer cancel()
 
-	query := `
-        SELECT id, email, username, password_hash, role, is_active, 
-               email_verified, created_at, updated_at
-        FROM users
-        ORDER BY created_at DESC
-    `
-
-	rows, err := r.db.QueryContext(ctx, query)
+	var users []*domain.User
+	err := r.db.DB.WithContext(ctx).Order("created_at DESC").Find(&users).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch users: %w", err)
-	}
-	defer rows.Close()
-
-	var users []*domain.User
-	for rows.Next() {
-		var user domain.User
-		err := rows.Scan(
-			&user.ID,
-			&user.Email,
-			&user.Username,
-			&user.PasswordHash,
-			&user.Role,
-			&user.IsActive,
-			&user.EmailVerified,
-			&user.CreatedAt,
-			&user.UpdatedAt,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan user: %w", err)
-		}
-		users = append(users, &user)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating users: %w", err)
 	}
 
 	return users, nil
@@ -520,19 +317,12 @@ func (r *userRepository) Delete(id int) error {
 	ctx, cancel := database.WithMediumTimeout()
 	defer cancel()
 
-	query := `DELETE FROM users WHERE id = $1`
-
-	result, err := r.db.ExecContext(ctx, query, id)
-	if err != nil {
-		return fmt.Errorf("failed to delete user: %w", err)
+	result := r.db.DB.WithContext(ctx).Delete(&domain.User{}, id)
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete user: %w", result.Error)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-
-	if rowsAffected == 0 {
+	if result.RowsAffected == 0 {
 		return fmt.Errorf("user not found")
 	}
 
@@ -544,23 +334,13 @@ func (r *userRepository) UpdateRole(id int, role string) error {
 	ctx, cancel := database.WithShortTimeout()
 	defer cancel()
 
-	query := `
-        UPDATE users 
-        SET role = $1, updated_at = NOW() 
-        WHERE id = $2
-    `
+	result := r.db.DB.WithContext(ctx).Model(&domain.User{}).Where("id = ?", id).Update("role", role)
 
-	result, err := r.db.ExecContext(ctx, query, role, id)
-	if err != nil {
-		return fmt.Errorf("failed to update role: %w", err)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update role: %w", result.Error)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-
-	if rowsAffected == 0 {
+	if result.RowsAffected == 0 {
 		return fmt.Errorf("user not found")
 	}
 
@@ -572,23 +352,13 @@ func (r *userRepository) UpdateActiveStatus(id int, isActive bool) error {
 	ctx, cancel := database.WithShortTimeout()
 	defer cancel()
 
-	query := `
-        UPDATE users 
-        SET is_active = $1, updated_at = NOW() 
-        WHERE id = $2
-    `
+	result := r.db.DB.WithContext(ctx).Model(&domain.User{}).Where("id = ?", id).Update("is_active", isActive)
 
-	result, err := r.db.ExecContext(ctx, query, isActive, id)
-	if err != nil {
-		return fmt.Errorf("failed to update status: %w", err)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update status: %w", result.Error)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-
-	if rowsAffected == 0 {
+	if result.RowsAffected == 0 {
 		return fmt.Errorf("user not found")
 	}
 
@@ -600,15 +370,13 @@ func (r *userRepository) CountUsers() (int, error) {
 	ctx, cancel := database.WithShortTimeout()
 	defer cancel()
 
-	var count int
-	query := `SELECT COUNT(*) FROM users`
-
-	err := r.db.QueryRowContext(ctx, query).Scan(&count)
+	var count int64
+	err := r.db.DB.WithContext(ctx).Model(&domain.User{}).Count(&count).Error
 	if err != nil {
 		return 0, fmt.Errorf("failed to count users: %w", err)
 	}
 
-	return count, nil
+	return int(count), nil
 }
 
 // CountActiveUsers returns number of active users
@@ -616,15 +384,13 @@ func (r *userRepository) CountActiveUsers() (int, error) {
 	ctx, cancel := database.WithShortTimeout()
 	defer cancel()
 
-	var count int
-	query := `SELECT COUNT(*) FROM users WHERE is_active = true`
-
-	err := r.db.QueryRowContext(ctx, query).Scan(&count)
+	var count int64
+	err := r.db.DB.WithContext(ctx).Model(&domain.User{}).Where("is_active = ?", true).Count(&count).Error
 	if err != nil {
 		return 0, fmt.Errorf("failed to count active users: %w", err)
 	}
 
-	return count, nil
+	return int(count), nil
 }
 
 // CountVerifiedUsers returns number of verified users
@@ -632,13 +398,11 @@ func (r *userRepository) CountVerifiedUsers() (int, error) {
 	ctx, cancel := database.WithShortTimeout()
 	defer cancel()
 
-	var count int
-	query := `SELECT COUNT(*) FROM users WHERE email_verified = true`
-
-	err := r.db.QueryRowContext(ctx, query).Scan(&count)
+	var count int64
+	err := r.db.DB.WithContext(ctx).Model(&domain.User{}).Where("email_verified = ?", true).Count(&count).Error
 	if err != nil {
 		return 0, fmt.Errorf("failed to count verified users: %w", err)
 	}
 
-	return count, nil
+	return int(count), nil
 }

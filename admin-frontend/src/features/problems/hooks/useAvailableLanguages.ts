@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { adminLanguagesApi } from "../../../api/adminApi";
+import { adminLanguagesApi } from "../../../lib/api/admin";
 import type { Language } from "../../../types";
 
 export function useAvailableLanguages() {

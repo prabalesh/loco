@@ -2,9 +2,8 @@ import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import ProblemForm from "../components/ProblemForm"
-import ProblemPreview from "./ProblemPreview"
 import type { CreateOrUpdateProblemRequest } from "../../../types/request"
-import { adminProblemApi } from "../../../api/adminApi"
+import { adminProblemApi } from "../../../lib/api/admin"
 import toast from "react-hot-toast"
 import { ProblemStepper } from "../components/ProblemStepper"
 
@@ -32,7 +31,7 @@ export default function CreateProblem() {
   // Fetch problem data if in edit mode
   const { data: problemData, isLoading: isFetchingProblem } = useQuery({
     queryKey: ['problem', id],
-    queryFn: () => adminProblemApi.getById(parseInt(id!)),
+    queryFn: () => adminProblemApi.getById(id!),
     enabled: isEditMode && !!id,
     select: (data) => data.data.data,
   })
@@ -46,10 +45,10 @@ export default function CreateProblem() {
 
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: (data: CreateOrUpdateProblemRequest) => 
+    mutationFn: (data: CreateOrUpdateProblemRequest) =>
       adminProblemApi.create(data),
     onSuccess: (response) => {
-      const problemId = response.data.id
+      const problemId = response.data.data.id
       toast.success("Problem created successfully!")
       queryClient.invalidateQueries({ queryKey: ['problems'] })
       navigate(`/problems/${problemId}/testcases`)
@@ -62,10 +61,10 @@ export default function CreateProblem() {
 
   // Update mutation
   const updateMutation = useMutation({
-    mutationFn: (data: CreateOrUpdateProblemRequest) => 
-      adminProblemApi.update(parseInt(id!), data),
+    mutationFn: (data: CreateOrUpdateProblemRequest) =>
+      adminProblemApi.update(id!, data),
     onSuccess: (response) => {
-      const problemId = response.data.id || id
+      const problemId = response.data.data.id || id
       toast.success("Problem updated successfully!")
       queryClient.invalidateQueries({ queryKey: ['problem', id] })
       queryClient.invalidateQueries({ queryKey: ['problems'] })
@@ -82,17 +81,17 @@ export default function CreateProblem() {
     mutationFn: (data: CreateOrUpdateProblemRequest) => {
       const draftData = { ...data, status: "draft" as const }
       return isEditMode && id
-        ? adminProblemApi.update(parseInt(id), draftData)
+        ? adminProblemApi.update(id, draftData)
         : adminProblemApi.create(draftData)
     },
     onSuccess: (response) => {
-      const problemId = response.data.id || id
+      const problemId = response.data.data.id || id
       toast.success("Draft saved successfully!")
       queryClient.invalidateQueries({ queryKey: ['problems'] })
-      
+
       // If creating new draft, redirect to edit mode
       if (!isEditMode) {
-        navigate(`/admin/problems/edit/${problemId}`, { replace: true })
+        navigate(`/problems/edit/${problemId}`, { replace: true })
       }
     },
     onError: (error) => {
@@ -117,9 +116,9 @@ export default function CreateProblem() {
     saveDraftMutation.mutate(formData)
   }
 
-  const isLoading = 
-    createMutation.isPending || 
-    updateMutation.isPending || 
+  const isLoading =
+    createMutation.isPending ||
+    updateMutation.isPending ||
     saveDraftMutation.isPending
 
   if (isFetchingProblem) {
@@ -138,24 +137,21 @@ export default function CreateProblem() {
           {isEditMode ? "Edit Problem" : "Create Problem"}
         </h1>
         <div>
-          <ProblemStepper currentStep={1} model="validate" />
+          <ProblemStepper currentStep={1} model="validate" problemId={id || "create"} />
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex gap-4 flex-1 overflow-hidden">
-        <div className="flex-1 p-4 overflow-y-auto">
-          <ProblemForm 
-            formData={formData} 
+      <div className="gap-4">
+        <div className="p-4 overflow-y-auto">
+          <ProblemForm
+            formData={formData}
             onChange={handleFormChange}
             onSubmit={handleSubmit}
             onSaveDraft={handleSaveDraft}
             loading={isLoading}
             isEditMode={isEditMode}
           />
-        </div>
-        <div className="flex-1 p-4 overflow-y-auto border-l bg-gray-50">
-          <ProblemPreview formData={formData} />
         </div>
       </div>
     </div>

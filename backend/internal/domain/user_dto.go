@@ -19,4 +19,5 @@ type UserProfileResponse struct {
 	Username   string    `json:"username"`
 	IsVerified bool      `json:"is_verified"`
 	CreatedAt  time.Time `json:"created_at"`
+	Stats      UserStats `json:"stats"`
 }

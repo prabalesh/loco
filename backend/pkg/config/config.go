@@ -10,17 +10,36 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	JWT      JWTConfig
-	Cookie   CookieConfig
-	CORS     CORSConfig
-	Email    EmailConfig
-	Log      LogConfig
+	Server              ServerConfig
+	Database            DatabaseConfig
+	Redis               RedisConfig
+	JWT                 JWTConfig
+	Cookie              CookieConfig
+	CORS                CORSConfig
+	RateLimit           RateLimitConfig
+	SubmissionRateLimit SubmissionRateLimitConfig
+	RunCodeRateLimit    RunCodeRateLimitConfig
+	Email               EmailConfig
+	Log                 LogConfig
 }
 
 type CORSConfig struct {
 	AllowedOrigins []string
+}
+
+type RateLimitConfig struct {
+	Limit  int
+	Window int // in seconds
+}
+
+type SubmissionRateLimitConfig struct {
+	Limit  int
+	Window int // in seconds
+}
+
+type RunCodeRateLimitConfig struct {
+	Limit  int
+	Window int // in seconds
 }
 
 type ServerConfig struct {
@@ -36,6 +55,13 @@ type DatabaseConfig struct {
 	Password string
 	Name     string
 	SSLMode  string
+}
+
+type RedisConfig struct {
+	Host     string
+	Port     string
+	Password string
+	DB       int
 }
 
 type JWTConfig struct {
@@ -96,6 +122,12 @@ func InitConfig() {
 				Name:     getEnv("DB_NAME", "coding_platform"),
 				SSLMode:  getEnv("DB_SSL_MODE", "disable"),
 			},
+			Redis: RedisConfig{
+				Host:     getEnv("REDIS_HOST", "localhost"),
+				Port:     getEnv("REDIS_PORT", "6379"),
+				Password: getEnv("REDIS_PASSWORD", ""),
+				DB:       parseInt("REDIS_DB", 0),
+			},
 			JWT: JWTConfig{
 				AccessTokenSecret:      mustGetEnv("ACCESS_TOKEN_SECRET"),
 				RefreshTokenSecret:     mustGetEnv("REFRESH_TOKEN_SECRET"),
@@ -123,6 +155,18 @@ func InitConfig() {
 			},
 			Log: LogConfig{
 				Level: getEnv("LOG_LEVEL", "info"),
+			},
+			RateLimit: RateLimitConfig{
+				Limit:  parseInt("RATE_LIMIT_MAX", 5),
+				Window: parseInt("RATE_LIMIT_WINDOW", 60),
+			},
+			SubmissionRateLimit: SubmissionRateLimitConfig{
+				Limit:  parseInt("SUBMISSION_RATE_LIMIT_MAX", 5),
+				Window: parseInt("SUBMISSION_RATE_LIMIT_WINDOW", 60),
+			},
+			RunCodeRateLimit: RunCodeRateLimitConfig{
+				Limit:  parseInt("RUN_CODE_RATE_LIMIT_MAX", 10),
+				Window: parseInt("RUN_CODE_RATE_LIMIT_WINDOW", 60),
 			},
 		}
 
@@ -200,4 +244,18 @@ func parseAllowedOrigins(originsStr string) []string {
 	}
 
 	return result
+}
+
+// getEnvAsInt gets environment variable as integer with fallback
+func getEnvAsInt(key string, fallback int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	intValue, err := strconv.Atoi(value)
+	if err != nil {
+		log.Printf("Invalid integer for %s, using fallback: %v", key, err)
+		return fallback
+	}
+	return intValue
 }

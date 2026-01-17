@@ -1,25 +1,23 @@
 package usecase
 
 import (
-	"context"
 	"errors"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/internal/domain/uerror"
 	"github.com/prabalesh/loco/backend/internal/domain/validator"
-	"github.com/prabalesh/loco/backend/internal/usecase/interfaces"
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/prabalesh/loco/backend/pkg/utils"
 	"go.uber.org/zap"
 )
 
 type LanguageUsecase struct {
-	languageRepo interfaces.LanguageRepository
+	languageRepo domain.LanguageRepository
 	cfg          *config.Config
 	logger       *zap.Logger
 }
 
-func NewLanguageUsecase(languageRepo interfaces.LanguageRepository, cfg *config.Config, logger *zap.Logger) *LanguageUsecase {
+func NewLanguageUsecase(languageRepo domain.LanguageRepository, cfg *config.Config, logger *zap.Logger) *LanguageUsecase {
 	return &LanguageUsecase{
 		languageRepo: languageRepo,
 		cfg:          cfg,
@@ -40,7 +38,7 @@ func (u *LanguageUsecase) CreateLanguage(req *domain.CreateLanguageRequest, admi
 	}
 
 	// Check if language_id already exists
-	_, err := u.languageRepo.GetByLanguageID(context.Background(), req.LanguageID)
+	_, err := u.languageRepo.GetBySlug(req.LanguageID)
 	if err == nil {
 		u.logger.Warn("Language creation failed: language_id already exists",
 			zap.String("language_id", req.LanguageID),
@@ -49,7 +47,7 @@ func (u *LanguageUsecase) CreateLanguage(req *domain.CreateLanguageRequest, admi
 	}
 
 	lang := &domain.Language{
-		LanguageID:      req.LanguageID,
+		Slug:            req.LanguageID,
 		Name:            req.Name,
 		Version:         req.Version,
 		Extension:       req.Extension,
@@ -58,7 +56,7 @@ func (u *LanguageUsecase) CreateLanguage(req *domain.CreateLanguageRequest, admi
 		ExecutorConfig:  req.ExecutorConfig,
 	}
 
-	if err := u.languageRepo.Create(context.Background(), lang); err != nil {
+	if err := u.languageRepo.Create(lang); err != nil {
 		u.logger.Error("Failed to create language in database",
 			zap.Error(err),
 			zap.String("language_id", req.LanguageID),
@@ -87,7 +85,7 @@ func (u *LanguageUsecase) UpdateLanguage(languageID int, req *domain.UpdateLangu
 	}
 
 	// Get existing language
-	lang, err := u.languageRepo.GetByID(context.Background(), languageID)
+	lang, err := u.languageRepo.GetByID(languageID)
 	if err != nil {
 		u.logger.Warn("Language not found for update",
 			zap.Int("language_id", languageID),
@@ -96,13 +94,13 @@ func (u *LanguageUsecase) UpdateLanguage(languageID int, req *domain.UpdateLangu
 	}
 
 	// Update fields (only non-empty fields)
-	if req.LanguageID != "" && req.LanguageID != lang.LanguageID {
+	if req.LanguageID != "" && req.LanguageID != lang.Slug {
 		// Check if new language_id already exists
-		existing, _ := u.languageRepo.GetByLanguageID(context.Background(), req.LanguageID)
+		existing, _ := u.languageRepo.GetBySlug(req.LanguageID)
 		if existing != nil {
 			return nil, errors.New("language_id already exists")
 		}
-		lang.LanguageID = req.LanguageID
+		lang.Slug = req.LanguageID
 	}
 
 	if req.Name != "" {
@@ -127,7 +125,7 @@ func (u *LanguageUsecase) UpdateLanguage(languageID int, req *domain.UpdateLangu
 
 	lang.IsActive = req.IsActive
 
-	if err := u.languageRepo.Update(context.Background(), lang); err != nil {
+	if err := u.languageRepo.Update(lang); err != nil {
 		u.logger.Error("Failed to update language",
 			zap.Error(err),
 			zap.Int("language_id", languageID),
@@ -147,7 +145,7 @@ func (u *LanguageUsecase) UpdateLanguage(languageID int, req *domain.UpdateLangu
 // DeleteLanguage deletes a language
 func (u *LanguageUsecase) DeleteLanguage(languageID int, adminID int) error {
 	// Check if language exists
-	_, err := u.languageRepo.GetByID(context.Background(), languageID)
+	_, err := u.languageRepo.GetByID(languageID)
 	if err != nil {
 		u.logger.Warn("Language not found for deletion",
 			zap.Int("language_id", languageID),
@@ -155,7 +153,7 @@ func (u *LanguageUsecase) DeleteLanguage(languageID int, adminID int) error {
 		return errors.New("language not found")
 	}
 
-	if err := u.languageRepo.Delete(context.Background(), languageID); err != nil {
+	if err := u.languageRepo.Delete(languageID); err != nil {
 		u.logger.Error("Failed to delete language",
 			zap.Error(err),
 			zap.Int("language_id", languageID),
@@ -173,7 +171,7 @@ func (u *LanguageUsecase) DeleteLanguage(languageID int, adminID int) error {
 
 // ActivateLanguage activates a language
 func (u *LanguageUsecase) ActivateLanguage(languageID int, adminID int) error {
-	lang, err := u.languageRepo.GetByID(context.Background(), languageID)
+	lang, err := u.languageRepo.GetByID(languageID)
 	if err != nil {
 		return errors.New("language not found")
 	}
@@ -183,7 +181,7 @@ func (u *LanguageUsecase) ActivateLanguage(languageID int, adminID int) error {
 	}
 
 	lang.IsActive = true
-	if err := u.languageRepo.Update(context.Background(), lang); err != nil {
+	if err := u.languageRepo.Update(lang); err != nil {
 		u.logger.Error("Failed to activate language",
 			zap.Error(err),
 			zap.Int("language_id", languageID),
@@ -201,7 +199,7 @@ func (u *LanguageUsecase) ActivateLanguage(languageID int, adminID int) error {
 
 // DeactivateLanguage deactivates a language
 func (u *LanguageUsecase) DeactivateLanguage(languageID int, adminID int) error {
-	lang, err := u.languageRepo.GetByID(context.Background(), languageID)
+	lang, err := u.languageRepo.GetByID(languageID)
 	if err != nil {
 		return errors.New("language not found")
 	}
@@ -211,7 +209,7 @@ func (u *LanguageUsecase) DeactivateLanguage(languageID int, adminID int) error 
 	}
 
 	lang.IsActive = false
-	if err := u.languageRepo.Update(context.Background(), lang); err != nil {
+	if err := u.languageRepo.Update(lang); err != nil {
 		u.logger.Error("Failed to deactivate language",
 			zap.Error(err),
 			zap.Int("language_id", languageID),
@@ -236,9 +234,9 @@ func (u *LanguageUsecase) GetLanguage(identifier string) (*domain.Language, erro
 
 	// Try to get by ID first, then by language_id
 	if id, parseErr := utils.ParseInt(identifier); parseErr == nil {
-		lang, err = u.languageRepo.GetByID(context.Background(), id)
+		lang, err = u.languageRepo.GetByID(id)
 	} else {
-		lang, err = u.languageRepo.GetByLanguageID(context.Background(), identifier)
+		lang, err = u.languageRepo.GetBySlug(identifier)
 	}
 
 	if err != nil {
@@ -261,11 +259,16 @@ func (u *LanguageUsecase) ListActiveLanguages() ([]*domain.Language, error) {
 		return nil, errors.New("failed to retrieve languages")
 	}
 
-	return languages, nil
+	result := make([]*domain.Language, len(languages))
+	for i := range languages {
+		result[i] = &languages[i]
+	}
+
+	return result, nil
 }
 
 func (u *LanguageUsecase) ListLanguages() ([]*domain.Language, error) {
-	languages, err := u.languageRepo.List()
+	languages, err := u.languageRepo.GetAll()
 	if err != nil {
 		u.logger.Error("Failed to list languages",
 			zap.Error(err),
@@ -273,5 +276,10 @@ func (u *LanguageUsecase) ListLanguages() ([]*domain.Language, error) {
 		return nil, errors.New("failed to retrieve languages")
 	}
 
-	return languages, nil
+	result := make([]*domain.Language, len(languages))
+	for i := range languages {
+		result[i] = &languages[i]
+	}
+
+	return result, nil
 }

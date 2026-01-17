@@ -31,9 +31,9 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import type { CreateTestCaseRequest } from "../../../types/request";
 import type { TestCase } from "../../../types";
-import { adminTestcaseApi } from "../../../api/adminApi";
+import { adminTestcaseApi } from "../../../lib/api/admin";
 
-interface TestCaseFormValues extends CreateTestCaseRequest {}
+interface TestCaseFormValues extends CreateTestCaseRequest { }
 
 export interface TestCaseListProps {
   problemId: number;
@@ -57,13 +57,13 @@ export default function TestCaseList({ problemId }: TestCaseListProps) {
 
   const { data, isFetching } = useQuery({
     queryKey: ["testcases", problemId],
-    queryFn: () => adminTestcaseApi.getAll(problemId),
+    queryFn: () => adminTestcaseApi.getAll(String(problemId)),
   });
 
   const testCases = data?.data.data || [];
 
   const createMutation = useMutation({
-    mutationFn: (values: CreateTestCaseRequest) => adminTestcaseApi.create(problemId, values),
+    mutationFn: (values: CreateTestCaseRequest) => adminTestcaseApi.create(String(problemId), values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["testcases", problemId] });
       toast.success("Test case created");
@@ -73,7 +73,7 @@ export default function TestCaseList({ problemId }: TestCaseListProps) {
 
   const updateMutation = useMutation({
     mutationFn: ({ testcaseId, values }: { testcaseId: number; values: CreateTestCaseRequest }) =>
-      adminTestcaseApi.update(testcaseId, values),
+      adminTestcaseApi.update(String(testcaseId), values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["testcases", problemId] });
       toast.success("Test case updated");
@@ -82,7 +82,7 @@ export default function TestCaseList({ problemId }: TestCaseListProps) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (testcaseId: number) => adminTestcaseApi.delete(problemId, testcaseId),
+    mutationFn: (testcaseId: number) => adminTestcaseApi.delete(String(testcaseId)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["testcases", problemId] });
       toast.success("Test case deleted");

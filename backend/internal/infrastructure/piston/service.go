@@ -1,0 +1,124 @@
+package piston
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
+
+	"github.com/prabalesh/loco/backend/pkg/config"
+	"go.uber.org/zap"
+)
+
+type ExecutionRequest struct {
+	Language string   `json:"language"`
+	Version  string   `json:"version"`
+	Files    []File   `json:"files"`
+	Stdin    string   `json:"stdin"`
+	Args     []string `json:"args"`
+}
+
+type File struct {
+	Name    string `json:"name,omitempty"`
+	Content string `json:"content"`
+}
+
+type ExecutionResponse struct {
+	Language string `json:"language"`
+	Version  string `json:"version"`
+	Run      Stage  `json:"run"`
+	Compile  Stage  `json:"compile"`
+}
+
+type Stage struct {
+	Stdout string `json:"stdout"`
+	Stderr string `json:"stderr"`
+	Code   int    `json:"code"`
+	Signal string `json:"signal"`
+	Output string `json:"output"`
+}
+
+type PistonService interface {
+	Execute(language, version, code, input string) (*ExecutionResult, error)
+}
+
+type ExecutionResult struct {
+	Output   string
+	Error    string
+	ExitCode int
+}
+
+type pistonService struct {
+	client  *http.Client
+	baseURL string
+	logger  *zap.Logger
+}
+
+func NewPistonService(cfg *config.Config, logger *zap.Logger) PistonService {
+	// Default to emkc.org if not configured, or use env var
+	baseURL := "http://localhost:2000/api/v2"
+	// You might want to add PISTON_URL to config later
+
+	return &pistonService{
+		client: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+		baseURL: baseURL,
+		logger:  logger,
+	}
+}
+
+func (s *pistonService) Execute(language, version, code, input string) (*ExecutionResult, error) {
+	reqBody := ExecutionRequest{
+		Language: language,
+		Version:  version,
+		Files: []File{
+			{Content: code},
+		},
+		Stdin: input,
+	}
+
+	jsonBody, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	fmt.Println(string(jsonBody))
+
+	resp, err := s.client.Post(s.baseURL+"/execute", "application/json", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute code: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		s.logger.Error("Piston API error",
+			zap.Int("status", resp.StatusCode),
+			zap.String("body", string(bodyBytes)),
+		)
+		return nil, fmt.Errorf("piston api returned status: %d", resp.StatusCode)
+	}
+
+	var pistonResp ExecutionResponse
+	if err := json.NewDecoder(resp.Body).Decode(&pistonResp); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	// Check for compile error first
+	if pistonResp.Compile.Code != 0 {
+		return &ExecutionResult{
+			Output:   pistonResp.Compile.Stdout,
+			Error:    pistonResp.Compile.Stderr + "\n" + pistonResp.Compile.Output,
+			ExitCode: pistonResp.Compile.Code,
+		}, nil
+	}
+
+	return &ExecutionResult{
+		Output:   pistonResp.Run.Stdout,
+		Error:    pistonResp.Run.Stderr, // + "\n" + pistonResp.Run.Output,
+		ExitCode: pistonResp.Run.Code,
+	}, nil
+}

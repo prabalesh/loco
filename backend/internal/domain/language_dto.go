@@ -20,3 +20,18 @@ type UpdateLanguageRequest struct {
 	IsActive        bool                   `json:"is_active"`
 	ExecutorConfig  map[string]interface{} `json:"executor_config,omitempty"`
 }
+
+// CreateProblemLanguageRequest for adding language support to a problem
+type CreateProblemLanguageRequest struct {
+	LanguageID   int    `json:"language_id" validate:"required"`
+	FunctionCode string `json:"function_code" validate:"required"`
+	MainCode     string `json:"main_code" validate:"required"`
+	SolutionCode string `json:"solution_code" validate:"required"`
+}
+
+// UpdateProblemLanguageRequest for updating language support for a problem
+type UpdateProblemLanguageRequest struct {
+	FunctionCode string `json:"function_code,omitempty"`
+	MainCode     string `json:"main_code,omitempty"`
+	SolutionCode string `json:"solution_code,omitempty"`
+}

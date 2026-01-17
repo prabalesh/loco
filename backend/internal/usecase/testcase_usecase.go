@@ -6,21 +6,21 @@ import (
 	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/internal/domain/uerror"
 	"github.com/prabalesh/loco/backend/internal/domain/validator"
-	"github.com/prabalesh/loco/backend/internal/usecase/interfaces"
+
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"go.uber.org/zap"
 )
 
 type TestCaseUsecase struct {
-	testCaseRepo interfaces.TestCaseRepository
-	problemRepo  interfaces.ProblemRepository
+	testCaseRepo domain.TestCaseRepository
+	problemRepo  domain.ProblemRepository
 	cfg          *config.Config
 	logger       *zap.Logger
 }
 
 func NewTestCaseUsecase(
-	testCaseRepo interfaces.TestCaseRepository,
-	problemRepo interfaces.ProblemRepository,
+	testCaseRepo domain.TestCaseRepository,
+	problemRepo domain.ProblemRepository,
 	cfg *config.Config,
 	logger *zap.Logger,
 ) *TestCaseUsecase {
@@ -237,7 +237,14 @@ func (u *TestCaseUsecase) GetTestCasesByProblem(problemID int, includeSamplesOnl
 		return nil, errors.New("problem not accessible")
 	}
 
-	testCases, err := u.testCaseRepo.GetByProblemID(problemID, includeSamplesOnly)
+	var testCases []domain.TestCase
+
+	if includeSamplesOnly {
+		testCases, err = u.testCaseRepo.GetSamples(problemID)
+	} else {
+		testCases, err = u.testCaseRepo.GetByProblemID(problemID)
+	}
+
 	if err != nil {
 		u.logger.Error("Failed to get test cases",
 			zap.Error(err),
@@ -245,7 +252,13 @@ func (u *TestCaseUsecase) GetTestCasesByProblem(problemID int, includeSamplesOnl
 		)
 		return nil, errors.New("failed to retrieve test cases")
 	}
-	return testCases, nil
+
+	result := make([]*domain.TestCase, len(testCases))
+	for i := range testCases {
+		result[i] = &testCases[i]
+	}
+
+	return result, nil
 }
 
 // ListTestCases lists test cases with pagination
@@ -254,7 +267,7 @@ func (u *TestCaseUsecase) ListTestCases(req *domain.ListTestCasesRequest) ([]*do
 		return nil, 0, errors.New("problem_id is required")
 	}
 
-	filters := interfaces.TestCaseFilters{
+	filters := domain.TestCaseFilters{
 		IsSample: req.IsSample,
 		Limit:    req.Limit,
 		Page:     req.Page,

@@ -2,17 +2,18 @@ package database
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"time"
 
-	_ "github.com/lib/pq"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"go.uber.org/zap"
 )
 
 type Database struct {
-	DB     *sql.DB
+	DB     *gorm.DB
 	Logger *zap.Logger
 }
 
@@ -28,22 +29,26 @@ func NewPostgresDB(cfg config.DatabaseConfig, logger *zap.Logger) (*Database, er
 		zap.String("database", cfg.Name),
 	)
 
-	db, err := sql.Open("postgres", dsn)
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{PrepareStmt: false})
 	if err != nil {
 		logger.Error("Failed to open database connection", zap.Error(err))
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	db.SetMaxIdleConns(25)
-	db.SetMaxIdleConns(5)
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get sql db: %w", err)
+	}
 
-	db.SetConnMaxLifetime(5 * time.Minute)
-	db.SetConnMaxIdleTime(1 * time.Minute)
+	sqlDB.SetMaxIdleConns(5)
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+	sqlDB.SetConnMaxIdleTime(1 * time.Minute)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err = db.PingContext(ctx); err != nil {
+	if err = sqlDB.PingContext(ctx); err != nil {
 		logger.Error("Failed to ping database", zap.Error(err))
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
@@ -55,66 +60,4 @@ func NewPostgresDB(cfg config.DatabaseConfig, logger *zap.Logger) (*Database, er
 	)
 
 	return &Database{DB: db, Logger: logger}, nil
-}
-
-func (d *Database) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	start := time.Now()
-	rows, err := d.DB.QueryContext(ctx, query, args...)
-	duration := time.Since(start)
-
-	if duration > 500*time.Millisecond {
-		d.Logger.Warn("Slow query detected",
-			zap.Duration("duration", duration),
-			zap.String("query", query),
-		)
-	}
-
-	if err != nil {
-		d.Logger.Error("Query failed",
-			zap.Error(err),
-			zap.String("query", query),
-			zap.Duration("duration", duration),
-		)
-	}
-
-	return rows, err
-}
-
-func (d *Database) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	start := time.Now()
-	row := d.DB.QueryRowContext(ctx, query, args...)
-	duration := time.Since(start)
-
-	if duration > 500*time.Millisecond {
-		d.Logger.Warn("Slow query detected",
-			zap.Duration("duration", duration),
-			zap.String("query", query),
-		)
-	}
-
-	return row
-}
-
-func (d *Database) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	start := time.Now()
-	result, err := d.DB.ExecContext(ctx, query, args...)
-	duration := time.Since(start)
-
-	// Log slow queries
-	if duration > 500*time.Millisecond {
-		d.Logger.Warn("Slow query detected",
-			zap.Duration("duration", duration),
-			zap.String("query", query),
-		)
-	}
-
-	if err != nil {
-		d.Logger.Error("Exec failed",
-			zap.Error(err),
-			zap.String("query", query),
-			zap.Duration("duration", duration),
-		)
-	}
-
-	return result, err
 }

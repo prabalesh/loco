@@ -11,21 +11,20 @@ import (
 	"github.com/prabalesh/loco/backend/internal/domain/validator"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/auth"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/email"
-	"github.com/prabalesh/loco/backend/internal/usecase/interfaces"
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/prabalesh/loco/backend/pkg/utils"
 	"go.uber.org/zap"
 )
 
 type AuthUsecase struct {
-	userRepo     interfaces.UserRepository
+	userRepo     domain.UserRepository
 	jwtService   *auth.JWTService
 	emailService *email.EmailService
 	cfg          *config.Config
 	logger       *zap.Logger
 }
 
-func NewAuthUsecase(userRepo interfaces.UserRepository, jwtService *auth.JWTService, emailService *email.EmailService, cfg *config.Config, logger *zap.Logger) *AuthUsecase {
+func NewAuthUsecase(userRepo domain.UserRepository, jwtService *auth.JWTService, emailService *email.EmailService, cfg *config.Config, logger *zap.Logger) *AuthUsecase {
 	return &AuthUsecase{
 		userRepo:     userRepo,
 		jwtService:   jwtService,
