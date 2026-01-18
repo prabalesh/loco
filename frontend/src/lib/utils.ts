@@ -15,3 +15,7 @@ export const filterEditorLanguage = (lang: string) => {
 
   return lang || 'plaintext'
 }
+
+export const calculateAcceptanceRate = (totalAccepted: number, totalSubmissions: number) => {
+  return totalSubmissions === 0 ? 0 : (totalAccepted / totalSubmissions) * 100;
+}

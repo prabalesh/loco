@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Skeleton } from '@/shared/components/ui/Skeleton'
+import { calculateAcceptanceRate } from '@/lib/utils'
 
 const DIFFICULTY_COLORS: Record<Difficulty, string> = {
     easy: 'text-emerald-500 bg-emerald-500/10',
@@ -103,7 +104,7 @@ export const ProblemsPage = () => {
                                                     {problem.difficulty}
                                                 </span>
                                                 <span className="text-sm text-gray-500 flex items-center gap-1">
-                                                    Acceptance: {problem.acceptance_rate.toFixed(1)}%
+                                                    Acceptance: {calculateAcceptanceRate(problem.total_accepted, problem.total_submissions).toFixed(1)}%
                                                 </span>
                                                 {problem.creator && (
                                                     <span className="text-sm text-gray-400">

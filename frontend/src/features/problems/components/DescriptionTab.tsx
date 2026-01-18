@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import type { Problem } from '../types'
+import { calculateAcceptanceRate } from '@/lib/utils'
 
 interface DescriptionTabProps {
     problem: Problem
@@ -17,7 +18,7 @@ export const DescriptionTab = ({ problem }: DescriptionTabProps) => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 shadow-sm">
                     <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">Acceptance Rate</p>
-                    <p className="text-2xl font-bold text-gray-900">{problem.acceptance_rate.toFixed(1)}%</p>
+                    <p className="text-2xl font-bold text-gray-900">{calculateAcceptanceRate(problem.total_accepted, problem.total_submissions).toFixed(1)}%</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 shadow-sm">
                     <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">Total Submissions</p>
