@@ -289,7 +289,7 @@ func (r *problemRepository) IncrementStats(id int, isAccepted bool) error {
 		}
 
 		if updatedProblem.TotalSubmissions > 0 {
-			rate := float64(updatedProblem.TotalAccepted) / float64(updatedProblem.TotalSubmissions)
+			rate := (float64(updatedProblem.TotalAccepted) / float64(updatedProblem.TotalSubmissions)) * 100
 			if err := tx.Model(&updatedProblem).Update("acceptance_rate", rate).Error; err != nil {
 				return err
 			}
