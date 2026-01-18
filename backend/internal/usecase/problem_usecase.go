@@ -391,6 +391,7 @@ func (u *ProblemUsecase) ListProblems(req *domain.ListProblemsRequest, userID in
 		Visibility: "public",    // Only public problems
 		Search:     req.Search,
 		Tags:       req.Tags,
+		Categories: req.Categories,
 	}
 
 	problems, total, err := u.problemRepo.List(filters)
@@ -424,6 +425,7 @@ func (u *ProblemUsecase) ListAllProblems(req *domain.AdminListProblemsRequest, u
 		Visibility: req.Visibility,
 		Search:     req.Search,
 		Tags:       req.Tags,
+		Categories: req.Categories,
 	}
 
 	problems, total, err := u.problemRepo.List(filters)

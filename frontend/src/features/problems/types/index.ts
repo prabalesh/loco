@@ -99,4 +99,5 @@ export interface ListProblemsRequest {
     difficulty?: string
     search?: string
     tags?: string[]
+    categories?: string[]
 }

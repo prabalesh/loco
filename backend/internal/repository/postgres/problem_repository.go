@@ -60,25 +60,30 @@ func (r *problemRepository) Update(problem *domain.Problem) error {
 	ctx, cancel := database.WithMediumTimeout()
 	defer cancel()
 
-	// Use specific fields to update or allow all fields?
-	// Existing implementation updates explicitly listed fields.
-	// GORM Updates allows struct or map. Struct updates non-zero fields.
-	// We want to update all fields passed in problem, except ID/CreatedBy maybe?
-	// The problem object passed to Update usually has all fields set.
-	// Using Select("*") or explicit Omit might be safer if zero values matter (like boolean false or empty strings).
-	// Existing impl updates all columns listed.
+	return r.db.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Update core fields
+		// Omit associations here to avoid conflicts or partial updates via Updates
+		if err := tx.Model(&domain.Problem{}).
+			Where("id = ?", problem.ID).
+			Omit("Tags", "Categories", "Creator"). // Avoid updating associations via Updates
+			Updates(problem).Error; err != nil {
+			return fmt.Errorf("failed to update problem fields: %w", err)
+		}
 
-	result := r.db.DB.WithContext(ctx).Session(&gorm.Session{FullSaveAssociations: true}).Model(&domain.Problem{}).Where("id = ?", problem.ID).Updates(problem)
+		if problem.Tags != nil {
+			if err := tx.Model(problem).Association("Tags").Replace(problem.Tags); err != nil {
+				return fmt.Errorf("failed to update tags: %w", err)
+			}
+		}
 
-	if result.Error != nil {
-		return fmt.Errorf("failed to update problem: %w", result.Error)
-	}
+		if problem.Categories != nil {
+			if err := tx.Model(problem).Association("Categories").Replace(problem.Categories); err != nil {
+				return fmt.Errorf("failed to update categories: %w", err)
+			}
+		}
 
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("problem not found")
-	}
-
-	return nil
+		return nil
+	})
 }
 
 func (r *problemRepository) Delete(id int) error {
@@ -169,6 +174,16 @@ func (r *problemRepository) List(filters domain.ProblemFilters) ([]*domain.Probl
 			Select("problem_id").
 			Joins("JOIN tags ON problem_tags.tag_id = tags.id").
 			Where("tags.slug IN ?", filters.Tags)
+
+		query = query.Where("id IN (?)", subQuery)
+	}
+
+	if len(filters.Categories) > 0 {
+		// Use subquery for category filtering
+		subQuery := r.db.DB.Table("problem_categories").
+			Select("problem_id").
+			Joins("JOIN categories ON problem_categories.category_id = categories.id").
+			Where("categories.slug IN ?", filters.Categories)
 
 		query = query.Where("id IN (?)", subQuery)
 	}

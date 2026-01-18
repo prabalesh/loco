@@ -72,6 +72,7 @@ func (h *ProblemHandler) ListProblems(w http.ResponseWriter, r *http.Request) {
 		Difficulty: r.URL.Query().Get("difficulty"),
 		Search:     r.URL.Query().Get("search"),
 		Tags:       r.URL.Query()["tags"], // Multiple tags support
+		Categories: r.URL.Query()["categories"],
 	}
 
 	userID, _ := middleware.GetUserID(r.Context())
@@ -280,6 +281,7 @@ func (h *ProblemHandler) ListAllProblems(w http.ResponseWriter, r *http.Request)
 		Visibility: r.URL.Query().Get("visibility"),
 		Search:     r.URL.Query().Get("search"),
 		Tags:       r.URL.Query()["tags"],
+		Categories: r.URL.Query()["categories"],
 	}
 
 	adminID, _ := middleware.GetUserID(r.Context())

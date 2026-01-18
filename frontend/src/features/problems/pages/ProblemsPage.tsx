@@ -1,5 +1,6 @@
 import { Search, ChevronRight, Star } from 'lucide-react'
 import { problemsApi } from '../api/problems'
+import { useDebounce } from '@/shared/hooks/useDebounce'
 import { Input } from '@/shared/components/ui/Input'
 import { Card } from '@/shared/components/ui/Card'
 import type { Difficulty } from '../types'
@@ -39,18 +40,58 @@ const ProblemsSkeleton = () => (
 export const ProblemsPage = () => {
     const [search, setSearch] = useState('')
     const [difficulty, setDifficulty] = useState<string>('')
-    const [page] = useState(1)
+    const [page, setPage] = useState(1)
+    const [selectedTags, setSelectedTags] = useState<string[]>([])
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+
+    // Debounce filter values to avoid excessive API calls
+    const debouncedSearch = useDebounce(search, 500)
+    const debouncedTags = useDebounce(selectedTags, 500)
+    const debouncedCategories = useDebounce(selectedCategories, 500)
+
+    const { data: tagsData } = useQuery({
+        queryKey: ['tags'],
+        queryFn: () => problemsApi.getTags(),
+    })
+
+    const { data: categoriesData } = useQuery({
+        queryKey: ['categories'],
+        queryFn: () => problemsApi.getCategories(),
+    })
+
+    const tags = tagsData?.data.data || []
+    const categories = categoriesData?.data.data || []
+
+    const toggleTag = (slug: string) => {
+        setSelectedTags(prev =>
+            prev.includes(slug) ? prev.filter(t => t !== slug) : [...prev, slug]
+        )
+        setPage(1)
+    }
+
+    const toggleCategory = (slug: string) => {
+        setSelectedCategories(prev =>
+            prev.includes(slug) ? prev.filter(c => c !== slug) : [...prev, slug]
+        )
+        setPage(1)
+    }
 
     const { data, isLoading } = useQuery({
-        queryKey: ['problems', { page, search, difficulty }],
-        queryFn: () => problemsApi.list({ page, search, difficulty: difficulty || undefined }),
+        queryKey: ['problems', { page, search: debouncedSearch, difficulty, tags: debouncedTags, categories: debouncedCategories }],
+        queryFn: () => problemsApi.list({
+            page,
+            search: debouncedSearch,
+            difficulty: difficulty || undefined,
+            tags: debouncedTags,
+            categories: debouncedCategories,
+        }),
     })
 
     const problems = data?.data.data || []
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div>
                     <h1 className="text-4xl font-bold text-gray-900 mb-2">Algorithm Challenges</h1>
                     <p className="text-gray-600 italic">Sharpen your skills with our curated set of problems.</p>
@@ -66,102 +107,143 @@ export const ProblemsPage = () => {
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
-                    <select
-                        className="px-4 py-2 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={difficulty}
-                        onChange={(e) => setDifficulty(e.target.value)}
-                    >
-                        <option value="">All Difficulties</option>
-                        <option value="easy">Easy</option>
-                        <option value="medium">Medium</option>
-                        <option value="hard">Hard</option>
-                    </select>
                 </div>
+                <select
+                    className="px-4 py-2 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={difficulty}
+                    onChange={(e) => { setDifficulty(e.target.value); setPage(1); }}
+                >
+                    <option value="">All Difficulties</option>
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                </select>
             </div>
 
-            {isLoading ? (
-                <ProblemsSkeleton />
-            ) : (
-                <div className="space-y-4">
-                    {problems.map((problem) => (
-                        <Link
-                            key={problem.id}
-                            to={`/problems/${problem.slug}`}
-                            className="block group"
-                        >
-                            <Card className="p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border-gray-100 group-hover:border-blue-200">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-6">
-                                        <div className="hidden sm:flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                                            <Star className="h-6 w-6" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                                                {problem.id}. {problem.title}
-                                            </h3>
-                                            <div className="flex items-center gap-4 mt-1">
-                                                <span className={`px-3 py-0.5 rounded-full text-xs font-semibold capitalize ${DIFFICULTY_COLORS[problem.difficulty]}`}>
-                                                    {problem.difficulty}
-                                                </span>
-                                                <span className="text-sm text-gray-500 flex items-center gap-1">
-                                                    Acceptance: {calculateAcceptanceRate(problem.total_accepted, problem.total_submissions).toFixed(1)}%
-                                                </span>
-                                                {problem.creator && (
-                                                    <span className="text-sm text-gray-400">
-                                                        by <Link
-                                                            to={`/users/${problem.creator.username}`}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            className="hover:text-blue-500 font-medium transition-colors"
-                                                        >
-                                                            @{problem.creator.username}
-                                                        </Link>
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="flex flex-wrap gap-2 mt-3">
-                                                {problem.categories?.map(cat => (
-                                                    <span key={cat.id} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold uppercase tracking-wider border border-blue-100">
-                                                        {cat.name}
-                                                    </span>
-                                                ))}
-                                                {problem.tags?.map(tag => (
-                                                    <span key={tag.id} className="px-2 py-0.5 bg-gray-50 text-gray-600 rounded text-[10px] font-medium border border-gray-100">
-                                                        {tag.name}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        {problem.user_status === 'solved' && (
-                                            <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold uppercase tracking-wider animate-in fade-in zoom-in duration-300">
-                                                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                                Solved
-                                            </span>
-                                        )}
-                                        {problem.user_status === 'attempted' && (
-                                            <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold uppercase tracking-wider animate-in fade-in zoom-in duration-300">
-                                                Attempted
-                                            </span>
-                                        )}
-                                        <div className="text-gray-300 group-hover:text-blue-500 transition-colors transform group-hover:translate-x-1 duration-300">
-                                            <ChevronRight className="h-6 w-6" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </Card>
-                        </Link>
-                    ))}
+            {/* Filters */}
+            <div className="mb-12 space-y-4">
+                {categories.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-medium text-gray-500 mr-2">Categories:</span>
+                        {categories.map((cat: any) => (
+                            <button
+                                key={cat.id}
+                                onClick={() => toggleCategory(cat.slug)}
+                                className={`px-3 py-1 rounded-full text-xs font-medium border transition-all duration-200 ${selectedCategories.includes(cat.slug)
+                                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                    }`}
+                            >
+                                {cat.name}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
-                    {problems.length === 0 && (
-                        <div className="text-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-                            <Search className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900">No problems found</h3>
-                            <p className="text-gray-500">Try adjusting your filters or search query.</p>
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
+                {tags.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-medium text-gray-500 mr-2">Topics:</span>
+                        {tags.map((tag: any) => (
+                            <button
+                                key={tag.id}
+                                onClick={() => toggleTag(tag.slug)}
+                                className={`px-3 py-1 rounded-full text-xs font-medium border transition-all duration-200 ${selectedTags.includes(tag.slug)
+                                    ? 'bg-gray-800 text-white border-gray-800 shadow-sm'
+                                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                    }`}
+                            >
+                                {tag.name}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {
+                isLoading ? (
+                    <ProblemsSkeleton />
+                ) : (
+                    <div className="space-y-4">
+                        {problems.map((problem) => (
+                            <Link
+                                key={problem.id}
+                                to={`/problems/${problem.slug}`}
+                                className="block group"
+                            >
+                                <Card className="p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border-gray-100 group-hover:border-blue-200">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-6">
+                                            <div className="hidden sm:flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                                                <Star className="h-6 w-6" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                                    {problem.id}. {problem.title}
+                                                </h3>
+                                                <div className="flex items-center gap-4 mt-1">
+                                                    <span className={`px-3 py-0.5 rounded-full text-xs font-semibold capitalize ${DIFFICULTY_COLORS[problem.difficulty]}`}>
+                                                        {problem.difficulty}
+                                                    </span>
+                                                    <span className="text-sm text-gray-500 flex items-center gap-1">
+                                                        Acceptance: {calculateAcceptanceRate(problem.total_accepted, problem.total_submissions).toFixed(1)}%
+                                                    </span>
+                                                    {problem.creator && (
+                                                        <span className="text-sm text-gray-400">
+                                                            by <Link
+                                                                to={`/users/${problem.creator.username}`}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="hover:text-blue-500 font-medium transition-colors"
+                                                            >
+                                                                @{problem.creator.username}
+                                                            </Link>
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-wrap gap-2 mt-3">
+                                                    {problem.categories?.map(cat => (
+                                                        <span key={cat.id} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold uppercase tracking-wider border border-blue-100">
+                                                            {cat.name}
+                                                        </span>
+                                                    ))}
+                                                    {problem.tags?.map(tag => (
+                                                        <span key={tag.id} className="px-2 py-0.5 bg-gray-50 text-gray-600 rounded text-[10px] font-medium border border-gray-100">
+                                                            {tag.name}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            {problem.user_status === 'solved' && (
+                                                <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold uppercase tracking-wider animate-in fade-in zoom-in duration-300">
+                                                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                    Solved
+                                                </span>
+                                            )}
+                                            {problem.user_status === 'attempted' && (
+                                                <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold uppercase tracking-wider animate-in fade-in zoom-in duration-300">
+                                                    Attempted
+                                                </span>
+                                            )}
+                                            <div className="text-gray-300 group-hover:text-blue-500 transition-colors transform group-hover:translate-x-1 duration-300">
+                                                <ChevronRight className="h-6 w-6" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+                            </Link>
+                        ))}
+
+                        {problems.length === 0 && (
+                            <div className="text-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                                <Search className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                                <h3 className="text-lg font-medium text-gray-900">No problems found</h3>
+                                <p className="text-gray-500">Try adjusting your filters or search query.</p>
+                            </div>
+                        )}
+                    </div>
+                )
+            }
+        </div >
     )
 }

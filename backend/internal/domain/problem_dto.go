@@ -43,6 +43,7 @@ type ListProblemsRequest struct {
 	Difficulty string   `json:"difficulty"`
 	Search     string   `json:"search"`
 	Tags       []string `json:"tags"`
+	Categories []string `json:"categories"`
 }
 
 type AdminListProblemsRequest struct {
@@ -53,6 +54,7 @@ type AdminListProblemsRequest struct {
 	Visibility string   `json:"visibility"`
 	Search     string   `json:"search"`
 	Tags       []string `json:"tags"`
+	Categories []string `json:"categories"`
 }
 
 type ProblemStats struct {

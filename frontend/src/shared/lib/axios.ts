@@ -9,6 +9,18 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  paramsSerializer: (params) => {
+    const searchParams = new URLSearchParams()
+    for (const key in params) {
+      const val = params[key]
+      if (Array.isArray(val)) {
+        val.forEach(v => searchParams.append(key, v))
+      } else if (val !== undefined && val !== null) {
+        searchParams.append(key, val as string)
+      }
+    }
+    return searchParams.toString()
+  },
 })
 
 let isRefreshing = false
@@ -44,12 +56,12 @@ apiClient.interceptors.response.use(
 
     if (authEndpoints.some(endpoint => originalRequest.url?.includes(endpoint))) {
       console.log('Auth endpoint failed, not retrying:', originalRequest.url)
-      
+
       // If refresh endpoint fails, logout
       if (originalRequest.url?.includes(API_ENDPOINTS.AUTH.REFRESH)) {
         authStore.getState().logout()
       }
-      
+
       return Promise.reject(error)
     }
 

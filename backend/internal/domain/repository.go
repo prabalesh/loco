@@ -36,7 +36,6 @@ type UserRepository interface {
 	GetUserRank(userID int) (int, error)
 }
 
-// ProblemFilters for listing problems
 type ProblemFilters struct {
 	Page       int
 	Limit      int
@@ -45,6 +44,7 @@ type ProblemFilters struct {
 	Visibility string
 	Search     string
 	Tags       []string
+	Categories []string
 	CreatedBy  *int
 }
 
