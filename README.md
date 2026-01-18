@@ -4,7 +4,7 @@ A modern, full-stack competitive programming platform built with **Go** and **Re
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Go Version](https://img.shields.io/badge/go-1.21+-00ADD8.svg)
-![React Version](https://img.shields.io/badge/react-18.0+-61DAFB.svg)
+![React Version](https://img.shields.io/badge/react-19.0+-61DAFB.svg)
 
 ---
 
@@ -28,14 +28,15 @@ A modern, full-stack competitive programming platform built with **Go** and **Re
 ## ✨ Features
 
 - 🔐 **Secure Authentication** - JWT-based auth with HttpOnly cookies
-- 👤 **User Profiles** - Public and private profile views with privacy controls
-- 💻 **Problem Library** - Browse and solve coding challenges (coming soon)
-- ✅ **Code Submission** - Submit solutions in multiple languages (coming soon)
-- 🏆 **Leaderboard** - Compete with other programmers (coming soon)
-- 📊 **Progress Tracking** - Monitor your solving statistics
-- 🎨 **Modern UI** - Clean, responsive design with Tailwind CSS
-- 🌙 **Dark Mode Ready** - Eye-friendly dark theme support
-- 🔒 **Privacy First** - Email and sensitive data hidden from public profiles
+- 👤 **User Profiles** - Public and private profile views with gamification stats
+- 🎮 **Gamification** - Earn XP, level up, unlock achievements, and maintain submission streaks
+- 💻 **Problem Library** - Comprehensive collection of coding challenges with multi-language support
+- ✅ **Code Submission** - Secure code execution via Piston with real-time feedback
+- 🏆 **Leaderboard** - Global rankings based on XP and problem-solving prowess
+- 🛠️ **Admin Portal** - Robust management interface for problems, users, and system monitoring
+- 📊 **Progress Tracking** - Detailed statistics and progress visualization
+- 🎨 **Modern UI** - Premium design system using Tailwind CSS v4 and Framer Motion
+- 🌙 **Dark Mode Ready** - Fully responsive design with native dark theme support
 
 ---
 
@@ -45,86 +46,51 @@ A modern, full-stack competitive programming platform built with **Go** and **Re
 - **Language:** Go 1.21+
 - **Framework:** net/http (Standard Library)
 - **Database:** PostgreSQL 15+
+- **Queue & Cache:** Redis
+- **Code Execution:** Piston API
 - **Authentication:** JWT with HttpOnly cookies
-- **Password Hashing:** bcrypt
 - **Logging:** Zap
 - **Database Driver:** pgx
-- **JWT Library:** golang-jwt/jwt
 
-### Frontend
-- **Framework:** React 18 + TypeScript
-- **Build Tool:** Vite
-- **Styling:** Tailwind CSS v3
-- **State Management:** Zustand with persistence
-- **Data Fetching:** TanStack Query (React Query)
-- **Routing:** React Router v6
-- **Form Handling:** React Hook Form + Zod validation
-- **HTTP Client:** Axios with interceptors
-- **UI Components:** Custom components with headless UI patterns
-- **Notifications:** React Hot Toast
-- **Animations:** Framer Motion
-- **Icons:** Lucide React
-- **Date Utilities:** date-fns
+### Frontend (Main & Admin)
+- **Framework:** React 19 + TypeScript
+- **Build Tool:** Vite 7
+- **Styling:** Tailwind CSS v4
+- **State Management:** Zustand
+- **Data Fetching:** TanStack Query v5
+- **UI Components:** Framer Motion, Lucide React, MUI (Admin)
+- **Editor:** Monaco Editor, Tiptap (Admin Rich Text)
+- **Form Handling:** React Hook Form + Zod
+- **Routing:** React Router v7
 
 ---
 
 ## 📁 Project Structure
 
-```
+```bash
 loco/
-├── backend/                      # Go backend
-│   ├── cmd/
-│   │   └── server/
-│   │       └── main.go          # Application entry point
-│   ├── internal/
-│   │   ├── delivery/            # HTTP layer
-│   │   │   ├── handler/         # Request handlers
-│   │   │   ├── middleware/      # Auth, CORS, Logging middleware
-│   │   │   └── router/          # Route configuration
-│   │   ├── domain/              # Business entities and DTOs
-│   │   ├── infrastructure/      # External services (JWT, etc.)
-│   │   ├── repository/          # Database layer (PostgreSQL)
-│   │   └── usecase/             # Business logic
-│   ├── pkg/
-│   │   ├── config/              # Configuration management
-│   │   └── database/            # Database connection pool
-│   ├── migrations/              # SQL migrations
-│   ├── .env                     # Environment variables
-│   ├── .env.example            # Environment template
-│   ├── go.mod                   # Go dependencies
-│   └── go.sum
+├── backend/                      # Go backend (clean architecture)
+│   ├── cmd/server/               # App entry point
+│   ├── internal/                 # Private application and library code
+│   │   ├── delivery/             # HTTP handlers & middleware
+│   │   ├── domain/               # Domain entities (Models, Usecases, Repositories interfaces)
+│   │   ├── usecase/              # Business logic implementation
+│   │   ├── repository/           # Database access (GORM/SQL)
+│   │   └── infrastructure/       # External services (Redis, Piston, JWT)
+│   ├── migrations/               # Database migrations
+│   └── pkg/                      # Shared utility packages
 │
-├── frontend/                     # React frontend
-│   ├── src/
-│   │   ├── app/                 # App setup and routing
-│   │   │   ├── App.tsx          # Root component
-│   │   │   └── router.tsx       # Route definitions
-│   │   ├── features/            # Feature modules
-│   │   │   └── auth/            # Authentication feature
-│   │   │       ├── api/         # API calls
-│   │   │       ├── components/  # Auth components
-│   │   │       ├── hooks/       # Custom hooks
-│   │   │       ├── pages/       # Auth pages
-│   │   │       ├── store/       # Zustand store
-│   │   │       └── types/       # TypeScript types
-│   │   ├── pages/               # Page components
-│   │   ├── shared/              # Shared resources
-│   │   │   ├── components/      # Reusable UI components
-│   │   │   ├── constants/       # App constants
-│   │   │   ├── hooks/           # Shared hooks
-│   │   │   ├── lib/             # Utilities (axios, query client)
-│   │   │   └── types/           # Shared TypeScript types
-│   │   └── styles/              # Global styles
-│   ├── public/                  # Static assets
-│   ├── index.html
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── tailwind.config.js
-│   ├── postcss.config.js
-│   └── vite.config.ts
+├── frontend/                     # Main user application (React 19)
+│   ├── src/features/             # Feature-based organization (Auth, Problems, Profile)
+│   ├── src/shared/               # Reusable components and hooks
+│   └── tailwind.config.js
 │
-├── README.md                     # This file
-└── LICENSE                       # MIT License
+├── admin-frontend/               # Admin dashboard (React 19 + MUI)
+│   ├── src/pages/                # Admin views (Dashboard, Problem Management)
+│   └── src/features/             # Admin specific logic
+│
+├── README.md
+└── LICENSE
 
 ```
 
@@ -134,10 +100,11 @@ loco/
 
 Before you begin, ensure you have the following installed:
 
-- **Go** 1.21 or higher → [Download](https://go.dev/dl/)
-- **Node.js** 18+ and npm → [Download](https://nodejs.org/)
-- **PostgreSQL** 15+ → [Download](https://www.postgresql.org/download/)
-- **Git** → [Download](https://git-scm.com/downloads)
+- **Go** 1.21+
+- **Node.js** 20+
+- **PostgreSQL** 15+
+- **Redis** 7+
+- **Docker** (Optional, for running execution engine)
 
 ---
 
@@ -168,12 +135,17 @@ psql -U postgres -c "CREATE DATABASE coding_platform;"
 psql -d coding_platform -f migrations/001_create_users_table.sql
 ```
 
-### 3. Frontend Setup
+### 3. Frontend Setup (Main App)
 
 ```bash
 cd frontend
+npm install
+```
 
-# Install dependencies
+### 4. Admin Frontend Setup
+
+```bash
+cd admin-frontend
 npm install
 ```
 
@@ -504,21 +476,19 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ## 🗺️ Roadmap
 
 - [x] User authentication with JWT
-- [x] User profiles (public and private)
-- [ ] Problem library with difficulty levels
-- [ ] Code editor with syntax highlighting
-- [ ] Multi-language code execution
-- [ ] Test case validation
-- [ ] Leaderboard and rankings
-- [ ] User submission history
-- [ ] Problem categories and tags
-- [ ] Search and filter problems
-- [ ] Admin dashboard
-- [ ] Email verification
-- [ ] Password reset functionality
+- [x] User profiles with gamification
+- [x] Problem library and detail views
+- [x] Monaco code editor integration
+- [x] Multi-language execution via Redis & Piston
+- [x] Real-time submission status polling
+- [x] Global Leaderboard
+- [x] User submission history & statistics
+- [x] Achievements & Badges system
+- [x] Admin Dashboard for problem management
+- [ ] Contest system and live rankings
+- [ ] Discussion forums per problem
 - [ ] OAuth integration (Google, GitHub)
-- [ ] Contest system
-- [ ] Discussion forums
+- [ ] Advanced code analytics (runtime/memory complexity)
 
 ---
 
