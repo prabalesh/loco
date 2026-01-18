@@ -41,7 +41,7 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		zap.Int("user_id", targetUserID),
 	)
 
-	RespondJSON(w, http.StatusOK, user.ToResponse())
+	RespondJSON(w, http.StatusOK, user)
 }
 
 func (h *UserHandler) GetProfileByUsername(w http.ResponseWriter, r *http.Request) {

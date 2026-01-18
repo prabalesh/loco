@@ -3,6 +3,17 @@ export interface UserStats {
   accepted_submissions: number
   problems_solved: number
   acceptance_rate: number
+  rank: number
+}
+
+export interface HeatmapEntry {
+  date: string
+  count: number
+}
+
+export interface DifficultyStat {
+  difficulty: string
+  count: number
 }
 
 export interface User {
@@ -11,8 +22,11 @@ export interface User {
   username: string
   role: string
   email_verified: boolean
+  is_verified: boolean
   created_at: string
   stats?: UserStats
+  submission_heatmap?: HeatmapEntry[]
+  solved_distribution?: DifficultyStat[]
 }
 
 export interface PublicUser {

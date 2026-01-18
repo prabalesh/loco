@@ -21,8 +21,8 @@ func NewUserUsecase(userRepo domain.UserRepository, submissionRepo domain.Submis
 	}
 }
 
-// GetUserProfile returns user profile by ID
-func (u *UserUsecase) GetUserProfile(userID int) (*domain.User, error) {
+// GetUserProfile returns full user profile response for the given user ID
+func (u *UserUsecase) GetUserProfile(userID int) (*domain.UserProfileResponse, error) {
 	user, err := u.userRepo.GetByID(userID)
 	if err != nil {
 		u.logger.Error("Failed to get user by ID",
@@ -32,7 +32,41 @@ func (u *UserUsecase) GetUserProfile(userID int) (*domain.User, error) {
 		return nil, errors.New("user not found")
 	}
 
-	return user, nil
+	// Fetch rank
+	rank, err := u.userRepo.GetUserRank(user.ID)
+	if err != nil {
+		u.logger.Error("Failed to get user rank", zap.Error(err))
+	}
+
+	// Fetch stats
+	stats, err := u.getUserStats(user.ID, rank)
+	if err != nil {
+		u.logger.Error("Failed to get user stats", zap.Error(err))
+	}
+
+	// Fetch recent problems
+	recentProblems, err := u.submissionRepo.FindSolvedProblemsByUser(user.ID, 5) // Limit to 5
+	if err != nil {
+		u.logger.Error("Failed to get recent problems", zap.Error(err))
+		recentProblems = []domain.Problem{}
+	}
+
+	// Fetch distribution
+	distribution, err := u.submissionRepo.GetSolvedDistribution(user.ID)
+	if err != nil {
+		u.logger.Error("Failed to get solved distribution", zap.Error(err))
+		distribution = []domain.DifficultyStat{}
+	}
+
+	// Fetch heatmap
+	heatmap, err := u.submissionRepo.GetSubmissionHeatmap(user.ID)
+	if err != nil {
+		u.logger.Error("Failed to get submission heatmap", zap.Error(err))
+		heatmap = []domain.HeatmapEntry{}
+	}
+
+	resp := user.ToUserProfileResponse(stats, recentProblems, heatmap, distribution)
+	return &resp, nil
 }
 
 func (u *UserUsecase) GetUserProfileByUsername(username string) (*domain.UserProfileResponse, error) {
