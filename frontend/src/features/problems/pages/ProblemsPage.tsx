@@ -105,6 +105,17 @@ export const ProblemsPage = () => {
                                                 <span className="text-sm text-gray-500 flex items-center gap-1">
                                                     Acceptance: {problem.acceptance_rate.toFixed(1)}%
                                                 </span>
+                                                {problem.creator && (
+                                                    <span className="text-sm text-gray-400">
+                                                        by <Link
+                                                            to={`/users/${problem.creator.username}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="hover:text-blue-500 font-medium transition-colors"
+                                                        >
+                                                            @{problem.creator.username}
+                                                        </Link>
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
