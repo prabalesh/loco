@@ -175,8 +175,15 @@ export default function ProblemLanguage() {
   }
 
   const getEditorLanguage = (langId: number) => {
-    const lang = languages.find((l) => l.id === langId)
-    return lang?.language_id || 'plaintext'
+    let lang = languages.find((l) => l.id === langId)?.language_id;
+
+    switch (lang) {
+      case "c++":
+        lang = "cpp"
+        break;
+    }
+
+    return lang || 'plaintext'
   }
 
   if (languagesLoading || problemLanguagesLoading) {
