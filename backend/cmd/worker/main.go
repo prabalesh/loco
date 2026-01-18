@@ -76,6 +76,7 @@ func main() {
 		pistonService,
 		loggers,
 		redisClient.Client,
+		cfg,
 	)
 
 	// 8. Start Worker

@@ -77,7 +77,8 @@ type Submission struct {
 	SubmittedBy            *int `json:"submitted_by,omitempty" gorm:"index"`           // Admin user ID if admin submission
 
 	// Associations
-	User     *User     `json:"user,omitempty" gorm:"foreignKey:UserID;references:ID"`
+	User     *User     `json:"user,omitempty" gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`
+	Admin    *User     `json:"admin,omitempty" gorm:"foreignKey:SubmittedBy;references:ID;constraint:OnDelete:SET NULL"`
 	Problem  *Problem  `json:"problem,omitempty" gorm:"foreignKey:ProblemID;references:ID"`
 	Language *Language `json:"language,omitempty" gorm:"foreignKey:LanguageID;references:ID"`
 }

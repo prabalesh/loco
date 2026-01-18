@@ -69,7 +69,17 @@ func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.adminUsecase.DeleteUser(adminID, userID); err != nil {
 		h.logger.Error("Failed to delete user", zap.Error(err), zap.Int("admin_id", adminID))
-		RespondError(w, http.StatusInternalServerError, err.Error())
+		switch err.Error() {
+		case "cannot delete admin users":
+			RespondError(w, http.StatusForbidden, err.Error())
+
+		case "user not found":
+			RespondError(w, http.StatusNotFound, err.Error())
+
+		default:
+			RespondError(w, http.StatusInternalServerError, "internal server error")
+		}
+
 		return
 	}
 

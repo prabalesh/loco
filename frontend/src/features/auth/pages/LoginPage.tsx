@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useState, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Code, CheckCircle, Mail, AlertCircle, Loader2 } from 'lucide-react'
 import { Input } from '@/shared/components/ui/Input'
@@ -15,6 +15,8 @@ import { CONFIG } from '@/shared/constants/config'
 import { useAuth } from '@/shared/hooks/useAuth'
 import { Navigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
+import type { LoginResponse } from '@/shared/types/auth.types'
+import type { AxiosError } from 'axios'
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email format'),
@@ -24,6 +26,7 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>
 
 export const LoginPage = () => {
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { isAuthenticated } = useAuth()
   const { mutate: login, isPending } = useLogin()
@@ -59,14 +62,21 @@ export const LoginPage = () => {
   const onSubmit = (data: LoginFormData) => {
     setShowResendOption(false)
     login(data, {
-      onError: (error: any) => {
-        const errorMessage = error.response?.data?.error || 'Login failed'
+      onSuccess: () => {
+        toast.success('Login successful!')
+        navigate(ROUTES.HOME)
+      },
+      onError: (err: any) => {
+        const error = err as AxiosError<LoginResponse>
+        console.log(error.response?.data)
+        const errorMessage = error.response?.data.data.message || 'Login failed'
 
         if (errorMessage.toLowerCase().includes('verify your email')) {
           setShowResendOption(true)
           setResendEmail(data.email)
           toast.error('Please verify your email first.', { duration: 5000 })
         } else {
+          console.log("triggered")
           toast.error(errorMessage)
         }
       },

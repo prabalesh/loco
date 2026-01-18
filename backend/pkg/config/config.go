@@ -21,6 +21,12 @@ type Config struct {
 	RunCodeRateLimit    RunCodeRateLimitConfig
 	Email               EmailConfig
 	Log                 LogConfig
+	Worker              WorkerConfig
+}
+
+type WorkerConfig struct {
+	MaxConcurrentSubmissions int
+	MaxConcurrentTestCases   int
 }
 
 type CORSConfig struct {
@@ -167,6 +173,10 @@ func InitConfig() {
 			RunCodeRateLimit: RunCodeRateLimitConfig{
 				Limit:  parseInt("RUN_CODE_RATE_LIMIT_MAX", 10),
 				Window: parseInt("RUN_CODE_RATE_LIMIT_WINDOW", 60),
+			},
+			Worker: WorkerConfig{
+				MaxConcurrentSubmissions: parseInt("WORKER_MAX_CONCURRENT_SUBMISSIONS", 4),
+				MaxConcurrentTestCases:   parseInt("WORKER_MAX_CONCURRENT_TEST__CASES", 5),
 			},
 		}
 

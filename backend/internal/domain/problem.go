@@ -23,6 +23,7 @@ type Problem struct {
 	TotalSubmission int       `json:"total_submissions" gorm:"default:0"`
 	TotalAccepted   int       `json:"total_accepted" gorm:"default:0"`
 	CreatedBy       *int      `json:"created_by" gorm:"index"`
+	Creator         *User     `json:"creator,omitempty" gorm:"foreignKey:CreatedBy;references:ID;constraint:OnDelete:SET NULL"`
 	CreatedAt       time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt       time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }

@@ -12,8 +12,8 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: (data: LoginRequest) => authApi.login(data),
     onSuccess: (response) => {
-      authStore.getState().setUser(response.user)
-      toast.success(`Welcome back, ${response.user.username}!`)
+      authStore.getState().setUser(response.data.user)
+      toast.success(`Welcome back, ${response.data.user.username}!`)
       navigate(ROUTES.HOME)
     }
   })

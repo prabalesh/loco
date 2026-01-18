@@ -35,13 +35,17 @@ export interface LoginRequest {
 }
 
 export interface RegisterResponse {
-  message: string
-  user: User
+  data: {
+    message: string
+    user: User
+  }
 }
 
 export interface LoginResponse {
-  message: string
-  user: User
+  data: {
+    message: string
+    user: User
+  }
 }
 
 export interface ValidationErrors {

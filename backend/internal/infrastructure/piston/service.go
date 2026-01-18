@@ -33,11 +33,14 @@ type ExecutionResponse struct {
 }
 
 type Stage struct {
-	Stdout string `json:"stdout"`
-	Stderr string `json:"stderr"`
-	Code   int    `json:"code"`
-	Signal string `json:"signal"`
-	Output string `json:"output"`
+	Stdout   string `json:"stdout"`
+	Stderr   string `json:"stderr"`
+	Code     int    `json:"code"`
+	Signal   string `json:"signal"`
+	Output   string `json:"output"`
+	WallTime int    `json:"wall_time"` // in milliseconds (some versions use time)
+	CpuTime  int    `json:"cpu_time"`  // in milliseconds
+	Memory   int    `json:"memory"`    // in bytes
 }
 
 type PistonService interface {
@@ -48,6 +51,8 @@ type ExecutionResult struct {
 	Output   string
 	Error    string
 	ExitCode int
+	Runtime  int // In milliseconds
+	Memory   int // In kilobytes
 }
 
 type pistonService struct {
@@ -64,6 +69,11 @@ func NewPistonService(cfg *config.Config, logger *zap.Logger) PistonService {
 	return &pistonService{
 		client: &http.Client{
 			Timeout: 10 * time.Second,
+			Transport: &http.Transport{
+				MaxIdleConns:        100,
+				MaxIdleConnsPerHost: 20,
+				IdleConnTimeout:     90 * time.Second,
+			},
 		},
 		baseURL: baseURL,
 		logger:  logger,
@@ -85,7 +95,7 @@ func (s *pistonService) Execute(language, version, code, input string) (*Executi
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	fmt.Println(string(jsonBody))
+	// fmt.Println(string(jsonBody))
 
 	resp, err := s.client.Post(s.baseURL+"/execute", "application/json", bytes.NewBuffer(jsonBody))
 	if err != nil {
@@ -113,12 +123,16 @@ func (s *pistonService) Execute(language, version, code, input string) (*Executi
 			Output:   pistonResp.Compile.Stdout,
 			Error:    pistonResp.Compile.Stderr + "\n" + pistonResp.Compile.Output,
 			ExitCode: pistonResp.Compile.Code,
+			Runtime:  pistonResp.Compile.CpuTime,
+			Memory:   pistonResp.Compile.Memory / 1024,
 		}, nil
 	}
 
 	return &ExecutionResult{
 		Output:   pistonResp.Run.Stdout,
-		Error:    pistonResp.Run.Stderr, // + "\n" + pistonResp.Run.Output,
+		Error:    pistonResp.Run.Stderr,
 		ExitCode: pistonResp.Run.Code,
+		Runtime:  pistonResp.Run.CpuTime,
+		Memory:   pistonResp.Run.Memory / 1024,
 	}, nil
 }

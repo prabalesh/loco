@@ -65,6 +65,11 @@ func main() {
 	}
 
 	// Auto Migrate
+	// Drop existing constraints to force GORM to recreate them with ON DELETE CASCADE/SET NULL
+	db.DB.Exec("ALTER TABLE submissions DROP CONSTRAINT IF EXISTS fk_submissions_user")
+	db.DB.Exec("ALTER TABLE submissions DROP CONSTRAINT IF EXISTS fk_submissions_admin")
+	db.DB.Exec("ALTER TABLE problems DROP CONSTRAINT IF EXISTS fk_problems_creator")
+
 	if err := db.DB.AutoMigrate(
 		&domain.User{},
 		&domain.Problem{},

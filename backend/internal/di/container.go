@@ -59,7 +59,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	queueStatusUsecase := usecase.NewQueueStatusUsecase(submissionRepo, redisClient.Client, logger)
 
 	// Worker
-	submissionWorker := worker.NewWorker(jobQueue, submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, pistonService, logger, redisClient.Client)
+	submissionWorker := worker.NewWorker(jobQueue, submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, pistonService, logger, redisClient.Client, cfg)
 
 	// Handlers
 	authHanlder := handler.NewAuthHandler(authUsecase, logger, cfg, cookieManager)

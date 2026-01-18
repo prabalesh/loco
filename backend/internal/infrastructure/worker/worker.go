@@ -6,9 +6,12 @@ import (
 	"strings"
 	"time"
 
+	"sync"
+
 	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/piston"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/queue"
+	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -25,6 +28,7 @@ type Worker struct {
 	stopChan            chan struct{}
 	redisClient         *redis.Client
 	workerID            string
+	config              *config.Config
 }
 
 func NewWorker(
@@ -37,6 +41,7 @@ func NewWorker(
 	pistonService piston.PistonService,
 	logger *zap.Logger,
 	redisClient *redis.Client,
+	cfg *config.Config,
 ) *Worker {
 	return &Worker{
 		queue:               queue,
@@ -50,14 +55,20 @@ func NewWorker(
 		stopChan:            make(chan struct{}),
 		redisClient:         redisClient,
 		workerID:            generateWorkerID(),
+		config:              cfg,
 	}
 }
 
 // Start begins processing jobs from the queue
 func (w *Worker) Start(ctx context.Context) {
-	w.logger.Info("Worker started, waiting for jobs...")
+	w.logger.Info("Worker started, waiting for jobs...",
+		zap.Int("max_concurrent_submissions", w.config.Worker.MaxConcurrentSubmissions),
+	)
 	// Start heartbeat goroutine
 	go w.startHeartbeat(ctx)
+
+	// Semaphore to limit concurrent submissions
+	sem := make(chan struct{}, w.config.Worker.MaxConcurrentSubmissions)
 
 	for {
 		select {
@@ -83,8 +94,14 @@ func (w *Worker) Start(ctx context.Context) {
 				continue
 			}
 
-			// Process the job
-			w.processSubmission(ctx, job.SubmissionID)
+			// Wait for a slot in the semaphore
+			sem <- struct{}{}
+
+			// Process the job in a new goroutine
+			go func(submissionID int) {
+				defer func() { <-sem }()
+				w.processSubmission(ctx, submissionID)
+			}(job.SubmissionID)
 		}
 	}
 }
@@ -202,37 +219,116 @@ func (w *Worker) evaluateSubmission(submission *domain.Submission, problem *doma
 
 	submission.TotalTestCases = totalCount
 
-	for _, tc := range testCases {
-		result, err := w.pistonService.Execute(language.Slug, language.Version, finalCode, tc.Input)
-		if err != nil {
+	// Results channel to collect test case results
+	type tcResult struct {
+		index  int
+		result *piston.ExecutionResult
+		err    error
+	}
+	resultsChan := make(chan tcResult, totalCount)
+
+	// Semaphore to limit concurrent test cases within one submission
+	tcSem := make(chan struct{}, w.config.Worker.MaxConcurrentTestCases)
+
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	for i, tc := range testCases {
+		wg.Add(1)
+		go func(idx int, testCase domain.TestCase) {
+			defer wg.Done()
+
+			// Acquire semaphore slot
+			select {
+			case tcSem <- struct{}{}:
+				defer func() { <-tcSem }()
+			case <-ctx.Done():
+				return
+			}
+
+			res, err := w.pistonService.Execute(language.Slug, language.Version, finalCode, testCase.Input)
+			resultsChan <- tcResult{index: idx, result: res, err: err}
+
+			// If any test case fails, we can stop others (optional optimization)
+			if err != nil || (res != nil && (res.ExitCode != 0 || strings.TrimSpace(res.Output) != strings.TrimSpace(testCase.ExpectedOutput))) {
+				// We don't want to cancel immediately if we want to run all tests,
+				// but typically for "Accepted" we need all to pass.
+				// For competitive programming, we often stop at first fail.
+				// However, if we want full results, we shouldn't cancel.
+				// Let's keep it running for all if we want total pass count.
+			}
+		}(i, tc)
+	}
+
+	// Close results channel when all goroutines are done
+	go func() {
+		wg.Wait()
+		close(resultsChan)
+	}()
+
+	// Process results as they come in
+	// Note: since we need total passCount, we must wait for all or handle them as they arrive.
+	// To maintain short-circuiting logic but still get counts, it's tricky.
+	// Let's collect all results for now to keep it simple and accurate for passCount.
+	allResults := make([]tcResult, totalCount)
+	for res := range resultsChan {
+		allResults[res.index] = res
+	}
+
+	// Now analyze results in order to find the first failure (if any)
+	for i, r := range allResults {
+		if r.err != nil {
 			w.logger.Error("Piston execution failed",
-				zap.Error(err),
+				zap.Error(r.err),
 				zap.Int("submission_id", submission.ID),
+				zap.Int("test_case_index", i),
 			)
-			finalStatus = domain.SubmissionStatusInternalError
-			errorMessage = "Execution system error"
-			break
+			if finalStatus == domain.SubmissionStatusAccepted {
+				finalStatus = domain.SubmissionStatusInternalError
+				errorMessage = "Execution system error"
+			}
+			continue
 		}
 
-		if result.ExitCode != 0 {
-			finalStatus = domain.SubmissionStatusRuntimeError
-			errorMessage = result.Error
-			break
+		if r.result.ExitCode != 0 {
+			if finalStatus == domain.SubmissionStatusAccepted {
+				finalStatus = domain.SubmissionStatusRuntimeError
+				errorMessage = r.result.Error
+			}
+			continue
 		}
 
-		// Normalize output (trim whitespace)
-		actual := strings.TrimSpace(result.Output)
-		expected := strings.TrimSpace(tc.ExpectedOutput)
+		actual := strings.TrimSpace(r.result.Output)
+		expected := strings.TrimSpace(testCases[i].ExpectedOutput)
 
 		if actual != expected {
-			finalStatus = domain.SubmissionStatusWrongAnswer
-			errorMessage = fmt.Sprintf("Failed on input: %s\nExpected: %s\nActual: %s", tc.Input, expected, actual)
-			break
+			if finalStatus == domain.SubmissionStatusAccepted {
+				finalStatus = domain.SubmissionStatusWrongAnswer
+				errorMessage = fmt.Sprintf("Failed on input: %s\nExpected: %s\nActual: %s", testCases[i].Input, expected, actual)
+			}
+			continue
 		}
 		passCount++
 	}
 
 	submission.PassedTestCases = passCount
+
+	// Aggregating metrics (using max for runtime and memory)
+	maxRuntime := 0
+	maxMemory := 0
+	for _, r := range allResults {
+		if r.result != nil {
+			if r.result.Runtime > maxRuntime {
+				maxRuntime = r.result.Runtime
+			}
+			if r.result.Memory > maxMemory {
+				maxMemory = r.result.Memory
+			}
+		}
+	}
+	submission.Runtime = maxRuntime
+	submission.Memory = maxMemory
 
 	// Update submission status
 	w.updateSubmissionResult(submission, finalStatus, errorMessage)

@@ -30,7 +30,7 @@ func RespondJSON[T any](w http.ResponseWriter, status int, data T) {
 
 func RespondError(w http.ResponseWriter, status int, message string) {
 	RespondJSON(w, status, map[string]string{
-		"error": message,
+		"message": message,
 	})
 }
 

@@ -13,6 +13,7 @@ import { ROUTES } from '@/shared/constants/routes'
 import { CONFIG } from '@/shared/constants/config'
 import { toast } from 'react-hot-toast'
 import type { AxiosError } from 'axios'
+import type { RegisterResponse } from '@/shared/types/auth.types'
 
 const registerSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email format'),
@@ -50,13 +51,13 @@ export const RegisterPage = () => {
     setSuccessMessage(null)
     try {
       const response = await authApi.register(data)
-      const message = response.message || 'Registration successful! Please verify your email.'
+      const message = response.data.message || 'Registration successful! Please verify your email.'
       setSuccessMessage(message)
       toast.success('Registration successful! Please verify your email.')
       setIsSuccess(true)
     } catch (err) {
-      const error = err as AxiosError<{ error: string }>
-      const errorMsg = error.response?.data?.error || 'Registration failed'
+      const error = err as AxiosError<RegisterResponse>
+      const errorMsg = error.response?.data.data.message || 'Registration failed'
       toast.error(errorMsg)
       setIsSuccess(false)
     } finally {

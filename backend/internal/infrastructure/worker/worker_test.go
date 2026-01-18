@@ -6,9 +6,22 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/prabalesh/loco/backend/internal/infrastructure/queue"
+	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
+
+type mockQueue struct{}
+
+func (m *mockQueue) EnqueueSubmission(ctx context.Context, submissionID int) error {
+	return nil
+}
+
+func (m *mockQueue) DequeueSubmission(ctx context.Context) (*queue.SubmissionJob, error) {
+	<-ctx.Done()
+	return nil, nil
+}
 
 func TestWorkerHeartbeat(t *testing.T) {
 	// Start miniredis
@@ -33,15 +46,21 @@ func TestWorkerHeartbeat(t *testing.T) {
 
 	// Initialize Worker with minimal dependencies
 	w := NewWorker(
-		nil, // queue
-		nil, // submissionRepo
-		nil, // problemRepo
-		nil, // testCaseRepo
-		nil, // languageRepo
-		nil, // problemLanguageRepo
-		nil, // pistonService
+		&mockQueue{}, // queue
+		nil,          // submissionRepo
+		nil,          // problemRepo
+		nil,          // testCaseRepo
+		nil,          // languageRepo
+		nil,          // problemLanguageRepo
+		nil,          // pistonService
 		logger,
 		rdb,
+		&config.Config{
+			Worker: config.WorkerConfig{
+				MaxConcurrentSubmissions: 4,
+				MaxConcurrentTestCases:   5,
+			},
+		},
 	)
 
 	// Context for test
@@ -66,6 +85,7 @@ func TestWorkerHeartbeat(t *testing.T) {
 
 	// Stop worker
 	w.Stop()
+	cancel()
 	// Wait specifically for the cleanup or just wait a bit
 	time.Sleep(100 * time.Millisecond)
 
