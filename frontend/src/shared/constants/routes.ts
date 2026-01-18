@@ -8,6 +8,7 @@ export const ROUTES = {
   SUBMISSIONS: '/submissions',
   LEADERBOARD: '/leaderboard',
   PROFILE: '/profile',
+  ACHIEVEMENTS: '/achievements',
   USER_PROFILE: (username: string) => `/users/${username}`,
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"go.uber.org/zap"
 )
@@ -43,7 +44,12 @@ func (h *AchievementHandler) List(w http.ResponseWriter, r *http.Request) {
 
 // GetMyAchievements returns achievements unlocked by the current user
 func (h *AchievementHandler) GetMyAchievements(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("userID").(int)
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		h.logger.Error("UserID not found in context")
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	userAchievements, err := h.achievementUsecase.GetUserProgress(userID)
 	if err != nil {

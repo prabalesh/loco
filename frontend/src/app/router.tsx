@@ -71,7 +71,7 @@ export const router = createBrowserRouter([
         element: <LeaderboardPage />,
       },
       {
-        path: '/achievements',
+        path: ROUTES.ACHIEVEMENTS,
         element: <AchievementsPage />,
       },
       {

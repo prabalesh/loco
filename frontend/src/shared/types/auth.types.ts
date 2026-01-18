@@ -4,6 +4,8 @@ export interface UserStats {
   problems_solved: number
   acceptance_rate: number
   rank: number
+  streak: number
+  solved_distribution?: DifficultyStat[]
 }
 
 export interface HeatmapEntry {

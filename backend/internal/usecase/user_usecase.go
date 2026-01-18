@@ -144,6 +144,16 @@ func (u *UserUsecase) getUserStats(userID int, rank int) (domain.UserStats, erro
 		return domain.UserStats{}, err
 	}
 
+	streak, err := u.submissionRepo.GetCurrentStreak(userID)
+	if err != nil {
+		u.logger.Error("Failed to get user streak", zap.Error(err))
+	}
+
+	distribution, err := u.submissionRepo.GetSolvedDistribution(userID)
+	if err != nil {
+		u.logger.Error("Failed to get solved distribution", zap.Error(err))
+	}
+
 	acceptanceRate := 0.0
 	if totalSubmissions > 0 {
 		acceptanceRate = float64(acceptedSubmissions) / float64(totalSubmissions) * 100
@@ -155,5 +165,7 @@ func (u *UserUsecase) getUserStats(userID int, rank int) (domain.UserStats, erro
 		ProblemsSolved:      int(problemsSolved),
 		AcceptanceRate:      acceptanceRate,
 		Rank:                rank,
+		Streak:              streak,
+		SolvedDistribution:  distribution,
 	}, nil
 }
