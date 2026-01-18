@@ -4,6 +4,7 @@ import { RotateCcw } from 'lucide-react'
 import { Button } from '@/shared/components/ui/Button'
 import { LanguageDropdown } from './LanguageDropdown'
 import type { ProblemLanguage } from '../types'
+import { filterEditorLanguage } from '../../../lib/utils'
 
 interface CodeEditorProps {
     languages: ProblemLanguage[]
@@ -82,8 +83,8 @@ export const CodeEditor = ({
             <div className="flex-1 relative overflow-hidden">
                 <Editor
                     height="100%"
-                    defaultLanguage={currentLang?.language_name.toLowerCase() || 'javascript'}
-                    language={currentLang?.language_name.toLowerCase() || 'javascript'}
+                    defaultLanguage={filterEditorLanguage(currentLang?.language.language_id || 'plaintext')}
+                    language={filterEditorLanguage(currentLang?.language.language_id || 'plaintext')}
                     theme="locoCustom"
                     value={code}
                     onChange={(val) => onCodeChange(val || '')}
@@ -104,6 +105,9 @@ export const CodeEditor = ({
                         automaticLayout: true,
                         letterSpacing: 0.5,
                         foldingStrategy: 'indentation',
+                        tabSize: 4,                    // Add this
+                        insertSpaces: true,             // Add this to use spaces instead of tabs
+                        detectIndentation: false,       // Add this to prevent auto-detection
                         scrollbar: {
                             vertical: 'auto',
                             horizontal: 'auto',
@@ -124,6 +128,7 @@ export const CodeEditor = ({
                         },
                     }}
                 />
+
             </div>
         </section>
     )

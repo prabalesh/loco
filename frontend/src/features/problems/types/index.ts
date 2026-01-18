@@ -34,7 +34,7 @@ export interface ProblemLanguage {
     language_version: string
     function_code: string
     main_code: string
-    default_template?: string
+    language: Language
 }
 
 export interface Submission {
