@@ -53,6 +53,7 @@ func TestWorkerHeartbeat(t *testing.T) {
 		nil,          // languageRepo
 		nil,          // problemLanguageRepo
 		nil,          // pistonService
+		nil,          // userStatsRepo
 		logger,
 		rdb,
 		&config.Config{

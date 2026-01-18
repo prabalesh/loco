@@ -58,6 +58,7 @@ type ProblemRepository interface {
 	SlugExists(slug string) (bool, error)
 	UpdateCurrentStep(id int, newCurrentStep int) error
 	UpdateStats(id int, acceptanceRate float64, totalSubmissions, totalAccepted int) error
+	IncrementStats(id int, isAccepted bool) error
 	UpdateStatus(id int, status string) error
 	UpdateVisibility(id int, visibility string) error
 	CountProblems() (int, error)
@@ -122,6 +123,14 @@ type SubmissionRepository interface {
 	// Queue monitoring
 	GetOldestPending(limit int) ([]Submission, error)
 	CountPendingBefore(createdAt time.Time) (int64, error)
+}
+
+// UserProblemStatsRepository interface
+type UserProblemStatsRepository interface {
+	Create(stats *UserProblemStats) error
+	Update(stats *UserProblemStats) error
+	Get(userID, problemID int) (*UserProblemStats, error)
+	Upsert(stats *UserProblemStats) error
 }
 
 // ProblemLanguageRepository interface

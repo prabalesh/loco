@@ -17,18 +17,19 @@ import (
 )
 
 type Worker struct {
-	queue               queue.JobQueue
-	submissionRepo      domain.SubmissionRepository
-	problemRepo         domain.ProblemRepository
-	testCaseRepo        domain.TestCaseRepository
-	languageRepo        domain.LanguageRepository
-	problemLanguageRepo domain.ProblemLanguageRepository
-	pistonService       piston.PistonService
-	logger              *zap.Logger
-	stopChan            chan struct{}
-	redisClient         *redis.Client
-	workerID            string
-	config              *config.Config
+	queue                queue.JobQueue
+	submissionRepo       domain.SubmissionRepository
+	problemRepo          domain.ProblemRepository
+	testCaseRepo         domain.TestCaseRepository
+	languageRepo         domain.LanguageRepository
+	problemLanguageRepo  domain.ProblemLanguageRepository
+	pistonService        piston.PistonService
+	userProblemStatsRepo domain.UserProblemStatsRepository
+	logger               *zap.Logger
+	stopChan             chan struct{}
+	redisClient          *redis.Client
+	workerID             string
+	config               *config.Config
 }
 
 func NewWorker(
@@ -39,23 +40,25 @@ func NewWorker(
 	languageRepo domain.LanguageRepository,
 	problemLanguageRepo domain.ProblemLanguageRepository,
 	pistonService piston.PistonService,
+	userProblemStatsRepo domain.UserProblemStatsRepository,
 	logger *zap.Logger,
 	redisClient *redis.Client,
 	cfg *config.Config,
 ) *Worker {
 	return &Worker{
-		queue:               queue,
-		submissionRepo:      submissionRepo,
-		problemRepo:         problemRepo,
-		testCaseRepo:        testCaseRepo,
-		languageRepo:        languageRepo,
-		problemLanguageRepo: problemLanguageRepo,
-		pistonService:       pistonService,
-		logger:              logger,
-		stopChan:            make(chan struct{}),
-		redisClient:         redisClient,
-		workerID:            generateWorkerID(),
-		config:              cfg,
+		queue:                queue,
+		submissionRepo:       submissionRepo,
+		problemRepo:          problemRepo,
+		testCaseRepo:         testCaseRepo,
+		languageRepo:         languageRepo,
+		problemLanguageRepo:  problemLanguageRepo,
+		pistonService:        pistonService,
+		userProblemStatsRepo: userProblemStatsRepo,
+		logger:               logger,
+		stopChan:             make(chan struct{}),
+		redisClient:          redisClient,
+		workerID:             generateWorkerID(),
+		config:               cfg,
 	}
 }
 
@@ -352,6 +355,9 @@ func (w *Worker) evaluateSubmission(submission *domain.Submission, problem *doma
 			}
 			w.problemLanguageRepo.Update(pl)
 		}
+	} else {
+		// Update Problem and User stats for regular submissions
+		w.updateProblemAndUserStats(submission, finalStatus)
 	}
 
 	w.logger.Info("Submission processed",
@@ -360,6 +366,65 @@ func (w *Worker) evaluateSubmission(submission *domain.Submission, problem *doma
 		zap.Int("passed", passCount),
 		zap.Int("total", totalCount),
 	)
+}
+
+func (w *Worker) updateProblemAndUserStats(submission *domain.Submission, finalStatus domain.SubmissionStatus) {
+	isAccepted := finalStatus == domain.SubmissionStatusAccepted
+
+	// 1. Update Problem Stats (Global)
+	if err := w.problemRepo.IncrementStats(submission.ProblemID, isAccepted); err != nil {
+		w.logger.Error("Failed to increment problem stats",
+			zap.Error(err),
+			zap.Int("problem_id", submission.ProblemID),
+		)
+	}
+
+	// 2. Update User Stats (Per User-Problem)
+	stats, err := w.userProblemStatsRepo.Get(submission.UserID, submission.ProblemID)
+	if err != nil {
+		w.logger.Error("Failed to get user problem stats",
+			zap.Error(err),
+			zap.Int("user_id", submission.UserID),
+			zap.Int("problem_id", submission.ProblemID),
+		)
+		return
+	}
+
+	now := time.Now()
+	if stats == nil {
+		stats = &domain.UserProblemStats{
+			UserID:    submission.UserID,
+			ProblemID: submission.ProblemID,
+			Attempts:  1,
+			Status:    "attempted",
+		}
+		if isAccepted {
+			stats.Status = "solved"
+			stats.FirstSolvedAt = &now
+			stats.BestSubmissionID = &submission.ID
+		}
+		if err := w.userProblemStatsRepo.Create(stats); err != nil {
+			w.logger.Error("Failed to create user problem stats", zap.Error(err))
+		}
+	} else {
+		stats.Attempts++
+		if isAccepted {
+			if stats.Status != "solved" {
+				stats.Status = "solved"
+				stats.FirstSolvedAt = &now
+				stats.BestSubmissionID = &submission.ID
+			} else {
+				// Already solved, check if this is "better"?
+				// For now just keep first solved ID or update if better?
+				// Let's just keep it simple.
+			}
+		} else if stats.Status != "solved" {
+			stats.Status = "attempted"
+		}
+		if err := w.userProblemStatsRepo.Update(stats); err != nil {
+			w.logger.Error("Failed to update user problem stats", zap.Error(err))
+		}
+	}
 }
 
 func (w *Worker) updateSubmissionResult(submission *domain.Submission, status domain.SubmissionStatus, errorMsg string) {

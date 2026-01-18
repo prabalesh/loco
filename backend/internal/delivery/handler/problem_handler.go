@@ -47,8 +47,8 @@ func NewProblemHandler(
 // GetProblem retrieves a single problem (public endpoint)
 func (h *ProblemHandler) GetProblem(w http.ResponseWriter, r *http.Request) {
 	identifier := r.PathValue("id") // Can be ID or slug
-
-	problem, err := h.problemUsecase.GetProblem(identifier)
+	userID, _ := middleware.GetUserID(r.Context())
+	problem, err := h.problemUsecase.GetProblem(identifier, userID)
 	if err != nil {
 		h.logger.Warn("Problem not found",
 			zap.String("identifier", identifier),
@@ -74,7 +74,8 @@ func (h *ProblemHandler) ListProblems(w http.ResponseWriter, r *http.Request) {
 		Tags:       r.URL.Query()["tags"], // Multiple tags support
 	}
 
-	problems, total, err := h.problemUsecase.ListProblems(req)
+	userID, _ := middleware.GetUserID(r.Context())
+	problems, total, err := h.problemUsecase.ListProblems(req, userID)
 	if err != nil {
 		h.logger.Error("Failed to list problems", zap.Error(err))
 		RespondError(w, http.StatusInternalServerError, "failed to retrieve problems")
@@ -281,7 +282,8 @@ func (h *ProblemHandler) ListAllProblems(w http.ResponseWriter, r *http.Request)
 		Tags:       r.URL.Query()["tags"],
 	}
 
-	problems, total, err := h.problemUsecase.ListAllProblems(req)
+	adminID, _ := middleware.GetUserID(r.Context())
+	problems, total, err := h.problemUsecase.ListAllProblems(req, adminID)
 	if err != nil {
 		h.logger.Error("Failed to list all problems (admin)", zap.Error(err))
 		RespondError(w, http.StatusInternalServerError, "failed to retrieve problems")

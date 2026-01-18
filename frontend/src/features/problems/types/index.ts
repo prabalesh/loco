@@ -15,7 +15,17 @@ export interface Problem {
     acceptance_rate: number
     total_submissions: number
     total_accepted: number
+    user_status?: 'solved' | 'attempted' | 'unsolved'
     tags?: string[]
+    creator?: User
+}
+
+export interface User {
+    id: number
+    username: string
+    email?: string
+    role?: string
+    created_at?: string
 }
 
 export interface Language {

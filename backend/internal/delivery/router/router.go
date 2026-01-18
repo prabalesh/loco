@@ -55,7 +55,7 @@ func SetupRouter(deps *Dependencies) http.Handler {
 
 	// ========== USER ROUTES ==========
 	mux.Handle("GET /users/me", authMiddleware(http.HandlerFunc(deps.UserHandler.GetProfile)))
-	mux.Handle("GET /users/{username}", authMiddleware(http.HandlerFunc(deps.UserHandler.GetProfileByUsername)))
+	mux.HandleFunc("GET /users/{username}", deps.UserHandler.GetProfileByUsername)
 
 	// ========== PROBLEM ROUTES (PUBLIC) ==========
 	mux.HandleFunc("GET /problems", deps.ProblemHandler.ListProblems)

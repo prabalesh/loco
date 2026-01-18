@@ -32,6 +32,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	testCaseRepo := postgres.NewTestCaseRepository(db)
 	submissionRepo := postgres.NewSubmissionRepository(db)
 	problemLanguageRepo := postgres.NewProblemLanguageRepository(db)
+	userProblemStatsRepo := postgres.NewUserProblemStatsRepository(db)
 
 	// Redis client
 	redisClient, err := redis.NewRedisClient(cfg.Redis, logger)
@@ -52,14 +53,14 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	userUsecase := usecase.NewUserUsecase(userRepo, submissionRepo, logger)
 	adminUsecase := usecase.NewAdminUsecase(userRepo, submissionRepo, redisClient.Client, logger)
 	problemLanguageUsecase := usecase.NewProblemLanguageUsecase(problemLanguageRepo, problemRepo, languageRepo, logger)
-	problemUsecase := usecase.NewProblemUsecase(problemRepo, testCaseRepo, cfg, logger)
+	problemUsecase := usecase.NewProblemUsecase(problemRepo, testCaseRepo, userProblemStatsRepo, cfg, logger)
 	languageUsecase := usecase.NewLanguageUsecase(languageRepo, cfg, logger)
 	testCaseUsecase := usecase.NewTestCaseUsecase(testCaseRepo, problemRepo, cfg, logger)
 	submissionUsecase := usecase.NewSubmissionUsecase(submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, pistonService, jobQueue, cfg, logger)
 	queueStatusUsecase := usecase.NewQueueStatusUsecase(submissionRepo, redisClient.Client, logger)
 
 	// Worker
-	submissionWorker := worker.NewWorker(jobQueue, submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, pistonService, logger, redisClient.Client, cfg)
+	submissionWorker := worker.NewWorker(jobQueue, submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, pistonService, userProblemStatsRepo, logger, redisClient.Client, cfg)
 
 	// Handlers
 	authHanlder := handler.NewAuthHandler(authUsecase, logger, cfg, cookieManager)

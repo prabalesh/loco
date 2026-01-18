@@ -109,6 +109,17 @@ export const ProblemsPage = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4">
+                                        {problem.user_status === 'solved' && (
+                                            <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold uppercase tracking-wider animate-in fade-in zoom-in duration-300">
+                                                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                Solved
+                                            </span>
+                                        )}
+                                        {problem.user_status === 'attempted' && (
+                                            <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold uppercase tracking-wider animate-in fade-in zoom-in duration-300">
+                                                Attempted
+                                            </span>
+                                        )}
                                         <div className="text-gray-300 group-hover:text-blue-500 transition-colors transform group-hover:translate-x-1 duration-300">
                                             <ChevronRight className="h-6 w-6" />
                                         </div>

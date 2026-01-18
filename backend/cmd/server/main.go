@@ -77,6 +77,7 @@ func main() {
 		&domain.TestCase{},
 		&domain.Submission{},
 		&domain.ProblemLanguage{},
+		&domain.UserProblemStats{},
 	); err != nil {
 		log.Fatal("Failed to run auto migrations", zap.Error(err))
 	}

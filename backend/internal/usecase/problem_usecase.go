@@ -15,18 +15,20 @@ import (
 )
 
 type ProblemUsecase struct {
-	problemRepo  domain.ProblemRepository
-	testcaseRepo domain.TestCaseRepository
-	cfg          *config.Config
-	logger       *zap.Logger
+	problemRepo   domain.ProblemRepository
+	testcaseRepo  domain.TestCaseRepository
+	userStatsRepo domain.UserProblemStatsRepository
+	cfg           *config.Config
+	logger        *zap.Logger
 }
 
-func NewProblemUsecase(problemRepo domain.ProblemRepository, testcaseRepo domain.TestCaseRepository, cfg *config.Config, logger *zap.Logger) *ProblemUsecase {
+func NewProblemUsecase(problemRepo domain.ProblemRepository, testcaseRepo domain.TestCaseRepository, userStatsRepo domain.UserProblemStatsRepository, cfg *config.Config, logger *zap.Logger) *ProblemUsecase {
 	return &ProblemUsecase{
-		problemRepo:  problemRepo,
-		testcaseRepo: testcaseRepo,
-		cfg:          cfg,
-		logger:       logger,
+		problemRepo:   problemRepo,
+		testcaseRepo:  testcaseRepo,
+		userStatsRepo: userStatsRepo,
+		cfg:           cfg,
+		logger:        logger,
 	}
 }
 
@@ -318,7 +320,7 @@ func (u *ProblemUsecase) ArchiveProblem(problemID int, adminID int) error {
 // ========== USER OPERATIONS ==========
 
 // GetProblem retrieves a single problem by ID or slug
-func (u *ProblemUsecase) GetProblem(identifier string) (*domain.Problem, error) {
+func (u *ProblemUsecase) GetProblem(identifier string, userID int) (*domain.Problem, error) {
 	var problem *domain.Problem
 	var err error
 
@@ -336,11 +338,17 @@ func (u *ProblemUsecase) GetProblem(identifier string) (*domain.Problem, error) 
 		return nil, errors.New("problem not found")
 	}
 
+	if userID != 0 {
+		if stats, err := u.userStatsRepo.Get(userID, problem.ID); err == nil && stats != nil {
+			problem.UserStatus = stats.Status
+		}
+	}
+
 	return problem, nil
 }
 
 // ListProblems retrieves problems with filters (for users - only published & public)
-func (u *ProblemUsecase) ListProblems(req *domain.ListProblemsRequest) ([]*domain.Problem, int, error) {
+func (u *ProblemUsecase) ListProblems(req *domain.ListProblemsRequest, userID int) ([]*domain.Problem, int, error) {
 	filters := domain.ProblemFilters{
 		Page:       req.Page,
 		Limit:      req.Limit,
@@ -359,13 +367,21 @@ func (u *ProblemUsecase) ListProblems(req *domain.ListProblemsRequest) ([]*domai
 		return nil, 0, errors.New("failed to retrieve problems")
 	}
 
+	if userID != 0 {
+		for i := range problems {
+			if stats, err := u.userStatsRepo.Get(userID, problems[i].ID); err == nil && stats != nil {
+				problems[i].UserStatus = stats.Status
+			}
+		}
+	}
+
 	return problems, total, nil
 }
 
 // ========== ADMIN LIST OPERATIONS ==========
 
 // ListAllProblems retrieves all problems (admin - includes drafts, private)
-func (u *ProblemUsecase) ListAllProblems(req *domain.AdminListProblemsRequest) ([]*domain.Problem, int, error) {
+func (u *ProblemUsecase) ListAllProblems(req *domain.AdminListProblemsRequest, userID int) ([]*domain.Problem, int, error) {
 	filters := domain.ProblemFilters{
 		Page:       req.Page,
 		Limit:      req.Limit,
@@ -382,6 +398,14 @@ func (u *ProblemUsecase) ListAllProblems(req *domain.AdminListProblemsRequest) (
 			zap.Error(err),
 		)
 		return nil, 0, errors.New("failed to retrieve problems")
+	}
+
+	if userID != 0 {
+		for i := range problems {
+			if stats, err := u.userStatsRepo.Get(userID, problems[i].ID); err == nil && stats != nil {
+				problems[i].UserStatus = stats.Status
+			}
+		}
 	}
 
 	return problems, total, nil

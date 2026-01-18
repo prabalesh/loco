@@ -32,7 +32,7 @@ func (r *problemRepository) GetAll(limit, offset int, search string) ([]domain.P
 		return nil, 0, err
 	}
 
-	err = query.Limit(limit).Offset(offset).Order("created_at desc").Find(&problems).Error
+	err = query.Preload("Creator").Limit(limit).Offset(offset).Order("created_at desc").Find(&problems).Error
 	return problems, total, err
 }
 
@@ -102,7 +102,7 @@ func (r *problemRepository) GetByID(id int) (*domain.Problem, error) {
 	defer cancel()
 
 	problem := &domain.Problem{}
-	err := r.db.DB.WithContext(ctx).First(problem, id).Error
+	err := r.db.DB.WithContext(ctx).Preload("Creator").First(problem, id).Error
 
 	if err == gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("problem not found")
@@ -120,7 +120,7 @@ func (r *problemRepository) GetBySlug(slug string) (*domain.Problem, error) {
 	defer cancel()
 
 	problem := &domain.Problem{}
-	err := r.db.DB.WithContext(ctx).Where("slug = ?", slug).First(problem).Error
+	err := r.db.DB.WithContext(ctx).Preload("Creator").Where("slug = ?", slug).First(problem).Error
 
 	if err == gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("problem not found")
@@ -189,7 +189,7 @@ func (r *problemRepository) List(filters domain.ProblemFilters) ([]*domain.Probl
 	}
 
 	// Fetch
-	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&problems).Error; err != nil {
+	if err := query.Preload("Creator").Order("created_at DESC").Limit(limit).Offset(offset).Find(&problems).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to list problems: %w", err)
 	}
 
@@ -257,6 +257,46 @@ func (r *problemRepository) UpdateStats(id int, acceptanceRate float64, totalSub
 	}
 
 	return nil
+}
+
+func (r *problemRepository) IncrementStats(id int, isAccepted bool) error {
+	ctx, cancel := database.WithShortTimeout()
+	defer cancel()
+
+	return r.db.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var problem domain.Problem
+		if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&problem, id).Error; err != nil {
+			return err
+		}
+
+		updates := map[string]interface{}{
+			"total_submissions": gorm.Expr("total_submissions + ?", 1),
+		}
+
+		if isAccepted {
+			updates["total_accepted"] = gorm.Expr("total_accepted + ?", 1)
+		}
+
+		if err := tx.Model(&problem).Updates(updates).Error; err != nil {
+			return err
+		}
+
+		// Re-fetch to calculate new rate accurately, or just do it in one go.
+		// For simplicity, let's just do another query or calculation.
+		var updatedProblem domain.Problem
+		if err := tx.First(&updatedProblem, id).Error; err != nil {
+			return err
+		}
+
+		if updatedProblem.TotalSubmissions > 0 {
+			rate := float64(updatedProblem.TotalAccepted) / float64(updatedProblem.TotalSubmissions)
+			if err := tx.Model(&updatedProblem).Update("acceptance_rate", rate).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }
 
 func (r *problemRepository) UpdateStatus(id int, status string) error {

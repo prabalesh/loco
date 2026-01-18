@@ -7,12 +7,12 @@ import { LoginPage } from '../features/auth/pages/LoginPage'
 import { RegisterPage } from '../features/auth/pages/RegisterPage'
 import { ROUTES } from '../shared/constants/routes'
 import { ProfilePage } from '@/pages/ProfilePage'
-import { UserProfilePage } from '@/pages/UserProfilePage'
 import { VerifyEmailPage } from '@/features/auth/pages/VerifyEmailPage'
 import { ForgotPasswordPage } from '@/features/auth/pages/ForgetPasswordPage'
 import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage'
 import { ProblemsPage } from '@/features/problems/pages/ProblemsPage'
 import { ProblemDetailPage } from '@/features/problems/pages/ProblemDetailPage'
+import { ProfilePage as UserProfileView } from '@/features/users/pages/ProfilePage'
 import { SubmissionsPage } from '@/pages/SubmissionsPage'
 
 export const router = createBrowserRouter([
@@ -52,14 +52,9 @@ export const router = createBrowserRouter([
         path: ROUTES.RESET_PASSWORD,
         element: <ResetPasswordPage />,
       },
-      // Protected routes (add more as you build them)
       {
         path: '/users/:username',
-        element: (
-          <ProtectedRoute>
-            <UserProfilePage />
-          </ProtectedRoute>
-        ),
+        element: <UserProfileView />,
       },
       {
         path: ROUTES.SUBMISSIONS,

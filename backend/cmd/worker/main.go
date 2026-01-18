@@ -60,6 +60,7 @@ func main() {
 	testCaseRepo := postgres.NewTestCaseRepository(db)
 	languageRepo := postgres.NewLanguageRepository(db)
 	problemLanguageRepo := postgres.NewProblemLanguageRepository(db)
+	userProblemStatsRepo := postgres.NewUserProblemStatsRepository(db)
 
 	// 6. Initialize Services
 	pistonService := piston.NewPistonService(cfg, loggers)
@@ -74,6 +75,7 @@ func main() {
 		languageRepo,
 		problemLanguageRepo,
 		pistonService,
+		userProblemStatsRepo,
 		loggers,
 		redisClient.Client,
 		cfg,
