@@ -14,13 +14,13 @@ export const useRegister = () => {
   return useMutation({
     mutationFn: (data: RegisterRequest) => authApi.register(data),
     onSuccess: (response) => {
-      authStore.getState().setUser(response.user)
+      authStore.getState().setUser(response.data.user)
       toast.success('Registration successful! Welcome!')
       navigate(ROUTES.HOME)
     },
     onError: (error: AxiosError<ApiError>) => {
       const errorMessage = error.response?.data?.error || 'Registration failed'
-      
+
       if (error.response?.data?.fields) {
         const fields = error.response.data.fields
         Object.values(fields).forEach((msg) => toast.error(msg))
