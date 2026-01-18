@@ -118,6 +118,18 @@ export const ProblemsPage = () => {
                                                     </span>
                                                 )}
                                             </div>
+                                            <div className="flex flex-wrap gap-2 mt-3">
+                                                {problem.categories?.map(cat => (
+                                                    <span key={cat.id} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold uppercase tracking-wider border border-blue-100">
+                                                        {cat.name}
+                                                    </span>
+                                                ))}
+                                                {problem.tags?.map(tag => (
+                                                    <span key={tag.id} className="px-2 py-0.5 bg-gray-50 text-gray-600 rounded text-[10px] font-medium border border-gray-100">
+                                                        {tag.name}
+                                                    </span>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4">

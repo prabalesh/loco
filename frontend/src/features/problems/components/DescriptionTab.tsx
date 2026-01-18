@@ -30,6 +30,19 @@ export const DescriptionTab = ({ problem }: DescriptionTabProps) => {
                 </div>
             </div>
 
+            <div className="flex flex-wrap gap-2 mb-8">
+                {problem.categories?.map(cat => (
+                    <span key={cat.id} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold uppercase tracking-wider border border-blue-100 shadow-sm">
+                        {cat.name}
+                    </span>
+                ))}
+                {problem.tags?.map(tag => (
+                    <span key={tag.id} className="px-3 py-1 bg-gray-50 text-gray-600 rounded-lg text-xs font-medium border border-gray-100 shadow-sm">
+                        {tag.name}
+                    </span>
+                ))}
+            </div>
+
             {problem.description && (
                 <div className="mb-8">
                     <h2 className="text-xl font-bold mb-4 text-gray-900 border-b border-gray-200 pb-2">

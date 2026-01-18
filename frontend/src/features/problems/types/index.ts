@@ -16,8 +16,21 @@ export interface Problem {
     total_submissions: number
     total_accepted: number
     user_status?: 'solved' | 'attempted' | 'unsolved'
-    tags?: string[]
     creator?: User
+    tags?: Tag[]
+    categories?: Category[]
+}
+
+export interface Tag {
+    id: number
+    name: string
+    slug: string
+}
+
+export interface Category {
+    id: number
+    name: string
+    slug: string
 }
 
 export interface User {

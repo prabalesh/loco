@@ -9,6 +9,8 @@ const Dashboard = lazy(() => import('./features/dashboard/components/Dashboard')
 const UsersList = lazy(() => import('./features/users/components/UsersList').then(m => ({ default: m.UsersList })))
 const ProblemList = lazy(() => import('./features/problems/components/ProblemList'))
 const LanguageList = lazy(() => import('./features/languages/components/LanguageList'))
+const TagList = lazy(() => import('./features/tags/components/TagList'))
+const CategoryList = lazy(() => import('./features/categories/components/CategoryList'))
 const CreateProblem = lazy(() => import('./features/problems/pages/CreateProblem'))
 const ProblemTestCases = lazy(() => import('./features/problems/pages/ProblemTestCases'))
 const ProblemLanguage = lazy(() => import('./features/problems/pages/ProblemLanguage'))
@@ -111,6 +113,8 @@ function App() {
                 <Route path="/problems/create" element={<CreateProblem />} />
                 <Route path="/problems/edit/:id" element={<CreateProblem />} />
                 <Route path="/languages" element={<LanguageList />} />
+                <Route path="/tags" element={<TagList />} />
+                <Route path="/categories" element={<CategoryList />} />
                 <Route path="/problems/:problemId/testcases" element={<ProblemTestCases />} />
                 <Route path="/problems/:problemId/languages" element={<ProblemLanguage />} />
                 <Route path="/problems/:problemId/validate" element={<ProblemValidate />} />
