@@ -569,6 +569,112 @@ func (h *ProblemHandler) ListCategories(w http.ResponseWriter, r *http.Request) 
 	RespondJSON(w, http.StatusOK, categories)
 }
 
+func (h *ProblemHandler) CreateTag(w http.ResponseWriter, r *http.Request) {
+	var req domain.CreateTagRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	tag, err := h.problemUsecase.CreateTag(&req)
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, "failed to create tag")
+		return
+	}
+
+	RespondJSON(w, http.StatusCreated, tag)
+}
+
+func (h *ProblemHandler) UpdateTag(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid tag id")
+		return
+	}
+
+	var req domain.UpdateTagRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	tag, err := h.problemUsecase.UpdateTag(id, &req)
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, "failed to update tag")
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, tag)
+}
+
+func (h *ProblemHandler) DeleteTag(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid tag id")
+		return
+	}
+
+	if err := h.problemUsecase.DeleteTag(id); err != nil {
+		RespondError(w, http.StatusInternalServerError, "failed to delete tag")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *ProblemHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
+	var req domain.CreateCategoryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	category, err := h.problemUsecase.CreateCategory(&req)
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, "failed to create category")
+		return
+	}
+
+	RespondJSON(w, http.StatusCreated, category)
+}
+
+func (h *ProblemHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid category id")
+		return
+	}
+
+	var req domain.UpdateCategoryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	category, err := h.problemUsecase.UpdateCategory(id, &req)
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, "failed to update category")
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, category)
+}
+
+func (h *ProblemHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid category id")
+		return
+	}
+
+	if err := h.problemUsecase.DeleteCategory(id); err != nil {
+		RespondError(w, http.StatusInternalServerError, "failed to delete category")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // ========== HELPER FUNCTIONS ==========
 
 func getIntQuery(r *http.Request, key string, defaultValue int) int {

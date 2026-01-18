@@ -371,14 +371,3 @@ func (r *problemRepository) CountByDifficulty(difficulty string) (int, error) {
 
 	return int(count), nil
 }
-func (r *problemRepository) ListTags() ([]domain.Tag, error) {
-	var tags []domain.Tag
-	err := r.db.DB.Order("name asc").Find(&tags).Error
-	return tags, err
-}
-
-func (r *problemRepository) ListCategories() ([]domain.Category, error) {
-	var categories []domain.Category
-	err := r.db.DB.Order("name asc").Find(&categories).Error
-	return categories, err
-}

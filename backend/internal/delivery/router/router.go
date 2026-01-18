@@ -147,6 +147,16 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	mux.Handle("POST /admin/problems/{id}/submit", adminAuthMiddleware(http.HandlerFunc(deps.SubmissionHandler.AdminSubmit)))
 	mux.Handle("GET /admin/problems/{id}/submissions", adminAuthMiddleware(http.HandlerFunc(deps.SubmissionHandler.ListProblemSubmissions)))
 
+	// ========== ADMIN TAG ROUTES ==========
+	mux.Handle("POST /admin/tags", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.CreateTag)))
+	mux.Handle("PUT /admin/tags/{id}", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.UpdateTag)))
+	mux.Handle("DELETE /admin/tags/{id}", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.DeleteTag)))
+
+	// ========== ADMIN CATEGORY ROUTES ==========
+	mux.Handle("POST /admin/categories", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.CreateCategory)))
+	mux.Handle("PUT /admin/categories/{id}", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.UpdateCategory)))
+	mux.Handle("DELETE /admin/categories/{id}", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.DeleteCategory)))
+
 	handler := middleware.Logging(deps.Log)(mux)
 	handler = middleware.CORS(deps.Log, deps.Cfg.CORS.AllowedOrigins)(handler)
 

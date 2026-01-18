@@ -66,8 +66,26 @@ type ProblemRepository interface {
 	CountProblems() (int, error)
 	CountByStatus(status string) (int, error)
 	CountByDifficulty(difficulty string) (int, error)
-	ListTags() ([]Tag, error)
-	ListCategories() ([]Category, error)
+}
+
+// TagRepository interface
+type TagRepository interface {
+	Create(tag *Tag) error
+	GetByID(id int) (*Tag, error)
+	GetBySlug(slug string) (*Tag, error)
+	Update(tag *Tag) error
+	Delete(id int) error
+	List() ([]Tag, error)
+}
+
+// CategoryRepository interface
+type CategoryRepository interface {
+	Create(category *Category) error
+	GetByID(id int) (*Category, error)
+	GetBySlug(slug string) (*Category, error)
+	Update(category *Category) error
+	Delete(id int) error
+	List() ([]Category, error)
 }
 
 // LanguageRepository interface

@@ -18,15 +18,19 @@ type ProblemUsecase struct {
 	problemRepo   domain.ProblemRepository
 	testcaseRepo  domain.TestCaseRepository
 	userStatsRepo domain.UserProblemStatsRepository
+	tagRepo       domain.TagRepository
+	categoryRepo  domain.CategoryRepository
 	cfg           *config.Config
 	logger        *zap.Logger
 }
 
-func NewProblemUsecase(problemRepo domain.ProblemRepository, testcaseRepo domain.TestCaseRepository, userStatsRepo domain.UserProblemStatsRepository, cfg *config.Config, logger *zap.Logger) *ProblemUsecase {
+func NewProblemUsecase(problemRepo domain.ProblemRepository, testcaseRepo domain.TestCaseRepository, userStatsRepo domain.UserProblemStatsRepository, tagRepo domain.TagRepository, categoryRepo domain.CategoryRepository, cfg *config.Config, logger *zap.Logger) *ProblemUsecase {
 	return &ProblemUsecase{
 		problemRepo:   problemRepo,
 		testcaseRepo:  testcaseRepo,
 		userStatsRepo: userStatsRepo,
+		tagRepo:       tagRepo,
+		categoryRepo:  categoryRepo,
 		cfg:           cfg,
 		logger:        logger,
 	}
@@ -484,11 +488,91 @@ func (u *ProblemUsecase) GetProblemStats() (*domain.ProblemStats, error) {
 }
 
 func (u *ProblemUsecase) ListTags() ([]domain.Tag, error) {
-	return u.problemRepo.ListTags()
+	return u.tagRepo.List()
 }
 
 func (u *ProblemUsecase) ListCategories() ([]domain.Category, error) {
-	return u.problemRepo.ListCategories()
+	return u.categoryRepo.List()
+}
+
+func (u *ProblemUsecase) GetTag(id int) (*domain.Tag, error) {
+	return u.tagRepo.GetByID(id)
+}
+
+func (u *ProblemUsecase) CreateTag(req *domain.CreateTagRequest) (*domain.Tag, error) {
+	tag := &domain.Tag{
+		Name: req.Name,
+		Slug: req.Slug,
+	}
+	if err := u.tagRepo.Create(tag); err != nil {
+		u.logger.Error("Failed to create tag", zap.Error(err))
+		return nil, err
+	}
+	return tag, nil
+}
+
+func (u *ProblemUsecase) UpdateTag(id int, req *domain.UpdateTagRequest) (*domain.Tag, error) {
+	tag, err := u.tagRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.Name != "" {
+		tag.Name = req.Name
+	}
+	if req.Slug != "" {
+		tag.Slug = req.Slug
+	}
+
+	if err := u.tagRepo.Update(tag); err != nil {
+		u.logger.Error("Failed to update tag", zap.Error(err))
+		return nil, err
+	}
+	return tag, nil
+}
+
+func (u *ProblemUsecase) DeleteTag(id int) error {
+	return u.tagRepo.Delete(id)
+}
+
+func (u *ProblemUsecase) GetCategory(id int) (*domain.Category, error) {
+	return u.categoryRepo.GetByID(id)
+}
+
+func (u *ProblemUsecase) CreateCategory(req *domain.CreateCategoryRequest) (*domain.Category, error) {
+	category := &domain.Category{
+		Name: req.Name,
+		Slug: req.Slug,
+	}
+	if err := u.categoryRepo.Create(category); err != nil {
+		u.logger.Error("Failed to create category", zap.Error(err))
+		return nil, err
+	}
+	return category, nil
+}
+
+func (u *ProblemUsecase) UpdateCategory(id int, req *domain.UpdateCategoryRequest) (*domain.Category, error) {
+	category, err := u.categoryRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.Name != "" {
+		category.Name = req.Name
+	}
+	if req.Slug != "" {
+		category.Slug = req.Slug
+	}
+
+	if err := u.categoryRepo.Update(category); err != nil {
+		u.logger.Error("Failed to update category", zap.Error(err))
+		return nil, err
+	}
+	return category, nil
+}
+
+func (u *ProblemUsecase) DeleteCategory(id int) error {
+	return u.categoryRepo.Delete(id)
 }
 
 // ========== HELPER FUNCTIONS ==========

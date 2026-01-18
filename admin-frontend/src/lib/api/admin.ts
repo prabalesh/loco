@@ -111,6 +111,24 @@ export const adminProblemLanguagesApi = {
     axiosInstance.get<Response<{ combined_code: string }>>(`/admin/problems/${problemId}/languages/${languageId}/preview`),
 };
 
+export const adminTagApi = {
+  create: (data: { name: string; slug: string }) =>
+    axiosInstance.post<Response<Tag>>('/admin/tags', data),
+  update: (id: number, data: { name?: string; slug?: string }) =>
+    axiosInstance.put<Response<Tag>>(`/admin/tags/${id}`, data),
+  delete: (id: number) =>
+    axiosInstance.delete<SimpleResponse>(`/admin/tags/${id}`),
+}
+
+export const adminCategoryApi = {
+  create: (data: { name: string; slug: string }) =>
+    axiosInstance.post<Response<Category>>('/admin/categories', data),
+  update: (id: number, data: { name?: string; slug?: string }) =>
+    axiosInstance.put<Response<Category>>(`/admin/categories/${id}`, data),
+  delete: (id: number) =>
+    axiosInstance.delete<SimpleResponse>(`/admin/categories/${id}`),
+}
+
 export const adminSubmissionsApi = {
   getById: (problemId: number, submissionId: number) => axiosInstance.get<Response<any>>(`problems/${problemId}/submissions/${submissionId}`),
 }

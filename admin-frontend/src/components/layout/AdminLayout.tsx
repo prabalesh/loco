@@ -10,6 +10,8 @@ import {
   Shield,
   Code2,
   Globe,
+  Tag,
+  Grid,
 } from 'lucide-react'
 import { useAuthStore } from '../../features/auth/store/authStore'
 import { adminAuthApi } from '../../lib/api/admin'
@@ -56,6 +58,18 @@ export const AdminLayout = () => {
       icon: <Globe className="w-5 h-5" />,
       label: 'Languages',
       onClick: () => navigate('/languages'),
+    },
+    {
+      key: '/tags',
+      icon: <Tag className="w-5 h-5" />,
+      label: 'Tags',
+      onClick: () => navigate('/tags'),
+    },
+    {
+      key: '/categories',
+      icon: <Grid className="w-5 h-5" />,
+      label: 'Categories',
+      onClick: () => navigate('/categories'),
     },
   ]
 
