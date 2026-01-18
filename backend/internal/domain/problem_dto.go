@@ -15,6 +15,8 @@ type CreateProblemRequest struct {
 	Status        string `json:"status"`
 	Visibility    string `json:"visibility"`
 	IsActive      bool   `json:"is_active"`
+	TagIDs        []int  `json:"tag_ids"`
+	CategoryIDs   []int  `json:"category_ids"`
 }
 
 type UpdateProblemRequest struct {
@@ -31,6 +33,8 @@ type UpdateProblemRequest struct {
 	Status        string `json:"status"`
 	Visibility    string `json:"visibility"`
 	IsActive      *bool  `json:"is_active"`
+	TagIDs        []int  `json:"tag_ids"`
+	CategoryIDs   []int  `json:"category_ids"`
 }
 
 type ListProblemsRequest struct {

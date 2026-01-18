@@ -66,6 +66,8 @@ type ProblemRepository interface {
 	CountProblems() (int, error)
 	CountByStatus(status string) (int, error)
 	CountByDifficulty(difficulty string) (int, error)
+	ListTags() ([]Tag, error)
+	ListCategories() ([]Category, error)
 }
 
 // LanguageRepository interface

@@ -1,9 +1,9 @@
 export interface CreateOrUpdateLanguageRequest {
-    language_id: String
-    name: String,
-    version: String,
-    extension: String,
-    default_template: String
+  language_id: String
+  name: String,
+  version: String,
+  extension: String,
+  default_template: String
 }
 
 export interface CreateOrUpdateProblemRequest {
@@ -19,6 +19,8 @@ export interface CreateOrUpdateProblemRequest {
   constraints: string;
   status: "draft" | "published";
   is_active: boolean;
+  tag_ids: number[];
+  category_ids: number[];
 }
 
 export interface CreateTestCaseRequest {

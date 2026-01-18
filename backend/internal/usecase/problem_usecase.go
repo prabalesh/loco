@@ -110,6 +110,20 @@ func (u *ProblemUsecase) CreateProblem(req *domain.CreateProblemRequest, adminID
 		CreatedBy:     &adminID,
 	}
 
+	// Map Tags
+	if len(req.TagIDs) > 0 {
+		for _, id := range req.TagIDs {
+			problem.Tags = append(problem.Tags, domain.Tag{ID: id})
+		}
+	}
+
+	// Map Categories
+	if len(req.CategoryIDs) > 0 {
+		for _, id := range req.CategoryIDs {
+			problem.Categories = append(problem.Categories, domain.Category{ID: id})
+		}
+	}
+
 	if err := u.problemRepo.Create(problem); err != nil {
 		u.logger.Error("Failed to create problem in database",
 			zap.Error(err),
@@ -199,6 +213,22 @@ func (u *ProblemUsecase) UpdateProblem(problemID int, req *domain.UpdateProblemR
 
 	if req.IsActive != nil {
 		problem.IsActive = *req.IsActive
+	}
+
+	// Map Tags for Update
+	if req.TagIDs != nil {
+		problem.Tags = []domain.Tag{}
+		for _, id := range req.TagIDs {
+			problem.Tags = append(problem.Tags, domain.Tag{ID: id})
+		}
+	}
+
+	// Map Categories for Update
+	if req.CategoryIDs != nil {
+		problem.Categories = []domain.Category{}
+		for _, id := range req.CategoryIDs {
+			problem.Categories = append(problem.Categories, domain.Category{ID: id})
+		}
 	}
 
 	if err := u.problemRepo.Update(problem); err != nil {
@@ -451,6 +481,14 @@ func (u *ProblemUsecase) GetProblemStats() (*domain.ProblemStats, error) {
 		Medium:    mediumCount,
 		Hard:      hardCount,
 	}, nil
+}
+
+func (u *ProblemUsecase) ListTags() ([]domain.Tag, error) {
+	return u.problemRepo.ListTags()
+}
+
+func (u *ProblemUsecase) ListCategories() ([]domain.Category, error) {
+	return u.problemRepo.ListCategories()
 }
 
 // ========== HELPER FUNCTIONS ==========

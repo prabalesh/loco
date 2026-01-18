@@ -1,5 +1,5 @@
 import axiosInstance from '../axios'
-import type { User, AdminAnalytics, LoginCredentials, Language, Problem, TestCase } from '../../types'
+import type { User, AdminAnalytics, LoginCredentials, Language, Problem, TestCase, Tag, Category } from '../../types'
 import type { PaginatedResponse, Response, SimpleResponse } from '../../types/repsonse'
 import type { CreateOrUpdateLanguageRequest, CreateOrUpdateProblemRequest, CreateTestCaseRequest } from '../../types/request'
 import type { ProblemLanguage, CreateProblemLanguageRequest, UpdateProblemLanguageRequest } from '../../types/problemLanguage'
@@ -72,6 +72,9 @@ export const adminProblemApi = {
 
   publish: (problemId: string) =>
     axiosInstance.post<SimpleResponse>(`/admin/problems/${problemId}/publish`),
+
+  getTags: () => axiosInstance.get<Response<Tag[]>>('/tags'),
+  getCategories: () => axiosInstance.get<Response<Category[]>>('/categories'),
 }
 
 export const adminTestcaseApi = {

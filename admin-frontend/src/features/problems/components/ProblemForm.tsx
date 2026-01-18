@@ -1,5 +1,8 @@
 import TiptapEditor from "../../../components/editor/TiptapEditor"
 import type { CreateOrUpdateProblemRequest } from "../../../types/request"
+import { useQuery } from "@tanstack/react-query"
+import { adminProblemApi } from "../../../lib/api/admin"
+import type { Tag, Category } from "../../../types"
 
 interface ProblemFormProps {
   formData: CreateOrUpdateProblemRequest
@@ -10,14 +13,27 @@ interface ProblemFormProps {
   isEditMode: boolean
 }
 
-export default function ProblemForm({ 
-  formData, 
-  onChange, 
-  onSubmit, 
+export default function ProblemForm({
+  formData,
+  onChange,
+  onSubmit,
   onSaveDraft,
   loading,
-  isEditMode 
+  isEditMode
 }: ProblemFormProps) {
+  const { data: tagsResponse } = useQuery({
+    queryKey: ['tags'],
+    queryFn: () => adminProblemApi.getTags(),
+  })
+
+  const { data: categoriesResponse } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => adminProblemApi.getCategories(),
+  })
+
+  const tags = tagsResponse?.data?.data || []
+  const categories = categoriesResponse?.data?.data || []
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit()
@@ -83,8 +99,8 @@ export default function ProblemForm({
           <label className="block text-sm font-medium mb-2">
             Description <span className="text-red-500">*</span>
           </label>
-          <TiptapEditor 
-            content={formData.description} 
+          <TiptapEditor
+            content={formData.description}
             onChange={(content) => onChange({ description: content })}
           />
         </div>
@@ -94,8 +110,8 @@ export default function ProblemForm({
           <label className="block text-sm font-medium mb-2">
             Input Format
           </label>
-          <TiptapEditor 
-            content={formData.input_format} 
+          <TiptapEditor
+            content={formData.input_format}
             onChange={(content) => onChange({ input_format: content })}
           />
         </div>
@@ -105,8 +121,8 @@ export default function ProblemForm({
           <label className="block text-sm font-medium mb-2">
             Output Format
           </label>
-          <TiptapEditor 
-            content={formData.output_format} 
+          <TiptapEditor
+            content={formData.output_format}
             onChange={(content) => onChange({ output_format: content })}
           />
         </div>
@@ -116,8 +132,8 @@ export default function ProblemForm({
           <label className="block text-sm font-medium mb-2">
             Constraints
           </label>
-          <TiptapEditor 
-            content={formData.constraints} 
+          <TiptapEditor
+            content={formData.constraints}
             onChange={(content) => onChange({ constraints: content })}
           />
         </div>
@@ -185,6 +201,60 @@ export default function ProblemForm({
             <label htmlFor="is_active" className="ml-2 text-sm font-medium">
               Is Active
             </label>
+          </div>
+        </div>
+
+        {/* Tags */}
+        <div className="border-t pt-6">
+          <label className="block text-sm font-medium mb-3">
+            Tags (Topics)
+          </label>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 p-4 bg-gray-50 rounded-lg max-h-60 overflow-y-auto border">
+            {tags.map((tag: Tag) => (
+              <label key={tag.id} className="flex items-center space-x-2 cursor-pointer hover:bg-white p-1 rounded transition-colors">
+                <input
+                  type="checkbox"
+                  checked={formData.tag_ids?.includes(tag.id)}
+                  onChange={(e) => {
+                    const currentIds = formData.tag_ids || []
+                    const nextIds = e.target.checked
+                      ? [...currentIds, tag.id]
+                      : currentIds.filter(id => id !== tag.id)
+                    onChange({ tag_ids: nextIds })
+                  }}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  disabled={loading}
+                />
+                <span className="text-sm text-gray-700">{tag.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Categories */}
+        <div className="border-t pt-6">
+          <label className="block text-sm font-medium mb-3">
+            Categories
+          </label>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 bg-gray-50 rounded-lg border">
+            {categories.map((cat: Category) => (
+              <label key={cat.id} className="flex items-center space-x-2 cursor-pointer hover:bg-white p-1 rounded transition-colors">
+                <input
+                  type="checkbox"
+                  checked={formData.category_ids?.includes(cat.id)}
+                  onChange={(e) => {
+                    const currentIds = formData.category_ids || []
+                    const nextIds = e.target.checked
+                      ? [...currentIds, cat.id]
+                      : currentIds.filter(id => id !== cat.id)
+                    onChange({ category_ids: nextIds })
+                  }}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  disabled={loading}
+                />
+                <span className="text-sm text-gray-700">{cat.name}</span>
+              </label>
+            ))}
           </div>
         </div>
 

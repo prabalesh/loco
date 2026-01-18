@@ -549,6 +549,26 @@ func (h *ProblemHandler) PreviewProblemLanguage(w http.ResponseWriter, r *http.R
 	})
 }
 
+func (h *ProblemHandler) ListTags(w http.ResponseWriter, r *http.Request) {
+	tags, err := h.problemUsecase.ListTags()
+	if err != nil {
+		h.logger.Error("Failed to list tags", zap.Error(err))
+		RespondError(w, http.StatusInternalServerError, "failed to retrieve tags")
+		return
+	}
+	RespondJSON(w, http.StatusOK, tags)
+}
+
+func (h *ProblemHandler) ListCategories(w http.ResponseWriter, r *http.Request) {
+	categories, err := h.problemUsecase.ListCategories()
+	if err != nil {
+		h.logger.Error("Failed to list categories", zap.Error(err))
+		RespondError(w, http.StatusInternalServerError, "failed to retrieve categories")
+		return
+	}
+	RespondJSON(w, http.StatusOK, categories)
+}
+
 // ========== HELPER FUNCTIONS ==========
 
 func getIntQuery(r *http.Request, key string, defaultValue int) int {

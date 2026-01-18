@@ -28,6 +28,22 @@ export interface Language {
   updated_at: Date
 }
 
+export interface Tag {
+  id: number
+  name: string
+  slug: string
+  created_at: string
+  updated_at: string
+}
+
+export interface Category {
+  id: number
+  name: string
+  slug: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Problem {
   id: number
   title: string
@@ -44,8 +60,10 @@ export interface Problem {
   status: "draft" | "published"
   is_active: boolean
   acceptance_rate: number
-  total_submissions: 0
+  total_submissions: number
   total_accepted: number
+  tags?: Tag[]
+  categories?: Category[]
   created_at: Date
   updated_at: Date
 }

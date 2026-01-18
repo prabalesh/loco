@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import ProblemForm from "../components/ProblemForm"
 import type { CreateOrUpdateProblemRequest } from "../../../types/request"
 import { adminProblemApi } from "../../../lib/api/admin"
+import type { Tag, Category } from "../../../types"
 import toast from "react-hot-toast"
 import { ProblemStepper } from "../components/ProblemStepper"
 
@@ -26,6 +27,8 @@ export default function CreateProblem() {
     constraints: "",
     status: "draft",
     is_active: false,
+    tag_ids: [],
+    category_ids: [],
   })
 
   // Fetch problem data if in edit mode
@@ -39,7 +42,11 @@ export default function CreateProblem() {
   // Set form data when problem is fetched
   useEffect(() => {
     if (problemData) {
-      setFormData(problemData)
+      setFormData({
+        ...problemData,
+        tag_ids: problemData.tags?.map((t: Tag) => t.id) || [],
+        category_ids: problemData.categories?.map((c: Category) => c.id) || [],
+      })
     }
   }, [problemData])
 

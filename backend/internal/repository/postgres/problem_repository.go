@@ -32,7 +32,7 @@ func (r *problemRepository) GetAll(limit, offset int, search string) ([]domain.P
 		return nil, 0, err
 	}
 
-	err = query.Preload("Creator").Limit(limit).Offset(offset).Order("created_at desc").Find(&problems).Error
+	err = query.Preload("Creator").Preload("Tags").Preload("Categories").Limit(limit).Offset(offset).Order("created_at desc").Find(&problems).Error
 	return problems, total, err
 }
 
@@ -40,7 +40,7 @@ func (r *problemRepository) Create(problem *domain.Problem) error {
 	ctx, cancel := database.WithLongTimeout()
 	defer cancel()
 
-	result := r.db.DB.WithContext(ctx).Create(problem)
+	result := r.db.DB.WithContext(ctx).Session(&gorm.Session{FullSaveAssociations: true}).Create(problem)
 	if result.Error != nil {
 		if isUniqueViolation(result.Error) {
 			if containsField(result.Error, "title") {
@@ -68,7 +68,7 @@ func (r *problemRepository) Update(problem *domain.Problem) error {
 	// Using Select("*") or explicit Omit might be safer if zero values matter (like boolean false or empty strings).
 	// Existing impl updates all columns listed.
 
-	result := r.db.DB.WithContext(ctx).Model(&domain.Problem{}).Where("id = ?", problem.ID).Updates(problem)
+	result := r.db.DB.WithContext(ctx).Session(&gorm.Session{FullSaveAssociations: true}).Model(&domain.Problem{}).Where("id = ?", problem.ID).Updates(problem)
 
 	if result.Error != nil {
 		return fmt.Errorf("failed to update problem: %w", result.Error)
@@ -102,7 +102,7 @@ func (r *problemRepository) GetByID(id int) (*domain.Problem, error) {
 	defer cancel()
 
 	problem := &domain.Problem{}
-	err := r.db.DB.WithContext(ctx).Preload("Creator").First(problem, id).Error
+	err := r.db.DB.WithContext(ctx).Preload("Creator").Preload("Tags").Preload("Categories").First(problem, id).Error
 
 	if err == gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("problem not found")
@@ -120,7 +120,7 @@ func (r *problemRepository) GetBySlug(slug string) (*domain.Problem, error) {
 	defer cancel()
 
 	problem := &domain.Problem{}
-	err := r.db.DB.WithContext(ctx).Preload("Creator").Where("slug = ?", slug).First(problem).Error
+	err := r.db.DB.WithContext(ctx).Preload("Creator").Preload("Tags").Preload("Categories").Where("slug = ?", slug).First(problem).Error
 
 	if err == gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("problem not found")
@@ -189,7 +189,7 @@ func (r *problemRepository) List(filters domain.ProblemFilters) ([]*domain.Probl
 	}
 
 	// Fetch
-	if err := query.Preload("Creator").Order("created_at DESC").Limit(limit).Offset(offset).Find(&problems).Error; err != nil {
+	if err := query.Preload("Creator").Preload("Tags").Preload("Categories").Order("created_at DESC").Limit(limit).Offset(offset).Find(&problems).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to list problems: %w", err)
 	}
 
@@ -370,4 +370,15 @@ func (r *problemRepository) CountByDifficulty(difficulty string) (int, error) {
 	}
 
 	return int(count), nil
+}
+func (r *problemRepository) ListTags() ([]domain.Tag, error) {
+	var tags []domain.Tag
+	err := r.db.DB.Order("name asc").Find(&tags).Error
+	return tags, err
+}
+
+func (r *problemRepository) ListCategories() ([]domain.Category, error) {
+	var categories []domain.Category
+	err := r.db.DB.Order("name asc").Find(&categories).Error
+	return categories, err
 }

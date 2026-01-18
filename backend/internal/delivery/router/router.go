@@ -61,6 +61,8 @@ func SetupRouter(deps *Dependencies) http.Handler {
 
 	// ========== PROBLEM ROUTES (PUBLIC) ==========
 	mux.HandleFunc("GET /problems", deps.ProblemHandler.ListProblems)
+	mux.HandleFunc("GET /tags", deps.ProblemHandler.ListTags)
+	mux.HandleFunc("GET /categories", deps.ProblemHandler.ListCategories)
 	mux.HandleFunc("GET /problems/{id}", deps.ProblemHandler.GetProblem)
 	mux.HandleFunc("GET /problems/{id}/languages", deps.ProblemHandler.ListProblemLanguages)
 
