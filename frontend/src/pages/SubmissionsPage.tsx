@@ -19,6 +19,7 @@ import { ROUTES } from '@/shared/constants/routes'
 import type { SubmissionStatus } from '@/features/problems/types'
 import { Skeleton } from '@/shared/components/ui/Skeleton'
 
+
 const SubmissionsSkeleton = () => (
     <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -55,6 +56,7 @@ const SubmissionsSkeleton = () => (
         </div>
     </div>
 )
+
 
 export const SubmissionsPage = () => {
     const [page, setPage] = useState(1)
@@ -105,8 +107,9 @@ export const SubmissionsPage = () => {
         return <SubmissionsSkeleton />
     }
 
-    const submissions = submissionsData?.data.data.data || []
-    const total = submissionsData?.data.total || 0
+    // Safe extraction with optional chaining and nullish coalescing
+    const submissions = submissionsData?.data?.data?.data ?? []
+    const total = submissionsData?.data?.total ?? 0
     const totalPages = Math.ceil(total / limit)
 
     return (
@@ -166,15 +169,18 @@ export const SubmissionsPage = () => {
                                         {submissions.map((submission) => (
                                             <tr key={submission.id} className="hover:bg-gray-50/80 transition-colors">
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <Link to={`/problems/${submission.problem?.slug}`} className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline">
-                                                        {submission.problem?.title || `Problem #${submission.problem_id}`}
+                                                    <Link
+                                                        to={`/problems/${submission.problem?.slug}`}
+                                                        className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                                                    >
+                                                        {submission.problem?.title ?? `Problem #${submission.problem_id}`}
                                                     </Link>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     {renderStatus(submission.status)}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {submission.language.name}
+                                                    {submission.language?.name ?? 'Unknown'}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
                                                     {submission.runtime > 0 ? `${submission.runtime}ms` : '-'}
@@ -198,7 +204,7 @@ export const SubmissionsPage = () => {
                                 <button
                                     onClick={() => setPage(p => Math.max(1, p - 1))}
                                     disabled={page === 1}
-                                    className="px-3 py-1 border rounded text-sm disabled:opacity-50"
+                                    className="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
                                 >
                                     Previous
                                 </button>
@@ -208,7 +214,7 @@ export const SubmissionsPage = () => {
                                 <button
                                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                                     disabled={page === totalPages}
-                                    className="px-3 py-1 border rounded text-sm disabled:opacity-50"
+                                    className="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
                                 >
                                     Next
                                 </button>
