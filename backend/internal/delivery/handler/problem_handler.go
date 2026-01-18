@@ -532,7 +532,7 @@ func (h *ProblemHandler) PreviewProblemLanguage(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	combinedCode := pl.GetCombinedCode(lang.DefaultTemplate, "")
+	combinedCode := pl.GetAdminCombinedCode(lang.DefaultTemplate, "")
 
 	RespondJSON(w, http.StatusOK, map[string]string{
 		"combined_code": combinedCode,
