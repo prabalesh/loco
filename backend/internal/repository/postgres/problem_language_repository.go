@@ -37,6 +37,7 @@ func (r *problemLanguageRepository) GetByProblemID(problemID int) ([]domain.Prob
 		Select("problem_languages.*, languages.name as language_name, languages.version as language_version").
 		Joins("join languages on languages.id = problem_languages.language_id").
 		Where("problem_languages.problem_id = ?", problemID).
+		Preload("Language").
 		Find(&problemLanguages)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to get problem languages: %w", result.Error)
@@ -55,6 +56,7 @@ func (r *problemLanguageRepository) GetByProblemAndLanguage(problemID int, langu
 		Select("problem_languages.*, languages.name as language_name, languages.version as language_version").
 		Joins("join languages on languages.id = problem_languages.language_id").
 		Where("problem_languages.problem_id = ? AND problem_languages.language_id = ?", problemID, languageID).
+		Preload("Language").
 		First(&problemLanguage)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to get problem language: %w", result.Error)

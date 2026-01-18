@@ -30,6 +30,7 @@ import Editor from '@monaco-editor/react'
 import toast from 'react-hot-toast'
 import { adminLanguagesApi, adminProblemLanguagesApi } from '../../../lib/api/admin'
 import { ProblemStepper } from '../components/ProblemStepper'
+import { filterEditorLanguage } from '../../../utils/utils'
 
 interface Language {
   id: number
@@ -177,13 +178,9 @@ export default function ProblemLanguage() {
   const getEditorLanguage = (langId: number) => {
     let lang = languages.find((l) => l.id === langId)?.language_id;
 
-    switch (lang) {
-      case "c++":
-        lang = "cpp"
-        break;
-    }
+    lang = filterEditorLanguage(lang || 'plaintext')
 
-    return lang || 'plaintext'
+    return lang
   }
 
   if (languagesLoading || problemLanguagesLoading) {

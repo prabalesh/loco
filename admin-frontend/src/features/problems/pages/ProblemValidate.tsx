@@ -39,6 +39,7 @@ import toast from 'react-hot-toast'
 import Editor from '@monaco-editor/react'
 import { adminProblemLanguagesApi, adminProblemApi, adminSubmissionsApi } from '../../../lib/api/admin'
 import { ProblemStepper } from '../components/ProblemStepper'
+import { filterEditorLanguage } from '../../../utils/utils'
 
 export default function ProblemValidate() {
     const { problemId } = useParams<{ problemId: string }>()
@@ -54,6 +55,7 @@ export default function ProblemValidate() {
     // Preview state
     const [previewCode, setPreviewCode] = useState<string | null>(null)
     const [previewLanguage, setPreviewLanguage] = useState<string | null>(null)
+    const [previewLanguageId, setPreviewLanguageId] = useState<string>("plaintext")
     const [isPreviewVisible, setIsPreviewVisible] = useState(false)
     const [isPreviewLoading, setIsPreviewLoading] = useState(false)
 
@@ -138,9 +140,10 @@ export default function ProblemValidate() {
         validateMutation.mutate(languageId)
     }
 
-    const handlePreview = async (languageId: number, languageName: string) => {
+    const handlePreview = async (languageId: number, languageName: string, language: string) => {
         setIsPreviewLoading(true)
         setPreviewLanguage(languageName)
+        setPreviewLanguageId(language)
         try {
             const res = await adminProblemLanguagesApi.preview(String(problemId), languageId)
             setPreviewCode(res.data.data.combined_code)
@@ -234,7 +237,7 @@ export default function ProblemValidate() {
                                                         variant="outlined"
                                                         size="small"
                                                         startIcon={<EyeIcon />}
-                                                        onClick={() => handlePreview(record.language_id, record.language_name)}
+                                                        onClick={() => handlePreview(record.language_id, record.language_name, record.language.language_id)}
                                                         disabled={isPreviewLoading && previewLanguage === record.language_name}
                                                     >
                                                         Preview
@@ -312,7 +315,7 @@ export default function ProblemValidate() {
                     <Box sx={{ height: 500, border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
                         <Editor
                             height="100%"
-                            language={previewLanguage?.toLowerCase() || 'text'}
+                            language={filterEditorLanguage(previewLanguageId)}
                             value={previewCode || ''}
                             options={{
                                 readOnly: true,

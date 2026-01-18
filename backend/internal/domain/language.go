@@ -48,6 +48,7 @@ func (ec *ExecutorConfig) Scan(value interface{}) error {
 type ProblemLanguage struct {
 	ProblemID            int        `json:"problem_id" gorm:"primaryKey"`
 	LanguageID           int        `json:"language_id" gorm:"primaryKey"`
+	Language             *Language  `json:"language,omitempty" gorm:"foreignKey:LanguageID;references:ID"`
 	LanguageName         string     `json:"language_name" gorm:"->"`
 	LanguageVersion      string     `json:"language_version" gorm:"->"`
 	FunctionCode         string     `json:"function_code" gorm:"type:text"`
