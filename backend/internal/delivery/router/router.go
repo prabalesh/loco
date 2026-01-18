@@ -34,6 +34,7 @@ type Dependencies struct {
 	RunCodeRateLimit    *middleware.RateLimitMiddleware
 
 	LeaderboardHandler *handler.LeaderboardHandler
+	AchievementHandler *handler.AchievementHandler
 }
 
 func SetupRouter(deps *Dependencies) http.Handler {
@@ -88,6 +89,11 @@ func SetupRouter(deps *Dependencies) http.Handler {
 
 	// ========== LEADERBOARD ROUTES ==========
 	mux.HandleFunc("GET /leaderboard", deps.LeaderboardHandler.GetLeaderboard)
+
+	// ========== ACHIEVEMENT ROUTES ==========
+	mux.HandleFunc("GET /achievements", deps.AchievementHandler.List)
+	mux.HandleFunc("GET /users/{username}/achievements", deps.AchievementHandler.GetUserAchievements)
+	mux.Handle("GET /users/me/achievements", authMiddleware(http.HandlerFunc(deps.AchievementHandler.GetMyAchievements)))
 
 	// ========== ADMIN ROUTES ==========
 	adminAuthMiddleware := middleware.RequireAdminAuth(deps.JWTService, deps.Log)

@@ -24,6 +24,8 @@ export interface User {
   email_verified: boolean
   is_verified: boolean
   created_at: string
+  xp: number
+  level: number
   stats?: UserStats
   submission_heatmap?: HeatmapEntry[]
   solved_distribution?: DifficultyStat[]
@@ -34,6 +36,8 @@ export interface PublicUser {
   username: string
   is_verified: boolean
   created_at: string
+  xp: number
+  level: number
   stats?: UserStats
 }
 

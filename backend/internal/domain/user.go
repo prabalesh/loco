@@ -20,6 +20,10 @@ type User struct {
 	PasswordResetSentAt             *time.Time `json:"-" db:"password_reset_sent_at"`
 	CreatedAt                       time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt                       time.Time  `json:"updated_at" db:"updated_at"`
+
+	// Gamification
+	XP    int `json:"xp" db:"xp" gorm:"default:0"`
+	Level int `json:"level" db:"level" gorm:"default:1"`
 }
 
 // ToUserResponse converts User entity to UserResponse DTO
@@ -31,6 +35,8 @@ func (u *User) ToResponse() UserResponse {
 		Role:          u.Role,
 		EmailVerified: u.EmailVerified,
 		CreatedAt:     u.CreatedAt,
+		XP:            u.XP,
+		Level:         u.Level,
 	}
 }
 
@@ -40,6 +46,8 @@ func (u *User) ToUserProfileResponse(stats UserStats, recentProblems []Problem, 
 		Username:           u.Username,
 		IsVerified:         u.EmailVerified,
 		CreatedAt:          u.CreatedAt,
+		XP:                 u.XP,
+		Level:              u.Level,
 		Stats:              stats,
 		RecentProblems:     recentProblems,
 		SubmissionHeatmap:  heatmap,

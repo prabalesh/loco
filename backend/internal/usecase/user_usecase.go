@@ -69,6 +69,18 @@ func (u *UserUsecase) GetUserProfile(userID int) (*domain.UserProfileResponse, e
 	return &resp, nil
 }
 
+func (u *UserUsecase) GetByUsername(username string) (*domain.User, error) {
+	user, err := u.userRepo.GetByUsername(username)
+	if err != nil {
+		u.logger.Error("Failed to get user by username",
+			zap.Error(err),
+			zap.String("username", username),
+		)
+		return nil, errors.New("user not found")
+	}
+	return user, nil
+}
+
 func (u *UserUsecase) GetUserProfileByUsername(username string) (*domain.UserProfileResponse, error) {
 	user, err := u.userRepo.GetByUsername(username)
 	if err != nil {

@@ -21,6 +21,7 @@ type SubmissionUsecase struct {
 	problemLanguageRepo domain.ProblemLanguageRepository
 	pistonService       piston.PistonService
 	jobQueue            queue.JobQueue
+	achievementUsecase  *AchievementUsecase
 	cfg                 *config.Config
 	logger              *zap.Logger
 }
@@ -33,6 +34,7 @@ func NewSubmissionUsecase(
 	problemLanguageRepo domain.ProblemLanguageRepository,
 	pistonService piston.PistonService,
 	jobQueue queue.JobQueue,
+	achievementUsecase *AchievementUsecase,
 	cfg *config.Config,
 	logger *zap.Logger,
 ) *SubmissionUsecase {
@@ -44,6 +46,7 @@ func NewSubmissionUsecase(
 		problemLanguageRepo: problemLanguageRepo,
 		pistonService:       pistonService,
 		jobQueue:            jobQueue,
+		achievementUsecase:  achievementUsecase,
 		cfg:                 cfg,
 		logger:              logger,
 	}
@@ -247,8 +250,34 @@ func (u *SubmissionUsecase) evaluateSubmission(submission *domain.Submission, pr
 				pl.ValidatedAt = &now
 			}
 			u.problemLanguageRepo.Update(pl)
+			u.problemLanguageRepo.Update(pl)
 		}
 	}
+
+	// 5. Check Achievements
+	// Run achievement checks asynchronously to avoid blocking
+	go func() {
+		// Fetch basic stats
+		count, err := u.submissionRepo.CountAcceptedByUser(submission.UserID)
+		if err != nil {
+			u.logger.Error("Failed to count accepted submissions", zap.Error(err))
+			return
+		}
+		totalSolved, err := u.submissionRepo.CountProblemsSolvedByUser(submission.UserID)
+		if err != nil {
+			u.logger.Error("Failed to count solved problems", zap.Error(err))
+			return
+		}
+
+		stats := &domain.UserStats{
+			AcceptedSubmissions: int(count),
+			ProblemsSolved:      int(totalSolved),
+		}
+
+		if err := u.achievementUsecase.EvaluateSubmissionAchievements(submission, stats); err != nil {
+			u.logger.Error("Failed to evaluate achievements", zap.Error(err))
+		}
+	}()
 }
 
 func (u *SubmissionUsecase) updateSubmissionResult(submission *domain.Submission, status domain.SubmissionStatus, errorMsg string) {

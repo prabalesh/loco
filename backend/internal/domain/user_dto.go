@@ -12,6 +12,8 @@ type UserResponse struct {
 	Role          string    `json:"role"`
 	EmailVerified bool      `json:"email_verified"`
 	CreatedAt     time.Time `json:"created_at"`
+	XP            int       `json:"xp"`
+	Level         int       `json:"level"`
 }
 
 type UserProfileResponse struct {
@@ -19,6 +21,8 @@ type UserProfileResponse struct {
 	Username           string           `json:"username"`
 	IsVerified         bool             `json:"is_verified"`
 	CreatedAt          time.Time        `json:"created_at"`
+	XP                 int              `json:"xp"`
+	Level              int              `json:"level"`
 	Stats              UserStats        `json:"stats"`
 	RecentProblems     []Problem        `json:"recent_problems"`
 	SubmissionHeatmap  []HeatmapEntry   `json:"submission_heatmap"`

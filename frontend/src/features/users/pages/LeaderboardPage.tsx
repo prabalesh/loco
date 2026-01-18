@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { leaderboardApi } from '../api/leaderboard'
 import { Card } from '@/shared/components/ui/Card'
 import { Skeleton } from '@/shared/components/ui/Skeleton'
-import { Trophy, Medal, User, ArrowRight, TrendingUp } from 'lucide-react'
+import { Trophy, Medal, User, ArrowRight, TrendingUp, Zap } from 'lucide-react'
 import { Button } from '@/shared/components/ui/Button'
 import { motion } from 'framer-motion'
 
@@ -111,9 +111,22 @@ export const LeaderboardPage = () => {
                                             </div>
                                         </div>
 
+                                        <div className="text-center">
+                                            <div className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1 pointer-events-none flex items-center justify-center gap-1">
+                                                <Zap className="h-3 w-3" />
+                                                Level
+                                            </div>
+                                            <div className="text-2xl font-black text-purple-600">
+                                                {entry.level || 1}
+                                            </div>
+                                        </div>
+
                                         <div className="hidden md:block text-center border-l border-gray-100 pl-12">
-                                            <div className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Submissions</div>
-                                            <div className="text-2xl font-black text-gray-900">{entry.total_submissions}</div>
+                                            <div className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1 flex items-center justify-center gap-1">
+                                                <Zap className="h-3 w-3 text-amber-500" />
+                                                XP
+                                            </div>
+                                            <div className="text-2xl font-black text-amber-600">{(entry.xp || 0).toLocaleString()}</div>
                                         </div>
 
                                         <div className="sm:ml-4">

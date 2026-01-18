@@ -15,6 +15,7 @@ import { ProblemDetailPage } from '@/features/problems/pages/ProblemDetailPage'
 import { ProfilePage as UserProfileView } from '@/features/users/pages/ProfilePage'
 import { SubmissionsPage } from '@/pages/SubmissionsPage'
 import { LeaderboardPage } from '@/features/users/pages/LeaderboardPage'
+import { AchievementsPage } from '@/features/achievements/pages/AchievementsPage'
 
 export const router = createBrowserRouter([
   {
@@ -68,6 +69,10 @@ export const router = createBrowserRouter([
       {
         path: ROUTES.LEADERBOARD,
         element: <LeaderboardPage />,
+      },
+      {
+        path: '/achievements',
+        element: <AchievementsPage />,
       },
       {
         path: ROUTES.PROFILE,

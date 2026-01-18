@@ -35,6 +35,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	userProblemStatsRepo := postgres.NewUserProblemStatsRepository(db)
 	tagRepo := postgres.NewTagRepository(db)
 	categoryRepo := postgres.NewCategoryRepository(db)
+	achievementRepo := postgres.NewAchievementRepository(db)
 
 	// Redis client
 	redisClient, err := redis.NewRedisClient(cfg.Redis, logger)
@@ -58,7 +59,8 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	problemUsecase := usecase.NewProblemUsecase(problemRepo, testCaseRepo, userProblemStatsRepo, tagRepo, categoryRepo, cfg, logger)
 	languageUsecase := usecase.NewLanguageUsecase(languageRepo, cfg, logger)
 	testCaseUsecase := usecase.NewTestCaseUsecase(testCaseRepo, problemRepo, cfg, logger)
-	submissionUsecase := usecase.NewSubmissionUsecase(submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, pistonService, jobQueue, cfg, logger)
+	achievementUsecase := usecase.NewAchievementUsecase(achievementRepo, userRepo, logger)
+	submissionUsecase := usecase.NewSubmissionUsecase(submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, pistonService, jobQueue, achievementUsecase, cfg, logger)
 	queueStatusUsecase := usecase.NewQueueStatusUsecase(submissionRepo, redisClient.Client, logger)
 
 	// Worker
@@ -76,6 +78,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	queueHandler := handler.NewQueueHandler(queueStatusUsecase, logger)
 	leaderboardUsecase := usecase.NewLeaderboardUsecase(userRepo, logger)
 	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardUsecase, logger)
+	achievementHandler := handler.NewAchievementHandler(achievementUsecase, userUsecase, logger)
 
 	// Middleware
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(redisClient.Client, logger, &cfg.RateLimit)
@@ -97,6 +100,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 		SubmissionHandler:   submissionHandler,
 		QueueHandler:        queueHandler,
 		LeaderboardHandler:  leaderboardHandler,
+		AchievementHandler:  achievementHandler,
 		RateLimit:           rateLimitMiddleware,
 		SubmissionRateLimit: submissionRateLimitMiddleware,
 		RunCodeRateLimit:    runCodeRateLimitMiddleware,

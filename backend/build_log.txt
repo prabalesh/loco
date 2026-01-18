@@ -1,0 +1,3 @@
+github.com/prabalesh/loco/backend/internal/usecase
+# github.com/prabalesh/loco/backend/internal/usecase
+internal/usecase/submission_usecase.go:281:90: syntax error: unexpected name domain in argument list; possibly missing comma or )

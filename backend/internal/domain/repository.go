@@ -8,6 +8,7 @@ type UserRepository interface {
 	GetByEmail(email string) (*User, error)
 	GetByUsername(username string) (*User, error)
 	GetByID(id int) (*User, error)
+	Update(user *User) error
 	UpdatePassword(userID int, hashedPassword string) error
 	UpdateRole(userID int, role string) error
 	UpdateActiveStatus(userID int, isActive bool) error

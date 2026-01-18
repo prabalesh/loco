@@ -38,6 +38,16 @@ func (r *userRepository) Create(user *domain.User) error {
 	return nil
 }
 
+func (r *userRepository) Update(user *domain.User) error {
+	ctx, cancel := database.WithMediumTimeout()
+	defer cancel()
+
+	if err := r.db.DB.WithContext(ctx).Save(user).Error; err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+	return nil
+}
+
 // GetByEmail retrieves user by email with all verification fields
 func (r *userRepository) GetByEmail(email string) (*domain.User, error) {
 	ctx, cancel := database.WithShortTimeout()

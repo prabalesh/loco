@@ -78,6 +78,8 @@ func main() {
 		&domain.Submission{},
 		&domain.ProblemLanguage{},
 		&domain.UserProblemStats{},
+		&domain.Achievement{},
+		&domain.UserAchievement{},
 	); err != nil {
 		log.Fatal("Failed to run auto migrations", zap.Error(err))
 	}

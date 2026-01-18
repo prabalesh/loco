@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { User, Calendar, ArrowLeft } from 'lucide-react'
+import { User, Calendar, ArrowLeft, Zap, Award, Trophy } from 'lucide-react'
 import { useUserProfile } from '@/features/auth/hooks/useUserProfile'
 import { useAuth } from '@/shared/hooks/useAuth'
 import { Card } from '@/shared/components/ui/Card'
@@ -8,13 +8,26 @@ import { Button } from '@/shared/components/ui/Button'
 import { Loading } from '@/shared/components/common/Loading'
 import { ROUTES } from '@/shared/constants/routes'
 import { formatDistanceToNow, parseISO, format } from 'date-fns'
+import { achievementsApi } from '@/features/achievements/api/achievementsApi'
+import { useQuery } from '@tanstack/react-query'
 
 export const UserProfilePage = () => {
   const { username } = useParams<{ username: string }>()
   const { user: currentUser } = useAuth()
   const { data: user, isLoading, error } = useUserProfile(username!)
 
+  const { data: userAchievements = [] } = useQuery({
+    queryKey: ['user-achievements', username],
+    queryFn: () => achievementsApi.getUserAchievements(username!),
+    enabled: !!username,
+  })
+
   const isOwnProfile = currentUser?.username === username
+
+  const level = user?.level || 1
+  const xp = user?.xp || 0
+  const xpForNextLevel = level * 100
+  const xpProgress = (xp % 100) / 100 * 100
 
   if (isLoading) {
     return <Loading />
@@ -88,6 +101,43 @@ export const UserProfilePage = () => {
             </div>
           </Card>
 
+          {/* XP and Level Card */}
+          <Card className="p-6 border-0 shadow-xl shadow-purple-200/30 rounded-[2.5rem] bg-gradient-to-br from-purple-600 to-pink-600 text-white mb-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-10">
+              <Zap className="h-32 w-32" />
+            </div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Award className="h-5 w-5" />
+                    <span className="text-sm font-bold text-purple-100">LEVEL</span>
+                  </div>
+                  <div className="text-5xl font-black">{level}</div>
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center gap-2 mb-1 justify-end">
+                    <Zap className="h-5 w-5" />
+                    <span className="text-sm font-bold text-purple-100">EXPERIENCE</span>
+                  </div>
+                  <div className="text-3xl font-black">{xp.toLocaleString()}</div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm font-semibold">
+                  <span className="text-purple-100">Progress to Level {level + 1}</span>
+                  <span>{xp % 100} / {xpForNextLevel}</span>
+                </div>
+                <div className="h-3 w-full bg-white/20 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-white transition-all duration-500 rounded-full"
+                    style={{ width: `${xpProgress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </Card>
+
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <Card className="p-6 text-center">
@@ -144,13 +194,36 @@ export const UserProfilePage = () => {
             </div>
           </Card>
 
-          {/* Recent Submissions */}
+          {/* Achievements */}
           <Card className="p-8 mt-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Submissions</h2>
-            <div className="text-center py-12">
-              <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">No recent submissions</p>
-            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Achievements</h2>
+            {userAchievements.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {userAchievements.slice(0, 6).map((ua) => (
+                  <div
+                    key={ua.id}
+                    className="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100"
+                  >
+                    <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
+                      <Trophy className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm text-gray-900 truncate">
+                        {ua.achievement.name}
+                      </p>
+                      <p className="text-xs text-gray-600 truncate">
+                        +{ua.achievement.xp_reward} XP
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No achievements yet</p>
+              </div>
+            )}
           </Card>
         </motion.div>
       </div>
