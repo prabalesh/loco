@@ -107,6 +107,23 @@ func (r *submissionRepository) CountByUserProblem(userID int, problemID int) (in
 	return count, err
 }
 
+func (r *submissionRepository) FindSolvedProblemsByUser(userID int, limit int) ([]domain.Problem, error) {
+	var problems []domain.Problem
+	err := r.db.DB.Raw(`
+		SELECT p.* 
+		FROM problems p
+		JOIN (
+			SELECT DISTINCT ON (problem_id) problem_id, created_at
+			FROM submissions
+			WHERE user_id = ? AND status = ?
+			ORDER BY problem_id, created_at DESC
+		) s ON p.id = s.problem_id
+		ORDER BY s.created_at DESC
+		LIMIT ?
+	`, userID, domain.SubmissionStatusAccepted, limit).Scan(&problems).Error
+	return problems, err
+}
+
 // Stats implementations
 func (r *submissionRepository) CountTotal() (int64, error) {
 	var count int64

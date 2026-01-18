@@ -117,6 +117,7 @@ type SubmissionRepository interface {
 	CountCombinedStatus(status SubmissionStatus) (int64, error)
 	CountAcceptedByUser(userID int) (int64, error)
 	CountProblemsSolvedByUser(userID int) (int64, error)
+	FindSolvedProblemsByUser(userID int, limit int) ([]Problem, error)
 	CountSubmissionsLast24h() (int64, error)
 	GetDailyStats(days int) ([]DailySubmissionStat, error)
 

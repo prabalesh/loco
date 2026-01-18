@@ -164,10 +164,47 @@ export const ProfilePage = () => {
                             </div>
 
                             <div className="space-y-4">
-                                <div className="py-12 text-center text-gray-400 bg-gray-50/50 rounded-3xl border-2 border-dashed border-gray-100">
-                                    <Activity className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                                    <p className="font-medium">Recent solved problems will appear here</p>
-                                </div>
+                                {profile.recent_problems && profile.recent_problems.length > 0 ? (
+                                    profile.recent_problems.map((problem, index) => (
+                                        <motion.div
+                                            key={problem.id}
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: index * 0.1 }}
+                                            className="group flex items-center justify-between p-4 bg-gray-50/50 hover:bg-white hover:shadow-md rounded-2xl border border-transparent hover:border-gray-100 transition-all cursor-pointer"
+                                            onClick={() => navigate(`/problems/${problem.slug}`)}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className={`p-2 rounded-xl text-white shadow-sm ${problem.difficulty === 'easy' ? 'bg-emerald-500' :
+                                                        problem.difficulty === 'medium' ? 'bg-amber-500' : 'bg-rose-500'
+                                                    }`}>
+                                                    <Trophy className="h-4 w-4" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">
+                                                        {problem.title}
+                                                    </h4>
+                                                    <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wider">
+                                                        <span className={
+                                                            problem.difficulty === 'easy' ? 'text-emerald-600' :
+                                                                problem.difficulty === 'medium' ? 'text-amber-600' : 'text-rose-600'
+                                                        }>
+                                                            {problem.difficulty}
+                                                        </span>
+                                                        <span className="text-gray-400">•</span>
+                                                        <span className="text-gray-500">{problem.acceptance_rate.toFixed(1)}% Accuracy</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <ChevronLeft className="h-5 w-5 text-gray-300 group-hover:text-blue-500 rotate-180 transition-all transform group-hover:translate-x-1" />
+                                        </motion.div>
+                                    ))
+                                ) : (
+                                    <div className="py-12 text-center text-gray-400 bg-gray-50/50 rounded-3xl border-2 border-dashed border-gray-100">
+                                        <Activity className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                                        <p className="font-medium">Recent solved problems will appear here</p>
+                                    </div>
+                                )}
                             </div>
                         </Card>
                     </div>

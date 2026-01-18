@@ -51,7 +51,14 @@ func (u *UserUsecase) GetUserProfileByUsername(username string) (*domain.UserPro
 		u.logger.Error("Failed to get user stats", zap.Error(err))
 	}
 
-	resp := user.ToUserProfileResponse(stats)
+	// Fetch recent problems
+	recentProblems, err := u.submissionRepo.FindSolvedProblemsByUser(user.ID, 5) // Limit to 5
+	if err != nil {
+		u.logger.Error("Failed to get recent problems", zap.Error(err))
+		recentProblems = []domain.Problem{}
+	}
+
+	resp := user.ToUserProfileResponse(stats, recentProblems)
 	return &resp, nil
 }
 

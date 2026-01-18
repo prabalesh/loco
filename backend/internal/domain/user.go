@@ -34,13 +34,14 @@ func (u *User) ToResponse() UserResponse {
 	}
 }
 
-func (u *User) ToUserProfileResponse(stats UserStats) UserProfileResponse {
+func (u *User) ToUserProfileResponse(stats UserStats, recentProblems []Problem) UserProfileResponse {
 	return UserProfileResponse{
-		ID:         u.ID,
-		Username:   u.Username,
-		IsVerified: u.EmailVerified,
-		CreatedAt:  u.CreatedAt,
-		Stats:      stats,
+		ID:             u.ID,
+		Username:       u.Username,
+		IsVerified:     u.EmailVerified,
+		CreatedAt:      u.CreatedAt,
+		Stats:          stats,
+		RecentProblems: recentProblems,
 	}
 }
 

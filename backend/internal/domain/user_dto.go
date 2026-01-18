@@ -15,9 +15,10 @@ type UserResponse struct {
 }
 
 type UserProfileResponse struct {
-	ID         int       `json:"id"`
-	Username   string    `json:"username"`
-	IsVerified bool      `json:"is_verified"`
-	CreatedAt  time.Time `json:"created_at"`
-	Stats      UserStats `json:"stats"`
+	ID             int       `json:"id"`
+	Username       string    `json:"username"`
+	IsVerified     bool      `json:"is_verified"`
+	CreatedAt      time.Time `json:"created_at"`
+	Stats          UserStats `json:"stats"`
+	RecentProblems []Problem `json:"recent_problems"`
 }

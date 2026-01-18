@@ -1,3 +1,5 @@
+import type { Problem } from '@/features/problems/types'
+
 export interface UserStats {
     total_submissions: number
     accepted_submissions: number
@@ -11,4 +13,5 @@ export interface UserProfile {
     is_verified: boolean
     created_at: string
     stats: UserStats
+    recent_problems: Problem[]
 }
