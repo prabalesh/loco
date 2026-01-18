@@ -72,6 +72,8 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	testCaseHandler := handler.NewTestCaseHandler(testCaseUsecase, logger, cfg)
 	submissionHandler := handler.NewSubmissionHandler(submissionUsecase, logger)
 	queueHandler := handler.NewQueueHandler(queueStatusUsecase, logger)
+	leaderboardUsecase := usecase.NewLeaderboardUsecase(userRepo, logger)
+	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardUsecase, logger)
 
 	// Middleware
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(redisClient.Client, logger, &cfg.RateLimit)
@@ -92,6 +94,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 		TestCaseHandler:     testCaseHandler,
 		SubmissionHandler:   submissionHandler,
 		QueueHandler:        queueHandler,
+		LeaderboardHandler:  leaderboardHandler,
 		RateLimit:           rateLimitMiddleware,
 		SubmissionRateLimit: submissionRateLimitMiddleware,
 		RunCodeRateLimit:    runCodeRateLimitMiddleware,

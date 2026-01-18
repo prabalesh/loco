@@ -32,6 +32,8 @@ type Dependencies struct {
 	RateLimit           *middleware.RateLimitMiddleware
 	SubmissionRateLimit *middleware.RateLimitMiddleware
 	RunCodeRateLimit    *middleware.RateLimitMiddleware
+
+	LeaderboardHandler *handler.LeaderboardHandler
 }
 
 func SetupRouter(deps *Dependencies) http.Handler {
@@ -81,6 +83,9 @@ func SetupRouter(deps *Dependencies) http.Handler {
 
 	// ========== QUEUE STATUS ROUTES ==========
 	mux.HandleFunc("GET /queue/status", deps.QueueHandler.GetQueueStatus)
+
+	// ========== LEADERBOARD ROUTES ==========
+	mux.HandleFunc("GET /leaderboard", deps.LeaderboardHandler.GetLeaderboard)
 
 	// ========== ADMIN ROUTES ==========
 	adminAuthMiddleware := middleware.RequireAdminAuth(deps.JWTService, deps.Log)

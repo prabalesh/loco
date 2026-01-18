@@ -406,3 +406,48 @@ func (r *userRepository) CountVerifiedUsers() (int, error) {
 
 	return int(count), nil
 }
+
+func (r *userRepository) GetLeaderboard(limit int) ([]domain.LeaderboardEntry, error) {
+	ctx, cancel := database.WithMediumTimeout()
+	defer cancel()
+
+	var entries []domain.LeaderboardEntry
+	query := `
+		SELECT 
+			u.id as user_id, 
+			u.username, 
+			COALESCE(solved_counts.count, 0) as problems_solved,
+			COALESCE(sub_stats.total, 0) as total_submissions,
+			COALESCE(sub_stats.rate, 0) as acceptance_rate
+		FROM users u
+		LEFT JOIN (
+			SELECT user_id, COUNT(*) as count 
+			FROM user_problem_stats 
+			WHERE status = 'solved' 
+			GROUP BY user_id
+		) solved_counts ON u.id = solved_counts.user_id
+		LEFT JOIN (
+			SELECT 
+				user_id, 
+				COUNT(*) as total,
+				(COUNT(*) FILTER (WHERE status = 'Accepted')::float / NULLIF(COUNT(*), 0)) * 100 as rate
+			FROM submissions
+			WHERE is_validation_submission = false
+			GROUP BY user_id
+		) sub_stats ON u.id = sub_stats.user_id
+		ORDER BY problems_solved DESC, acceptance_rate DESC, u.username ASC
+		LIMIT ?
+	`
+
+	err := r.db.DB.WithContext(ctx).Raw(query, limit).Scan(&entries).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch leaderboard: %w", err)
+	}
+
+	// Assign ranks
+	for i := range entries {
+		entries[i].Rank = i + 1
+	}
+
+	return entries, nil
+}

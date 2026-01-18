@@ -14,6 +14,7 @@ import { ProblemsPage } from '@/features/problems/pages/ProblemsPage'
 import { ProblemDetailPage } from '@/features/problems/pages/ProblemDetailPage'
 import { ProfilePage as UserProfileView } from '@/features/users/pages/ProfilePage'
 import { SubmissionsPage } from '@/pages/SubmissionsPage'
+import { LeaderboardPage } from '@/features/users/pages/LeaderboardPage'
 
 export const router = createBrowserRouter([
   {
@@ -66,11 +67,7 @@ export const router = createBrowserRouter([
       },
       {
         path: ROUTES.LEADERBOARD,
-        element: (
-          <div className="p-8 text-center">
-            <h1 className="text-3xl font-bold">Leaderboard Page (Coming Soon)</h1>
-          </div>
-        ),
+        element: <LeaderboardPage />,
       },
       {
         path: ROUTES.PROFILE,

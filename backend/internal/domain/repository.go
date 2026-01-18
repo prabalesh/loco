@@ -32,6 +32,7 @@ type UserRepository interface {
 	CountUsers() (int, error)
 	CountActiveUsers() (int, error)
 	CountVerifiedUsers() (int, error)
+	GetLeaderboard(limit int) ([]LeaderboardEntry, error)
 }
 
 // ProblemFilters for listing problems
