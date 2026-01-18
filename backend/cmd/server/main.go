@@ -16,6 +16,7 @@ import (
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/prabalesh/loco/backend/pkg/database"
 	"github.com/prabalesh/loco/backend/pkg/logger"
+	"github.com/prabalesh/loco/backend/pkg/seeder"
 	"go.uber.org/zap"
 )
 
@@ -82,6 +83,11 @@ func main() {
 		&domain.UserAchievement{},
 	); err != nil {
 		log.Fatal("Failed to run auto migrations", zap.Error(err))
+	}
+
+	// Run Seeder
+	if err := seeder.SeedAll(db, log); err != nil {
+		log.Fatal("Failed to seed database", zap.Error(err))
 	}
 
 	container := di.NewContainer(db, cfg, log)
