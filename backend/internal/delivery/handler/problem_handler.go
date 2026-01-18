@@ -386,6 +386,14 @@ func (h *ProblemHandler) ListProblemLanguages(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Hide solution code for non-admins
+	role, _ := r.Context().Value(middleware.UserRoleKey).(string)
+	if role != "admin" {
+		for i := range languages {
+			languages[i].SolutionCode = ""
+		}
+	}
+
 	RespondJSON(w, http.StatusOK, languages)
 }
 

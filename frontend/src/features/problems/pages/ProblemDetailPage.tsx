@@ -70,6 +70,8 @@ export const ProblemDetailPage = () => {
     const [activeTab, setActiveTab] = useState<'description' | 'result' | 'submissions'>('description')
     const [selectedLang, setSelectedLang] = useState<number | null>(null)
     const [code, setCode] = useState('')
+    const [leftWidth, setLeftWidth] = useState(50) // Percentage
+    const [isResizing, setIsResizing] = useState(false)
     const [pollingId, setPollingId] = useState<number | null>(null)
     const [runResult, setRunResult] = useState<RunCodeResult | null>(null)
     const [isRunning, setIsRunning] = useState(false)
@@ -90,14 +92,63 @@ export const ProblemDetailPage = () => {
         enabled: !!problem?.id
     })
 
-    // Set default language and code
+    // Fetch Sample Test Cases
+    const { data: sampleTestCases } = useQuery({
+        queryKey: ['sample-test-cases', problem?.id],
+        queryFn: () => problemsApi.getSampleTestCases(problem!.id).then(res => (res.data as any).data),
+        enabled: !!problem?.id
+    })
+
+    // Set default language and code (from localStorage or first available)
     useEffect(() => {
-        if (languages && languages.length > 0 && !selectedLang) {
-            const firstLang = languages[0]
-            setSelectedLang(firstLang.language_id)
-            setCode(firstLang.function_code || '')
+        if (languages && languages.length > 0) {
+            if (!selectedLang) {
+                const firstLang = languages[0]
+                const savedCode = localStorage.getItem(`loco-code-${problem?.id}-${firstLang.language_id}`)
+                setSelectedLang(firstLang.language_id)
+                setCode(savedCode || firstLang.function_code || '')
+            }
         }
-    }, [languages, selectedLang])
+    }, [languages, selectedLang, problem?.id])
+
+    // Save code to localStorage
+    useEffect(() => {
+        if (problem?.id && selectedLang && code) {
+            localStorage.setItem(`loco-code-${problem.id}-${selectedLang}`, code)
+        }
+    }, [code, selectedLang, problem?.id])
+
+    const startResizing = (e: React.MouseEvent) => {
+        setIsResizing(true)
+        e.preventDefault()
+    }
+
+    const stopResizing = () => {
+        setIsResizing(false)
+    }
+
+    const resize = (e: MouseEvent) => {
+        if (isResizing) {
+            const newWidth = (e.clientX / window.innerWidth) * 100
+            if (newWidth > 20 && newWidth < 80) {
+                setLeftWidth(newWidth)
+            }
+        }
+    }
+
+    useEffect(() => {
+        if (isResizing) {
+            window.addEventListener('mousemove', resize)
+            window.addEventListener('mouseup', stopResizing)
+        } else {
+            window.removeEventListener('mousemove', resize)
+            window.removeEventListener('mouseup', stopResizing)
+        }
+        return () => {
+            window.removeEventListener('mousemove', resize)
+            window.removeEventListener('mouseup', stopResizing)
+        }
+    }, [isResizing])
 
     const currentLang = languages?.find((l: ProblemLanguage) => l.language_id === selectedLang)
 
@@ -168,7 +219,8 @@ export const ProblemDetailPage = () => {
         const lang = languages?.find((l: ProblemLanguage) => l.language_id === langId)
         if (lang) {
             setSelectedLang(langId)
-            setCode(lang.function_code || '')
+            const savedCode = localStorage.getItem(`loco-code-${problem?.id}-${langId}`)
+            setCode(savedCode || lang.function_code || '')
             toast.success(`Switched to ${lang.language_name}`, { duration: 2000 })
         }
     }
@@ -230,9 +282,12 @@ export const ProblemDetailPage = () => {
                 isSubmitting={submitMutation.isPending || runCodeMutation.isPending || !!pollingId || isRunning}
             />
 
-            <main className="flex-1 flex overflow-hidden">
+            <main className="flex-1 flex overflow-hidden relative">
                 {/* Left Section: Context */}
-                <section className="w-1/2 flex flex-col border-r border-gray-200 bg-white shadow-sm">
+                <section
+                    className="flex flex-col border-r border-gray-200 bg-white shadow-sm overflow-hidden"
+                    style={{ width: `${leftWidth}%` }}
+                >
                     <ProblemTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
                     <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
@@ -243,6 +298,7 @@ export const ProblemDetailPage = () => {
                                 pollingId={pollingId}
                                 runResult={runResult}
                                 isRunning={isRunning || runCodeMutation.isPending}
+                                sampleTestCases={sampleTestCases}
                             />
                         )}
                         {activeTab === 'submissions' && (
@@ -255,16 +311,25 @@ export const ProblemDetailPage = () => {
                     </div>
                 </section>
 
-                {/* Right Section: Code Editor */}
-                <CodeEditor
-                    languages={languages}
-                    selectedLang={selectedLang}
-                    currentLang={currentLang}
-                    code={code}
-                    onLanguageChange={handleLanguageChange}
-                    onCodeChange={setCode}
-                    onResetCode={handleResetCode}
+                {/* Resize Handle */}
+                <div
+                    onMouseDown={startResizing}
+                    className={`w-1 hover:w-1.5 transition-all cursor-col-resize bg-gray-200 hover:bg-blue-400 z-50 flex items-center justify-center ${isResizing ? 'bg-blue-500 w-1.5' : ''
+                        }`}
                 />
+
+                {/* Right Section: Code Editor */}
+                <div className="flex-1 flex flex-col min-w-0">
+                    <CodeEditor
+                        languages={languages}
+                        selectedLang={selectedLang}
+                        currentLang={currentLang}
+                        code={code}
+                        onLanguageChange={handleLanguageChange}
+                        onCodeChange={setCode}
+                        onResetCode={handleResetCode}
+                    />
+                </div>
             </main>
 
             {/* Submission Details Modal */}

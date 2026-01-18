@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Editor, { loader } from '@monaco-editor/react'
-import { RotateCcw } from 'lucide-react'
+import { RotateCcw, Maximize2, Minimize2 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/Button'
 import { LanguageDropdown } from './LanguageDropdown'
 import type { ProblemLanguage } from '../types'
@@ -25,6 +25,8 @@ export const CodeEditor = ({
     onCodeChange,
     onResetCode
 }: CodeEditorProps) => {
+    const [isFullscreen, setIsFullscreen] = useState(false)
+
     // Initialize custom Monaco theme
     useEffect(() => {
         loader.init().then(monaco => {
@@ -56,7 +58,8 @@ export const CodeEditor = ({
     }, [])
 
     return (
-        <section className="flex-1 flex flex-col bg-gradient-to-br from-gray-950 to-black font-mono shadow-2xl">
+        <section className={`flex flex-col bg-gradient-to-br from-gray-950 to-black font-mono shadow-2xl transition-all duration-300 ${isFullscreen ? 'fixed inset-0 z-[100] h-screen w-screen' : 'flex-1'
+            }`}>
             {/* Code Editor Toolbar */}
             <div className="bg-gray-900/95 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between z-10 shadow-2xl">
                 <div className="flex items-center gap-3">
@@ -67,6 +70,20 @@ export const CodeEditor = ({
                     />
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsFullscreen(!isFullscreen)}
+                        className="text-gray-400 hover:text-white hover:bg-gray-800/80 rounded-xl px-4 py-2 h-auto transition-all duration-200"
+                        title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                    >
+                        {isFullscreen ? (
+                            <Minimize2 className="h-4 w-4" />
+                        ) : (
+                            <Maximize2 className="h-4 w-4" />
+                        )}
+                    </Button>
+                    <div className="w-[1px] h-4 bg-white/10 mx-1" />
                     <Button
                         variant="ghost"
                         size="sm"
@@ -83,18 +100,18 @@ export const CodeEditor = ({
             <div className="flex-1 relative overflow-hidden">
                 <Editor
                     height="100%"
-                    defaultLanguage={filterEditorLanguage(currentLang?.language.language_id || 'plaintext')}
-                    language={filterEditorLanguage(currentLang?.language.language_id || 'plaintext')}
+                    defaultLanguage={filterEditorLanguage(currentLang?.language?.language_id || 'plaintext')}
+                    language={filterEditorLanguage(currentLang?.language?.language_id || 'plaintext')}
                     theme="locoCustom"
                     value={code}
                     onChange={(val) => onCodeChange(val || '')}
                     options={{
-                        fontSize: 15,
+                        fontSize: 16,
                         fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
                         fontLigatures: true,
                         fontWeight: '500',
-                        lineHeight: 22,
-                        minimap: { enabled: false },
+                        lineHeight: 24,
+                        minimap: { enabled: isFullscreen }, // Only show minimap in fullscreen
                         padding: { top: 24, bottom: 24 },
                         smoothScrolling: true,
                         cursorBlinking: 'expand',
@@ -105,9 +122,9 @@ export const CodeEditor = ({
                         automaticLayout: true,
                         letterSpacing: 0.5,
                         foldingStrategy: 'indentation',
-                        tabSize: 4,                    // Add this
-                        insertSpaces: true,             // Add this to use spaces instead of tabs
-                        detectIndentation: false,       // Add this to prevent auto-detection
+                        tabSize: 4,
+                        insertSpaces: true,
+                        detectIndentation: false,
                         scrollbar: {
                             vertical: 'auto',
                             horizontal: 'auto',

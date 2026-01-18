@@ -37,6 +37,14 @@ export interface ProblemLanguage {
     language: Language
 }
 
+export interface TestCase {
+    id: number
+    problem_id: number
+    input: string
+    expected_output: string
+    is_sample: boolean
+}
+
 export interface Submission {
     id: number
     problem_id: number

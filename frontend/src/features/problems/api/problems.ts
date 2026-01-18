@@ -1,5 +1,5 @@
 import { apiClient } from '@/shared/lib/axios'
-import type { Problem, ProblemLanguage, ListProblemsRequest } from '../types'
+import type { Problem, ProblemLanguage, ListProblemsRequest, TestCase } from '../types'
 import type { PaginatedResponse } from '@/shared/types/common.types'
 
 export const problemsApi = {
@@ -11,4 +11,7 @@ export const problemsApi = {
 
     getLanguages: (problemId: number) =>
         apiClient.get<ProblemLanguage[]>(`/problems/${problemId}/languages`),
+
+    getSampleTestCases: (problemId: number) =>
+        apiClient.get<TestCase[]>(`/problems/${problemId}/test-cases/samples`),
 }
