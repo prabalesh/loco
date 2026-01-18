@@ -45,8 +45,14 @@ func (u *UserUsecase) GetUserProfileByUsername(username string) (*domain.UserPro
 		return nil, errors.New("user not found")
 	}
 
+	// Fetch rank
+	rank, err := u.userRepo.GetUserRank(user.ID)
+	if err != nil {
+		u.logger.Error("Failed to get user rank", zap.Error(err))
+	}
+
 	// Fetch stats
-	stats, err := u.getUserStats(user.ID)
+	stats, err := u.getUserStats(user.ID, rank)
 	if err != nil {
 		u.logger.Error("Failed to get user stats", zap.Error(err))
 	}
@@ -58,11 +64,25 @@ func (u *UserUsecase) GetUserProfileByUsername(username string) (*domain.UserPro
 		recentProblems = []domain.Problem{}
 	}
 
-	resp := user.ToUserProfileResponse(stats, recentProblems)
+	// Fetch distribution
+	distribution, err := u.submissionRepo.GetSolvedDistribution(user.ID)
+	if err != nil {
+		u.logger.Error("Failed to get solved distribution", zap.Error(err))
+		distribution = []domain.DifficultyStat{}
+	}
+
+	// Fetch heatmap
+	heatmap, err := u.submissionRepo.GetSubmissionHeatmap(user.ID)
+	if err != nil {
+		u.logger.Error("Failed to get submission heatmap", zap.Error(err))
+		heatmap = []domain.HeatmapEntry{}
+	}
+
+	resp := user.ToUserProfileResponse(stats, recentProblems, heatmap, distribution)
 	return &resp, nil
 }
 
-func (u *UserUsecase) getUserStats(userID int) (domain.UserStats, error) {
+func (u *UserUsecase) getUserStats(userID int, rank int) (domain.UserStats, error) {
 	totalSubmissions, err := u.submissionRepo.CountByUser(userID)
 	if err != nil {
 		return domain.UserStats{}, err
@@ -88,5 +108,6 @@ func (u *UserUsecase) getUserStats(userID int) (domain.UserStats, error) {
 		AcceptedSubmissions: int(acceptedSubmissions),
 		ProblemsSolved:      int(problemsSolved),
 		AcceptanceRate:      acceptanceRate,
+		Rank:                rank,
 	}, nil
 }

@@ -62,6 +62,18 @@ export interface TestCase {
   updated_at: string;
 }
 
+export interface TrendingProblem {
+  id: number
+  title: string
+  slug: string
+  submission_count: number
+}
+
+export interface LanguageStat {
+  language_name: string
+  count: number
+}
+
 export interface AdminAnalytics {
   total_users: number
   active_users: number
@@ -72,6 +84,8 @@ export interface AdminAnalytics {
   active_workers: number
   queue_size: number
   submission_history?: { date: string; count: number }[]
+  trending_problems?: TrendingProblem[]
+  language_stats?: LanguageStat[]
 }
 
 export interface LoginCredentials {

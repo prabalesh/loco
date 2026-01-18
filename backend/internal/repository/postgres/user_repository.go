@@ -451,3 +451,45 @@ func (r *userRepository) GetLeaderboard(limit int) ([]domain.LeaderboardEntry, e
 
 	return entries, nil
 }
+func (r *userRepository) GetUserRank(userID int) (int, error) {
+	ctx, cancel := database.WithShortTimeout()
+	defer cancel()
+
+	// Rank is based on number of problems solved, then acceptance rate
+	query := `
+		WITH user_stats AS (
+			SELECT 
+				u.id,
+				COALESCE(solved_counts.count, 0) as solved,
+				COALESCE(sub_stats.rate, 0) as rate
+			FROM users u
+			LEFT JOIN (
+				SELECT user_id, COUNT(*) as count 
+				FROM user_problem_stats 
+				WHERE status = 'solved' 
+				GROUP BY user_id
+			) solved_counts ON u.id = solved_counts.user_id
+			LEFT JOIN (
+				SELECT 
+					user_id, 
+					(COUNT(*) FILTER (WHERE status = 'Accepted')::float / NULLIF(COUNT(*), 0)) * 100 as rate
+				FROM submissions
+				WHERE is_validation_submission = false
+				GROUP BY user_id
+			) sub_stats ON u.id = sub_stats.user_id
+		)
+		SELECT rank FROM (
+			SELECT id, RANK() OVER (ORDER BY solved DESC, rate DESC) as rank
+			FROM user_stats
+		) ranked_users
+		WHERE id = ?
+	`
+
+	var rank int
+	err := r.db.DB.WithContext(ctx).Raw(query, userID).Scan(&rank).Error
+	if err != nil {
+		return 0, fmt.Errorf("failed to get user rank: %w", err)
+	}
+
+	return rank, nil
+}

@@ -17,6 +17,8 @@ import { motion } from 'framer-motion'
 import { format } from 'date-fns'
 
 import type { UserProfile } from '../types'
+import { StatsHeatmap } from '../components/StatsHeatmap'
+import { SolvedDistribution } from '../components/SolvedDistribution'
 
 export const ProfilePage = () => {
     const { username } = useParams<{ username: string }>()
@@ -116,43 +118,73 @@ export const ProfilePage = () => {
                     {/* Main Content / Stats */}
                     <div className="lg:col-span-2 space-y-8">
                         {/* Stats Overview */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                             <motion.div whileHover={{ y: -5 }}>
-                                <Card className="p-6 border-0 shadow-lg shadow-gray-200/40 rounded-3xl bg-white group ring-1 ring-emerald-50 hover:ring-emerald-200 transition-all">
-                                    <div className="flex items-center gap-4 mb-4">
-                                        <div className="p-3 bg-emerald-50 rounded-2xl group-hover:bg-emerald-500 group-hover:text-white transition-colors text-emerald-600">
-                                            <Trophy className="h-5 w-5" />
-                                        </div>
-                                        <div className="text-sm font-bold text-gray-500 uppercase tracking-tight">Solved</div>
+                                <Card className="p-5 border-0 shadow-lg shadow-gray-200/40 rounded-3xl bg-white group ring-1 ring-blue-50 hover:ring-blue-200 transition-all">
+                                    <div className="p-2 bg-blue-50 rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-colors text-blue-600 w-fit mb-3">
+                                        <Trophy className="h-4 w-4" />
                                     </div>
-                                    <div className="text-3xl font-black text-gray-900">{profile.stats.problems_solved}</div>
+                                    <div className="text-2xl font-black text-gray-900">#{profile.stats.rank || 'N/A'}</div>
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Global Rank</div>
                                 </Card>
                             </motion.div>
 
                             <motion.div whileHover={{ y: -5 }}>
-                                <Card className="p-6 border-0 shadow-lg shadow-gray-200/40 rounded-3xl bg-white group ring-1 ring-blue-50 hover:ring-blue-200 transition-all">
-                                    <div className="flex items-center gap-4 mb-4">
-                                        <div className="p-3 bg-blue-50 rounded-2xl group-hover:bg-blue-500 group-hover:text-white transition-colors text-blue-600">
-                                            <Activity className="h-5 w-5" />
-                                        </div>
-                                        <div className="text-sm font-bold text-gray-500 uppercase tracking-tight">Accuracy</div>
+                                <Card className="p-5 border-0 shadow-lg shadow-gray-200/40 rounded-3xl bg-white group ring-1 ring-emerald-50 hover:ring-emerald-200 transition-all">
+                                    <div className="p-2 bg-emerald-50 rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-colors text-emerald-600 w-fit mb-3">
+                                        <CheckCircle2 className="h-4 w-4" />
                                     </div>
-                                    <div className="text-3xl font-black text-gray-900">{profile.stats.acceptance_rate.toFixed(1)}%</div>
+                                    <div className="text-2xl font-black text-gray-900">{profile.stats.problems_solved}</div>
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Problems Solved</div>
                                 </Card>
                             </motion.div>
 
                             <motion.div whileHover={{ y: -5 }}>
-                                <Card className="p-6 border-0 shadow-lg shadow-gray-200/40 rounded-3xl bg-white group ring-1 ring-indigo-50 hover:ring-indigo-200 transition-all">
-                                    <div className="flex items-center gap-4 mb-4">
-                                        <div className="p-3 bg-indigo-50 rounded-2xl group-hover:bg-indigo-500 group-hover:text-white transition-colors text-indigo-600">
-                                            <Activity className="h-5 w-5" />
-                                        </div>
-                                        <div className="text-sm font-bold text-gray-500 uppercase tracking-tight">Submissions</div>
+                                <Card className="p-5 border-0 shadow-lg shadow-gray-200/40 rounded-3xl bg-white group ring-1 ring-amber-50 hover:ring-amber-200 transition-all">
+                                    <div className="p-2 bg-amber-50 rounded-xl group-hover:bg-amber-500 group-hover:text-white transition-colors text-amber-600 w-fit mb-3">
+                                        <Activity className="h-4 w-4" />
                                     </div>
-                                    <div className="text-3xl font-black text-gray-900">{profile.stats.total_submissions}</div>
+                                    <div className="text-2xl font-black text-gray-900">{profile.stats.acceptance_rate.toFixed(1)}%</div>
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Accuracy</div>
+                                </Card>
+                            </motion.div>
+
+                            <motion.div whileHover={{ y: -5 }}>
+                                <Card className="p-5 border-0 shadow-lg shadow-gray-200/40 rounded-3xl bg-white group ring-1 ring-indigo-50 hover:ring-indigo-200 transition-all">
+                                    <div className="p-2 bg-indigo-50 rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-colors text-indigo-600 w-fit mb-3">
+                                        <Activity className="h-4 w-4" />
+                                    </div>
+                                    <div className="text-2xl font-black text-gray-900">{profile.stats.total_submissions}</div>
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Submissions</div>
                                 </Card>
                             </motion.div>
                         </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <Card className="p-8 border-0 shadow-xl shadow-gray-200/30 rounded-[2.5rem] bg-white">
+                                <SolvedDistribution
+                                    distribution={profile.solved_distribution}
+                                    totalSolved={profile.stats.problems_solved}
+                                />
+                            </Card>
+
+                            <div className="space-y-8">
+                                <Card className="p-8 border-0 shadow-xl shadow-gray-200/30 rounded-[2.5rem] bg-indigo-600 text-white relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-8 opacity-10">
+                                        <Trophy className="h-32 w-32" />
+                                    </div>
+                                    <h3 className="text-lg font-bold mb-2">Badge Progress</h3>
+                                    <p className="text-indigo-100 text-sm mb-6 font-medium">Solve 50 problems to unlock the next achievement!</p>
+                                    <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
+                                        <div className="h-full bg-white transition-all" style={{ width: `${Math.min((profile.stats.problems_solved / 50) * 100, 100)}%` }} />
+                                    </div>
+                                </Card>
+                            </div>
+                        </div>
+
+                        <Card className="p-8 border-0 shadow-xl shadow-gray-200/30 rounded-[2.5rem] bg-white">
+                            <StatsHeatmap data={profile.submission_heatmap} />
+                        </Card>
 
                         {/* Recent Activity placeholder or Solved Problems */}
                         <Card className="p-8 border-0 shadow-xl shadow-gray-200/30 rounded-[2.5rem] bg-white">
@@ -176,7 +208,7 @@ export const ProfilePage = () => {
                                         >
                                             <div className="flex items-center gap-4">
                                                 <div className={`p-2 rounded-xl text-white shadow-sm ${problem.difficulty === 'easy' ? 'bg-emerald-500' :
-                                                        problem.difficulty === 'medium' ? 'bg-amber-500' : 'bg-rose-500'
+                                                    problem.difficulty === 'medium' ? 'bg-amber-500' : 'bg-rose-500'
                                                     }`}>
                                                     <Trophy className="h-4 w-4" />
                                                 </div>

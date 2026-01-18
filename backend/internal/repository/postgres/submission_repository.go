@@ -199,3 +199,67 @@ func (r *submissionRepository) GetDailyStats(days int) ([]domain.DailySubmission
 	err := r.db.DB.Raw(query, days).Scan(&stats).Error
 	return stats, err
 }
+func (r *submissionRepository) GetTrendingProblems(limit int, days int) ([]domain.TrendingProblem, error) {
+	var results []domain.TrendingProblem
+	query := `
+		SELECT 
+			p.id, 
+			p.title, 
+			p.slug, 
+			COUNT(s.id) as submission_count
+		FROM problems p
+		JOIN submissions s ON p.id = s.problem_id
+		WHERE s.created_at >= NOW() - make_interval(days => ?)
+		  AND s.is_admin_submission = false
+		GROUP BY p.id, p.title, p.slug
+		ORDER BY submission_count DESC
+		LIMIT ?
+	`
+	err := r.db.DB.Raw(query, days, limit).Scan(&results).Error
+	return results, err
+}
+
+func (r *submissionRepository) GetLanguageStats() ([]domain.LanguageStat, error) {
+	var stats []domain.LanguageStat
+	query := `
+		SELECT 
+			l.name as language_name, 
+			COUNT(s.id) as count
+		FROM languages l
+		JOIN submissions s ON l.id = s.language_id
+		WHERE s.is_admin_submission = false
+		GROUP BY l.name
+		ORDER BY count DESC
+	`
+	err := r.db.DB.Raw(query).Scan(&stats).Error
+	return stats, err
+}
+func (r *submissionRepository) GetSolvedDistribution(userID int) ([]domain.DifficultyStat, error) {
+	var stats []domain.DifficultyStat
+	query := `
+		SELECT 
+			p.difficulty, 
+			COUNT(DISTINCT p.id) as count
+		FROM problems p
+		JOIN submissions s ON p.id = s.problem_id
+		WHERE s.user_id = ? AND s.status = 'Accepted' AND s.is_admin_submission = false
+		GROUP BY p.difficulty
+	`
+	err := r.db.DB.Raw(query, userID).Scan(&stats).Error
+	return stats, err
+}
+
+func (r *submissionRepository) GetSubmissionHeatmap(userID int) ([]domain.HeatmapEntry, error) {
+	var heatmap []domain.HeatmapEntry
+	query := `
+		SELECT 
+			TO_CHAR(created_at, 'YYYY-MM-DD') as date, 
+			COUNT(*) as count
+		FROM submissions
+		WHERE user_id = ? AND is_admin_submission = false AND created_at >= NOW() - INTERVAL '1 year'
+		GROUP BY date
+		ORDER BY date ASC
+	`
+	err := r.db.DB.Raw(query, userID).Scan(&heatmap).Error
+	return heatmap, err
+}

@@ -33,6 +33,7 @@ type UserRepository interface {
 	CountActiveUsers() (int, error)
 	CountVerifiedUsers() (int, error)
 	GetLeaderboard(limit int) ([]LeaderboardEntry, error)
+	GetUserRank(userID int) (int, error)
 }
 
 // ProblemFilters for listing problems
@@ -121,6 +122,12 @@ type SubmissionRepository interface {
 	FindSolvedProblemsByUser(userID int, limit int) ([]Problem, error)
 	CountSubmissionsLast24h() (int64, error)
 	GetDailyStats(days int) ([]DailySubmissionStat, error)
+
+	// Analytics
+	GetTrendingProblems(limit int, days int) ([]TrendingProblem, error)
+	GetLanguageStats() ([]LanguageStat, error)
+	GetSolvedDistribution(userID int) ([]DifficultyStat, error)
+	GetSubmissionHeatmap(userID int) ([]HeatmapEntry, error)
 
 	// Queue monitoring
 	GetOldestPending(limit int) ([]Submission, error)

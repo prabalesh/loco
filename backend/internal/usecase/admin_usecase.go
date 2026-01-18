@@ -214,6 +214,20 @@ func (u *AdminUsecase) GetAnalytics() (*domain.AdminAnalytics, error) {
 		activeWorkers = 0
 	}
 
+	// Fetch trending problems (last 7 days, top 5)
+	trendingProblems, err := u.submissionRepo.GetTrendingProblems(5, 7)
+	if err != nil {
+		u.logger.Error("Failed to get trending problems", zap.Error(err))
+		trendingProblems = []domain.TrendingProblem{}
+	}
+
+	// Fetch language stats
+	languageStats, err := u.submissionRepo.GetLanguageStats()
+	if err != nil {
+		u.logger.Error("Failed to get language stats", zap.Error(err))
+		languageStats = []domain.LanguageStat{}
+	}
+
 	analytics := &domain.AdminAnalytics{
 		TotalUsers:         totalUsers,
 		ActiveUsers:        activeUsers,
@@ -226,6 +240,8 @@ func (u *AdminUsecase) GetAnalytics() (*domain.AdminAnalytics, error) {
 		OldestPendingAge:   oldestAge,
 		QueueHealthStatus:  queueHealthStatus,
 		SubmissionHistory:  dailyStats,
+		TrendingProblems:   trendingProblems,
+		LanguageStats:      languageStats,
 	}
 
 	return analytics, nil

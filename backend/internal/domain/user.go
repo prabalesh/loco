@@ -34,21 +34,15 @@ func (u *User) ToResponse() UserResponse {
 	}
 }
 
-func (u *User) ToUserProfileResponse(stats UserStats, recentProblems []Problem) UserProfileResponse {
+func (u *User) ToUserProfileResponse(stats UserStats, recentProblems []Problem, heatmap []HeatmapEntry, distribution []DifficultyStat) UserProfileResponse {
 	return UserProfileResponse{
-		ID:             u.ID,
-		Username:       u.Username,
-		IsVerified:     u.EmailVerified,
-		CreatedAt:      u.CreatedAt,
-		Stats:          stats,
-		RecentProblems: recentProblems,
+		ID:                 u.ID,
+		Username:           u.Username,
+		IsVerified:         u.EmailVerified,
+		CreatedAt:          u.CreatedAt,
+		Stats:              stats,
+		RecentProblems:     recentProblems,
+		SubmissionHeatmap:  heatmap,
+		SolvedDistribution: distribution,
 	}
-}
-
-// UserStats represents statistics for a user
-type UserStats struct {
-	TotalSubmissions    int     `json:"total_submissions"`
-	AcceptedSubmissions int     `json:"accepted_submissions"`
-	ProblemsSolved      int     `json:"problems_solved"`
-	AcceptanceRate      float64 `json:"acceptance_rate"`
 }

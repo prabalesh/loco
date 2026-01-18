@@ -12,6 +12,20 @@ type AdminAnalytics struct {
 	OldestPendingAge   int64                 `json:"oldest_pending_age_seconds"`
 	QueueHealthStatus  string                `json:"queue_health_status"`
 	SubmissionHistory  []DailySubmissionStat `json:"submission_history"`
+	TrendingProblems   []TrendingProblem     `json:"trending_problems"`
+	LanguageStats      []LanguageStat        `json:"language_stats"`
+}
+
+type TrendingProblem struct {
+	ID              int    `json:"id"`
+	Title           string `json:"title"`
+	Slug            string `json:"slug"`
+	SubmissionCount int    `json:"submission_count"`
+}
+
+type LanguageStat struct {
+	LanguageName string `json:"language_name"`
+	Count        int    `json:"count"`
 }
 
 type UpdateRoleRequest struct {

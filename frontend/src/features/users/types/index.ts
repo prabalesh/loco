@@ -5,6 +5,17 @@ export interface UserStats {
     accepted_submissions: number
     problems_solved: number
     acceptance_rate: number
+    rank: number
+}
+
+export interface DifficultyStat {
+    difficulty: string
+    count: number
+}
+
+export interface HeatmapEntry {
+    date: string
+    count: number
 }
 
 export interface UserProfile {
@@ -14,4 +25,6 @@ export interface UserProfile {
     created_at: string
     stats: UserStats
     recent_problems: Problem[]
+    submission_heatmap: HeatmapEntry[]
+    solved_distribution: DifficultyStat[]
 }
