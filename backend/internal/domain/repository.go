@@ -149,6 +149,7 @@ type SubmissionRepository interface {
 	GetLanguageStats() ([]LanguageStat, error)
 	GetSolvedDistribution(userID int) ([]DifficultyStat, error)
 	GetSubmissionHeatmap(userID int) ([]HeatmapEntry, error)
+	GetCurrentStreak(userID int) (int, error)
 
 	// Queue monitoring
 	GetOldestPending(limit int) ([]Submission, error)

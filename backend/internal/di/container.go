@@ -59,7 +59,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	problemUsecase := usecase.NewProblemUsecase(problemRepo, testCaseRepo, userProblemStatsRepo, tagRepo, categoryRepo, cfg, logger)
 	languageUsecase := usecase.NewLanguageUsecase(languageRepo, cfg, logger)
 	testCaseUsecase := usecase.NewTestCaseUsecase(testCaseRepo, problemRepo, cfg, logger)
-	achievementUsecase := usecase.NewAchievementUsecase(achievementRepo, userRepo, logger)
+	achievementUsecase := usecase.NewAchievementUsecase(achievementRepo, userRepo, submissionRepo, problemRepo, logger)
 	submissionUsecase := usecase.NewSubmissionUsecase(submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, pistonService, jobQueue, achievementUsecase, cfg, logger)
 	queueStatusUsecase := usecase.NewQueueStatusUsecase(submissionRepo, redisClient.Client, logger)
 

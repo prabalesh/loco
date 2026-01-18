@@ -257,21 +257,36 @@ func (u *SubmissionUsecase) evaluateSubmission(submission *domain.Submission, pr
 	// 5. Check Achievements
 	// Run achievement checks asynchronously to avoid blocking
 	go func() {
-		// Fetch basic stats
-		count, err := u.submissionRepo.CountAcceptedByUser(submission.UserID)
-		if err != nil {
-			u.logger.Error("Failed to count accepted submissions", zap.Error(err))
-			return
-		}
+		// Fetch comprehensive stats
 		totalSolved, err := u.submissionRepo.CountProblemsSolvedByUser(submission.UserID)
 		if err != nil {
 			u.logger.Error("Failed to count solved problems", zap.Error(err))
 			return
 		}
 
+		totalAccepted, err := u.submissionRepo.CountAcceptedByUser(submission.UserID)
+		if err != nil {
+			u.logger.Error("Failed to count accepted submissions", zap.Error(err))
+			return
+		}
+
+		streak, err := u.submissionRepo.GetCurrentStreak(submission.UserID)
+		if err != nil {
+			u.logger.Error("Failed to get current streak", zap.Error(err))
+			// Continue with 0 streak
+		}
+
+		distribution, err := u.submissionRepo.GetSolvedDistribution(submission.UserID)
+		if err != nil {
+			u.logger.Error("Failed to get solved distribution", zap.Error(err))
+			// Continue with empty distribution
+		}
+
 		stats := &domain.UserStats{
-			AcceptedSubmissions: int(count),
+			AcceptedSubmissions: int(totalAccepted),
 			ProblemsSolved:      int(totalSolved),
+			Streak:              streak,
+			SolvedDistribution:  distribution,
 		}
 
 		if err := u.achievementUsecase.EvaluateSubmissionAchievements(submission, stats); err != nil {

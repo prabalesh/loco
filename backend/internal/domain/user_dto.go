@@ -30,11 +30,13 @@ type UserProfileResponse struct {
 }
 
 type UserStats struct {
-	TotalSubmissions    int     `json:"total_submissions"`
-	AcceptedSubmissions int     `json:"accepted_submissions"`
-	ProblemsSolved      int     `json:"problems_solved"`
-	AcceptanceRate      float64 `json:"acceptance_rate"`
-	Rank                int     `json:"rank"`
+	TotalSubmissions    int              `json:"total_submissions"`
+	AcceptedSubmissions int              `json:"accepted_submissions"`
+	ProblemsSolved      int              `json:"problems_solved"`
+	AcceptanceRate      float64          `json:"acceptance_rate"`
+	Rank                int              `json:"rank"`
+	Streak              int              `json:"streak"`
+	SolvedDistribution  []DifficultyStat `json:"solved_distribution"`
 }
 
 type DifficultyStat struct {

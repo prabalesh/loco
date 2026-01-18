@@ -263,3 +263,42 @@ func (r *submissionRepository) GetSubmissionHeatmap(userID int) ([]domain.Heatma
 	err := r.db.DB.Raw(query, userID).Scan(&heatmap).Error
 	return heatmap, err
 }
+
+func (r *submissionRepository) GetCurrentStreak(userID int) (int, error) {
+	var dates []time.Time
+	query := `
+		SELECT DISTINCT DATE_TRUNC('day', created_at) as day
+		FROM submissions
+		WHERE user_id = ? AND is_admin_submission = false
+		ORDER BY day DESC
+	`
+	err := r.db.DB.Raw(query, userID).Scan(&dates).Error
+	if err != nil {
+		return 0, err
+	}
+
+	if len(dates) == 0 {
+		return 0, nil
+	}
+
+	streak := 0
+	now := time.Now().Truncate(24 * time.Hour)
+	lastDate := dates[0].Truncate(24 * time.Hour)
+
+	// Check if the last submission was today or yesterday
+	if lastDate.Equal(now) || lastDate.Equal(now.AddDate(0, 0, -1)) {
+		streak = 1
+		for i := 1; i < len(dates); i++ {
+			prevDate := dates[i-1].Truncate(24 * time.Hour)
+			currDate := dates[i].Truncate(24 * time.Hour)
+
+			if prevDate.AddDate(0, 0, -1).Equal(currDate) {
+				streak++
+			} else {
+				break
+			}
+		}
+	}
+
+	return streak, nil
+}

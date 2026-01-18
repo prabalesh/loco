@@ -10,17 +10,23 @@ import (
 type AchievementUsecase struct {
 	achievementRepo domain.AchievementRepository
 	userRepo        domain.UserRepository
+	submissionRepo  domain.SubmissionRepository
+	problemRepo     domain.ProblemRepository
 	logger          *zap.Logger
 }
 
 func NewAchievementUsecase(
 	achievementRepo domain.AchievementRepository,
 	userRepo domain.UserRepository,
+	submissionRepo domain.SubmissionRepository,
+	problemRepo domain.ProblemRepository,
 	logger *zap.Logger,
 ) *AchievementUsecase {
 	return &AchievementUsecase{
 		achievementRepo: achievementRepo,
 		userRepo:        userRepo,
+		submissionRepo:  submissionRepo,
+		problemRepo:     problemRepo,
 		logger:          logger,
 	}
 }
@@ -82,19 +88,49 @@ func (u *AchievementUsecase) EvaluateSubmissionAchievements(submission *domain.S
 			u.logger.Error("Failed to unlock first-blood", zap.Error(err))
 		}
 
-		// One Shot (First attempt is AC)
-		if submission.TotalTestCases > 0 && submission.PassedTestCases == submission.TotalTestCases {
-			// Logic for One Shot would require checking previous submissions for this problem
+		// Problem Solving counts (Solver I-X)
+		solverSlugs := []string{"solver-i", "solver-ii", "solver-iii", "solver-iv", "solver-v", "solver-vi", "solver-vii", "solver-viii", "solver-ix", "solver-x"}
+		solverCounts := []int{1, 10, 25, 50, 100, 200, 300, 400, 500, 1000}
+		for i, count := range solverCounts {
+			if stats.ProblemsSolved >= count {
+				_ = u.CheckAndUnlock(userID, solverSlugs[i])
+			}
 		}
 
-		// Count based achievements
-		if stats.ProblemsSolved >= 1 {
-			_ = u.CheckAndUnlock(userID, "solver-i")
+		// Difficulty based (Easy Peasy, Medium Well, Hard Core)
+		for _, dist := range stats.SolvedDistribution {
+			var slugs []string
+			var counts []int
+			switch dist.Difficulty {
+			case "Easy":
+				slugs = []string{"easy-peasy-i", "easy-peasy-ii", "easy-peasy-iii", "easy-peasy-iv", "easy-peasy-v"}
+				counts = []int{10, 50, 100, 200, 500}
+			case "Medium":
+				slugs = []string{"medium-well-i", "medium-well-ii", "medium-well-iii", "medium-well-iv", "medium-well-v"}
+				counts = []int{10, 50, 100, 200, 500}
+			case "Hard":
+				slugs = []string{"hard-core-i", "hard-core-ii", "hard-core-iii", "hard-core-iv", "hard-core-v"}
+				counts = []int{10, 50, 100, 200, 500}
+			}
+
+			for i, count := range counts {
+				if dist.Count >= count {
+					_ = u.CheckAndUnlock(userID, slugs[i])
+				}
+			}
 		}
-		if stats.ProblemsSolved >= 10 {
-			_ = u.CheckAndUnlock(userID, "solver-ii")
+
+		// One Shot (Solved on first attempt)
+		attempts, err := u.submissionRepo.CountByUserProblem(userID, submission.ProblemID)
+		if err == nil && attempts == 1 {
+			_ = u.CheckAndUnlock(userID, "one-shot")
 		}
-		// ... maps to other counts
+
+		// Persistence (Solved after 10+ attempts)
+		// We subtract 1 because the current successful submission is included
+		if err == nil && (attempts-1) >= 10 {
+			_ = u.CheckAndUnlock(userID, "persistence")
+		}
 
 	} else if submission.Status == domain.SubmissionStatusWrongAnswer {
 		_ = u.CheckAndUnlock(userID, "bug-hunter")
@@ -102,6 +138,15 @@ func (u *AchievementUsecase) EvaluateSubmissionAchievements(submission *domain.S
 		_ = u.CheckAndUnlock(userID, "speed-demon")
 	} else if submission.Status == domain.SubmissionStatusMemoryLimitExceeded {
 		_ = u.CheckAndUnlock(userID, "memory-leak")
+	}
+
+	// 3. Streak based
+	streakSlugs := []string{"getting-serious", "weekly-warrior", "fortnight-fighter", "monthly-master", "century-club", "year-of-code"}
+	streakValues := []int{3, 7, 14, 30, 100, 365}
+	for i, val := range streakValues {
+		if stats.Streak >= val {
+			_ = u.CheckAndUnlock(userID, streakSlugs[i])
+		}
 	}
 
 	return nil
