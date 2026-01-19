@@ -12,16 +12,24 @@ import (
 )
 
 const (
-	SubmissionQueueName = "submission:queue"
-	QueueTimeout        = 0 // 0 means block indefinitely
+	SubmissionQueueName  = "submission:queue"
+	AchievementQueueName = "achievement:queue"
+	QueueTimeout         = 0 // 0 means block indefinitely
 )
 
 type JobQueue interface {
 	EnqueueSubmission(ctx context.Context, submissionID int) error
 	DequeueSubmission(ctx context.Context) (*SubmissionJob, error)
+	EnqueueAchievement(ctx context.Context, submissionID int) error
+	DequeueAchievement(ctx context.Context) (*AchievementJob, error)
 }
 
 type SubmissionJob struct {
+	SubmissionID int       `json:"submission_id"`
+	EnqueuedAt   time.Time `json:"enqueued_at"`
+}
+
+type AchievementJob struct {
 	SubmissionID int       `json:"submission_id"`
 	EnqueuedAt   time.Time `json:"enqueued_at"`
 }
@@ -88,6 +96,60 @@ func (q *jobQueue) DequeueSubmission(ctx context.Context) (*SubmissionJob, error
 	}
 
 	q.logger.Debug("Submission dequeued successfully",
+		zap.Int("submission_id", job.SubmissionID),
+	)
+
+	return &job, nil
+}
+
+// EnqueueAchievement pushes an achievement evaluation job to the Redis queue
+func (q *jobQueue) EnqueueAchievement(ctx context.Context, submissionID int) error {
+	job := AchievementJob{
+		SubmissionID: submissionID,
+		EnqueuedAt:   time.Now(),
+	}
+
+	jobData, err := json.Marshal(job)
+	if err != nil {
+		q.logger.Error("Failed to marshal achievement job", zap.Error(err), zap.Int("submission_id", submissionID))
+		return fmt.Errorf("failed to marshal job: %w", err)
+	}
+
+	if err := q.redis.Client.LPush(ctx, AchievementQueueName, jobData).Err(); err != nil {
+		q.logger.Error("Failed to enqueue achievement job", zap.Error(err), zap.Int("submission_id", submissionID))
+		return fmt.Errorf("failed to enqueue achievement: %w", err)
+	}
+
+	q.logger.Info("Achievement job enqueued successfully",
+		zap.Int("submission_id", submissionID),
+		zap.String("queue", AchievementQueueName),
+	)
+
+	return nil
+}
+
+// DequeueAchievement pulls an achievement job from the Redis queue using BRPOP (blocking)
+func (q *jobQueue) DequeueAchievement(ctx context.Context) (*AchievementJob, error) {
+	result, err := q.redis.Client.BRPop(ctx, time.Duration(QueueTimeout)*time.Second, AchievementQueueName).Result()
+	if err != nil {
+		if err == goredis.Nil {
+			return nil, nil
+		}
+		q.logger.Error("Failed to dequeue achievement job", zap.Error(err))
+		return nil, fmt.Errorf("failed to dequeue achievement: %w", err)
+	}
+
+	if len(result) < 2 {
+		return nil, fmt.Errorf("invalid queue result format")
+	}
+
+	var job AchievementJob
+	if err := json.Unmarshal([]byte(result[1]), &job); err != nil {
+		q.logger.Error("Failed to unmarshal achievement job", zap.Error(err))
+		return nil, fmt.Errorf("failed to unmarshal job: %w", err)
+	}
+
+	q.logger.Debug("Achievement job dequeued successfully",
 		zap.Int("submission_id", job.SubmissionID),
 	)
 

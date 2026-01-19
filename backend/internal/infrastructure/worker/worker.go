@@ -425,6 +425,14 @@ func (w *Worker) updateProblemAndUserStats(submission *domain.Submission, finalS
 			w.logger.Error("Failed to update user problem stats", zap.Error(err))
 		}
 	}
+
+	// 3. Trigger achievement evaluation
+	if err := w.queue.EnqueueAchievement(context.Background(), submission.ID); err != nil {
+		w.logger.Error("Failed to enqueue achievement job",
+			zap.Error(err),
+			zap.Int("submission_id", submission.ID),
+		)
+	}
 }
 
 func (w *Worker) updateSubmissionResult(submission *domain.Submission, status domain.SubmissionStatus, errorMsg string) {

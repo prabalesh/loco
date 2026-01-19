@@ -12,6 +12,7 @@ import (
 	"github.com/prabalesh/loco/backend/internal/infrastructure/queue"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/worker"
 	"github.com/prabalesh/loco/backend/internal/repository/postgres"
+	"github.com/prabalesh/loco/backend/internal/usecase"
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/prabalesh/loco/backend/pkg/database"
 	"github.com/prabalesh/loco/backend/pkg/logger"
@@ -61,10 +62,20 @@ func main() {
 	languageRepo := postgres.NewLanguageRepository(db)
 	problemLanguageRepo := postgres.NewProblemLanguageRepository(db)
 	userProblemStatsRepo := postgres.NewUserProblemStatsRepository(db)
+	achievementRepo := postgres.NewAchievementRepository(db)
+	userRepo := postgres.NewUserRepository(db)
 
 	// 6. Initialize Services
 	pistonService := piston.NewPistonService(cfg, loggers)
 	jobQueue := queue.NewJobQueue(redisClient, loggers)
+
+	achievementUsecase := usecase.NewAchievementUsecase(
+		achievementRepo,
+		userRepo,
+		submissionRepo,
+		problemRepo,
+		loggers,
+	)
 
 	// 7. Initialize Worker
 	submissionWorker := worker.NewWorker(
@@ -81,12 +92,23 @@ func main() {
 		cfg,
 	)
 
+	achievementWorker := worker.NewAchievementWorker(
+		jobQueue,
+		achievementUsecase,
+		submissionRepo,
+		loggers,
+	)
+
 	// 8. Start Worker
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	go func() {
 		submissionWorker.Start(ctx)
+	}()
+
+	go func() {
+		achievementWorker.Start(ctx)
 	}()
 
 	// Graceful shutdown
@@ -96,6 +118,7 @@ func main() {
 	<-sigChan
 	loggers.Info("Shutting down worker...")
 	submissionWorker.Stop()
+	achievementWorker.Stop()
 	cancel()
 	loggers.Info("Worker stopped")
 }

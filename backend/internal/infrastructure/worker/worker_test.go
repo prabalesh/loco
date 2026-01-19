@@ -23,6 +23,15 @@ func (m *mockQueue) DequeueSubmission(ctx context.Context) (*queue.SubmissionJob
 	return nil, nil
 }
 
+func (m *mockQueue) EnqueueAchievement(ctx context.Context, submissionID int) error {
+	return nil
+}
+
+func (m *mockQueue) DequeueAchievement(ctx context.Context) (*queue.AchievementJob, error) {
+	<-ctx.Done()
+	return nil, nil
+}
+
 func TestWorkerHeartbeat(t *testing.T) {
 	// Start miniredis
 	s, err := miniredis.Run()
