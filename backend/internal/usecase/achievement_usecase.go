@@ -1,17 +1,23 @@
 package usecase
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/pkg/redis"
 	"go.uber.org/zap"
 )
+
+const EventAchievementUnlocked = "achievement_unlocked"
 
 type AchievementUsecase struct {
 	achievementRepo domain.AchievementRepository
 	userRepo        domain.UserRepository
 	submissionRepo  domain.SubmissionRepository
 	problemRepo     domain.ProblemRepository
+	redis           *redis.RedisClient
 	logger          *zap.Logger
 }
 
@@ -20,6 +26,7 @@ func NewAchievementUsecase(
 	userRepo domain.UserRepository,
 	submissionRepo domain.SubmissionRepository,
 	problemRepo domain.ProblemRepository,
+	redis *redis.RedisClient,
 	logger *zap.Logger,
 ) *AchievementUsecase {
 	return &AchievementUsecase{
@@ -27,6 +34,7 @@ func NewAchievementUsecase(
 		userRepo:        userRepo,
 		submissionRepo:  submissionRepo,
 		problemRepo:     problemRepo,
+		redis:           redis,
 		logger:          logger,
 	}
 }
@@ -66,11 +74,30 @@ func (u *AchievementUsecase) CheckAndUnlock(userID int, slug string) error {
 		return err
 	}
 
-	u.logger.Info("Achievement unlocked",
+	u.logger.Info("Achievement unlocked and publishing to Redis",
 		zap.Int("user_id", userID),
 		zap.String("slug", slug),
 		zap.Int("xp_awarded", achievement.XPReward),
 	)
+
+	// 4. Publish Event for Real-time Notification
+	event := domain.NotificationEvent{
+		Type: domain.EventAchievementUnlocked,
+		Data: domain.AchievementUnlockedEvent{
+			UserID:        userID,
+			AchievementID: achievement.ID,
+			Slug:          achievement.Slug,
+			Name:          achievement.Name,
+			Description:   achievement.Description,
+			XPReward:      achievement.XPReward,
+			IconURL:       achievement.IconURL,
+		},
+	}
+
+	payload, _ := json.Marshal(event)
+	if err := u.redis.Client.Publish(context.Background(), domain.AchievementEventChannel, payload).Err(); err != nil {
+		u.logger.Error("Failed to publish achievement event", zap.Error(err))
+	}
 
 	return nil
 }

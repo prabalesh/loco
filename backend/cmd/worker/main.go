@@ -74,6 +74,7 @@ func main() {
 		userRepo,
 		submissionRepo,
 		problemRepo,
+		redisClient,
 		loggers,
 	)
 

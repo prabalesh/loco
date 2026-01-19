@@ -59,9 +59,10 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	problemUsecase := usecase.NewProblemUsecase(problemRepo, testCaseRepo, userProblemStatsRepo, tagRepo, categoryRepo, cfg, logger)
 	languageUsecase := usecase.NewLanguageUsecase(languageRepo, cfg, logger)
 	testCaseUsecase := usecase.NewTestCaseUsecase(testCaseRepo, problemRepo, cfg, logger)
-	achievementUsecase := usecase.NewAchievementUsecase(achievementRepo, userRepo, submissionRepo, problemRepo, logger)
+	achievementUsecase := usecase.NewAchievementUsecase(achievementRepo, userRepo, submissionRepo, problemRepo, redisClient, logger)
 	submissionUsecase := usecase.NewSubmissionUsecase(submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, pistonService, jobQueue, achievementUsecase, cfg, logger)
 	queueStatusUsecase := usecase.NewQueueStatusUsecase(submissionRepo, redisClient.Client, logger)
+	notificationUsecase := usecase.NewNotificationUsecase(redisClient, logger)
 
 	// Worker
 	submissionWorker := worker.NewWorker(jobQueue, submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, pistonService, userProblemStatsRepo, logger, redisClient.Client, cfg)
@@ -79,6 +80,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	leaderboardUsecase := usecase.NewLeaderboardUsecase(userRepo, logger)
 	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardUsecase, logger)
 	achievementHandler := handler.NewAchievementHandler(achievementUsecase, userUsecase, logger)
+	notificationHandler := handler.NewNotificationHandler(notificationUsecase, logger)
 
 	// Middleware
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(redisClient.Client, logger, &cfg.RateLimit)
@@ -101,6 +103,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 		QueueHandler:        queueHandler,
 		LeaderboardHandler:  leaderboardHandler,
 		AchievementHandler:  achievementHandler,
+		NotificationHandler: notificationHandler,
 		RateLimit:           rateLimitMiddleware,
 		SubmissionRateLimit: submissionRateLimitMiddleware,
 		RunCodeRateLimit:    runCodeRateLimitMiddleware,

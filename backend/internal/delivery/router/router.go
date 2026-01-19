@@ -33,8 +33,9 @@ type Dependencies struct {
 	SubmissionRateLimit *middleware.RateLimitMiddleware
 	RunCodeRateLimit    *middleware.RateLimitMiddleware
 
-	LeaderboardHandler *handler.LeaderboardHandler
-	AchievementHandler *handler.AchievementHandler
+	LeaderboardHandler  *handler.LeaderboardHandler
+	AchievementHandler  *handler.AchievementHandler
+	NotificationHandler *handler.NotificationHandler
 }
 
 func SetupRouter(deps *Dependencies) http.Handler {
@@ -94,6 +95,9 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	mux.HandleFunc("GET /achievements", deps.AchievementHandler.List)
 	mux.HandleFunc("GET /users/{username}/achievements", deps.AchievementHandler.GetUserAchievements)
 	mux.Handle("GET /users/me/achievements", authMiddleware(http.HandlerFunc(deps.AchievementHandler.GetMyAchievements)))
+
+	// ========== NOTIFICATION ROUTES ==========
+	mux.Handle("GET /notifications/stream", authMiddleware(http.HandlerFunc(deps.NotificationHandler.Stream)))
 
 	// ========== ADMIN ROUTES ==========
 	adminAuthMiddleware := middleware.RequireAdminAuth(deps.JWTService, deps.Log)
