@@ -40,7 +40,7 @@ ChartJS.register(
   Filler
 )
 
-import { Skeleton, Grid, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip } from '@mui/material'
+import { Skeleton, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip } from '@mui/material'
 
 const DashboardSkeleton = () => (
   <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-8">
@@ -56,29 +56,29 @@ const DashboardSkeleton = () => (
       </div>
     </Box>
 
-    <Grid container spacing={3}>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {[1, 2, 3, 4].map((i) => (
-        <Grid item xs={12} md={6} lg={3} key={i}>
+        <div key={i} className="col-span-1">
           <Box className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-white/50 shadow-2xl h-44">
             <Skeleton variant="rounded" width={64} height={64} className="rounded-2xl mb-6" />
             <Skeleton variant="text" width="60%" />
           </Box>
-        </Grid>
+        </div>
       ))}
-    </Grid>
+    </div>
 
-    <Grid container spacing={3} className="mt-10">
-      <Grid item xs={12} lg={8}>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-10">
+      <div className="lg:col-span-2">
         <Box className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-white/50 shadow-2xl h-[450px]">
           <Skeleton variant="rectangular" width="100%" height="100%" className="rounded-xl" />
         </Box>
-      </Grid>
-      <Grid item xs={12} lg={4}>
+      </div>
+      <div className="lg:col-span-1">
         <Box className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-white/50 shadow-2xl h-[450px]">
           <Skeleton variant="rectangular" width="100%" height="100%" className="rounded-xl" />
         </Box>
-      </Grid>
-    </Grid>
+      </div>
+    </div>
   </div>
 )
 
