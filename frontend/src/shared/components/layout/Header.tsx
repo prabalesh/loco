@@ -20,8 +20,8 @@ export const Header = () => {
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link 
-            to={ROUTES.HOME} 
+          <Link
+            to={ROUTES.HOME}
             className="flex items-center space-x-2 hover:opacity-80 transition-opacity z-50"
             onClick={closeMobileMenu}
           >
@@ -110,9 +110,8 @@ export const Header = () => {
 
         {/* Mobile Menu */}
         <div
-          className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
-            mobileMenuOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
-          }`}
+          className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileMenuOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
+            }`}
         >
           <div className="py-4 space-y-2 border-t border-gray-200">
             {/* Mobile Navigation Links */}
@@ -168,8 +167,8 @@ export const Header = () => {
                 </>
               ) : (
                 <div className="space-y-2 px-4">
-                  <Link 
-                    to={ROUTES.LOGIN} 
+                  <Link
+                    to={ROUTES.LOGIN}
                     className="block"
                     onClick={closeMobileMenu}
                   >
@@ -177,8 +176,8 @@ export const Header = () => {
                       Login
                     </Button>
                   </Link>
-                  <Link 
-                    to={ROUTES.REGISTER} 
+                  <Link
+                    to={ROUTES.REGISTER}
                     className="block"
                     onClick={closeMobileMenu}
                   >

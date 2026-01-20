@@ -19,6 +19,7 @@ type UserResponse struct {
 type UserProfileResponse struct {
 	ID                 int              `json:"id"`
 	Username           string           `json:"username"`
+	Email              string           `json:"email"`
 	IsVerified         bool             `json:"is_verified"`
 	CreatedAt          time.Time        `json:"created_at"`
 	XP                 int              `json:"xp"`

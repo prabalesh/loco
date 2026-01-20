@@ -306,9 +306,8 @@ export const ProfilePage = () => {
               {[
                 { label: 'Username', value: user.username, icon: User },
                 { label: 'Email', value: user.email, icon: Mail },
-                { label: 'Role', value: user.role, icon: Shield, capitalize: true },
                 { label: 'Member Since', value: formatDistanceToNow(new Date(user.created_at), { addSuffix: true }), icon: Calendar },
-                { label: 'Email Verified', value: user.email_verified ? 'Yes' : 'No', icon: CheckCircle2, success: user.email_verified, error: !user.email_verified }
+                { label: 'Email Verified', value: user.is_verified ? 'Yes' : 'No', icon: CheckCircle2, success: user.is_verified, error: !user.is_verified }
               ].map((item, idx) => (
                 <div key={item.label} className={`flex items-center justify-between py-4 ${idx !== 4 ? 'border-b border-gray-100' : ''}`}>
                   <div className="flex items-center space-x-4">
@@ -317,7 +316,7 @@ export const ProfilePage = () => {
                     </div>
                     <span className="font-bold text-gray-500 uppercase tracking-tight text-sm">{item.label}</span>
                   </div>
-                  <span className={`font-black text-gray-900 ${item.capitalize ? 'capitalize' : ''} ${item.success ? 'text-emerald-600' : item.error ? 'text-rose-600' : ''}`}>
+                  <span className={`font-black text-gray-900 ${item.success ? 'text-emerald-600' : item.error ? 'text-rose-600' : ''}`}>
                     {item.value}
                   </span>
                 </div>

@@ -44,6 +44,7 @@ func (u *User) ToUserProfileResponse(stats UserStats, recentProblems []Problem, 
 	return UserProfileResponse{
 		ID:                 u.ID,
 		Username:           u.Username,
+		Email:              u.Email,
 		IsVerified:         u.EmailVerified,
 		CreatedAt:          u.CreatedAt,
 		XP:                 u.XP,

@@ -1,4 +1,4 @@
-import { useEffect, createElement } from 'react'
+import { useEffect, useRef, createElement } from 'react'
 import { toast } from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from './useAuth'
@@ -6,27 +6,44 @@ import { CONFIG } from '../constants/config'
 import { Trophy, ArrowRight } from 'lucide-react'
 
 export function useNotifications() {
-    const { user } = useAuth()
+    const { user, isAuthenticated } = useAuth()
     const navigate = useNavigate()
+    const hasMounted = useRef(false)
 
     useEffect(() => {
-        if (!user) return
+        // Wait for component to fully mount
+        if (!hasMounted.current) {
+            hasMounted.current = true
+            return
+        }
+
+        // Only connect if user is authenticated
+        if (!isAuthenticated || !user) {
+            console.log('Skipping SSE connection: user not authenticated')
+            return
+        }
 
         let eventSource: EventSource | null = null
 
-        // Use a small timeout to avoid "Interrupted while loading" errors in Firefox
-        // and to let the browser stabilize during page reloads.
+        // Small delay to ensure React is fully rendered and stable
         const timer = setTimeout(() => {
             const streamUrl = `${CONFIG.API_BASE_URL}/notifications/stream`
+
+            console.log('Establishing SSE connection...')
+            console.log('Current origin:', window.location.origin)
+            console.log('Target URL:', streamUrl)
+            console.log('Authenticated user:', user.username || user.email)
+
             eventSource = new EventSource(streamUrl, { withCredentials: true })
 
             eventSource.onopen = () => {
-                console.log('SSE connection established to:', streamUrl)
+                console.log('✅ SSE connection established to:', streamUrl)
             }
 
             eventSource.onmessage = (event) => {
                 try {
                     const notification = JSON.parse(event.data)
+                    console.log('Received notification:', notification)
 
                     if (notification.type === 'achievement_unlocked') {
                         const achievement = notification.data
@@ -82,14 +99,17 @@ export function useNotifications() {
 
             eventSource.onerror = (err) => {
                 console.error('SSE connection error:', err)
+                console.log('ReadyState:', eventSource?.readyState)
+                console.log('Check Network tab for CORS headers')
             }
-        }, 500)
+        }, 1000) // Increased to 1 second for more stability
 
         return () => {
             clearTimeout(timer)
             if (eventSource) {
-                (eventSource as EventSource).close()
+                console.log('Closing SSE connection')
+                eventSource.close()
             }
         }
-    }, [user])
+    }, [user, isAuthenticated, navigate])
 }
