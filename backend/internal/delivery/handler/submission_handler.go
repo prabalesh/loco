@@ -7,6 +7,7 @@ import (
 
 	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/dto"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"go.uber.org/zap"
 )
@@ -50,7 +51,7 @@ func (h *SubmissionHandler) Submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RespondJSON(w, http.StatusCreated, submission)
+	RespondJSON(w, http.StatusCreated, dto.ToSubmissionResponse(submission))
 }
 
 func (h *SubmissionHandler) GetSubmission(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +69,17 @@ func (h *SubmissionHandler) GetSubmission(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	RespondJSON(w, http.StatusOK, submission)
+	// Sanitize Results (Hide hidden test cases)
+	isAdmin := false
+	if role, ok := middleware.GetUserRole(r.Context()); ok && role == "admin" {
+		isAdmin = true
+	}
+
+	if !isAdmin {
+		submission.Sanitize()
+	}
+
+	RespondJSON(w, http.StatusOK, dto.ToSubmissionResponse(submission))
 }
 
 func (h *SubmissionHandler) ListUserProblemSubmissions(w http.ResponseWriter, r *http.Request) {
@@ -101,8 +112,25 @@ func (h *SubmissionHandler) ListUserProblemSubmissions(w http.ResponseWriter, r 
 		return
 	}
 
+	// Sanitize Results (Hide hidden test cases)
+	isAdmin := false
+	if role, ok := middleware.GetUserRole(r.Context()); ok && role == "admin" {
+		isAdmin = true
+	}
+
+	if !isAdmin {
+		for i := range submissions {
+			submissions[i].Sanitize()
+		}
+	}
+
+	submissionResponses := make([]dto.SubmissionResponse, len(submissions))
+	for i := range submissions {
+		submissionResponses[i] = dto.ToSubmissionResponse(&submissions[i])
+	}
+
 	RespondJSON(w, http.StatusOK, map[string]interface{}{
-		"data":  submissions,
+		"data":  submissionResponses,
 		"total": count,
 		"page":  page,
 		"limit": limit,
@@ -133,8 +161,25 @@ func (h *SubmissionHandler) ListUserSubmissions(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// Sanitize Results (Hide hidden test cases)
+	isAdmin := false
+	if role, ok := middleware.GetUserRole(r.Context()); ok && role == "admin" {
+		isAdmin = true
+	}
+
+	if !isAdmin {
+		for i := range submissions {
+			submissions[i].Sanitize()
+		}
+	}
+
+	submissionResponses := make([]dto.SubmissionResponse, len(submissions))
+	for i := range submissions {
+		submissionResponses[i] = dto.ToSubmissionResponse(&submissions[i])
+	}
+
 	RespondJSON(w, http.StatusOK, map[string]interface{}{
-		"data":  submissions,
+		"data":  submissionResponses,
 		"total": count,
 		"page":  page,
 		"limit": limit,
@@ -171,8 +216,25 @@ func (h *SubmissionHandler) ListAdminUserSubmissions(w http.ResponseWriter, r *h
 		return
 	}
 
+	// Sanitize Results (Hide hidden test cases)
+	isAdmin := false
+	if role, ok := middleware.GetUserRole(r.Context()); ok && role == "admin" {
+		isAdmin = true
+	}
+
+	if !isAdmin {
+		for i := range submissions {
+			submissions[i].Sanitize()
+		}
+	}
+
+	submissionResponses := make([]dto.SubmissionResponse, len(submissions))
+	for i := range submissions {
+		submissionResponses[i] = dto.ToSubmissionResponse(&submissions[i])
+	}
+
 	RespondJSON(w, http.StatusOK, map[string]interface{}{
-		"data":  submissions,
+		"data":  submissionResponses,
 		"total": count,
 		"page":  page,
 		"limit": limit,
@@ -217,7 +279,7 @@ func (h *SubmissionHandler) AdminSubmit(w http.ResponseWriter, r *http.Request) 
 	}
 
 	h.logger.Info("Admin submission created", zap.Int("submission_id", submission.ID), zap.Int("admin_id", adminID))
-	RespondJSON(w, http.StatusCreated, submission)
+	RespondJSON(w, http.StatusCreated, dto.ToSubmissionResponse(submission))
 }
 
 // ListProblemSubmissions lists all submissions for a specific problem (admin only)
@@ -246,8 +308,13 @@ func (h *SubmissionHandler) ListProblemSubmissions(w http.ResponseWriter, r *htt
 		return
 	}
 
+	submissionResponses := make([]dto.SubmissionResponse, len(submissions))
+	for i := range submissions {
+		submissionResponses[i] = dto.ToSubmissionResponse(&submissions[i])
+	}
+
 	RespondJSON(w, http.StatusOK, map[string]interface{}{
-		"data":  submissions,
+		"data":  submissionResponses,
 		"page":  page,
 		"limit": limit,
 	})

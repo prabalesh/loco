@@ -55,7 +55,8 @@ type Submission struct {
 	UserID          int              `json:"user_id" gorm:"not null"`
 	ProblemID       int              `json:"problem_id" gorm:"not null"`
 	LanguageID      int              `json:"language_id" gorm:"not null"`
-	Code            string           `json:"code" gorm:"type:text;not null"`
+	Code            string           `json:"code,omitempty" gorm:"type:text;not null"`
+	FunctionCode    string           `json:"function_code" gorm:"type:text;default:''"`
 	Status          SubmissionStatus `json:"status" gorm:"type:varchar(50);default:'Pending'"`
 	ErrorMessage    string           `json:"error_message,omitempty" gorm:"type:text"` // For compile/runtime errors
 	Runtime         int              `json:"runtime" gorm:"default:0"`                 // in milliseconds
@@ -83,6 +84,16 @@ type Submission struct {
 	Language *Language `json:"language,omitempty" gorm:"foreignKey:LanguageID;references:ID"`
 }
 
+func (s *Submission) Sanitize() {
+	for i := range s.TestCaseResults {
+		if !s.TestCaseResults[i].IsSample {
+			s.TestCaseResults[i].Input = ""
+			s.TestCaseResults[i].ExpectedOutput = ""
+			s.TestCaseResults[i].ActualOutput = ""
+		}
+	}
+}
+
 type CreateSubmissionRequest struct {
 	ProblemID  int    `json:"problem_id" validate:"required"`
 	LanguageID int    `json:"language_id" validate:"required"`
@@ -108,6 +119,16 @@ type RunCodeResult struct {
 	PassedTestCases int              `json:"passed_test_cases"`
 	TotalTestCases  int              `json:"total_test_cases"`
 	Results         []TestCaseResult `json:"results"`
+}
+
+func (r *RunCodeResult) Sanitize() {
+	for i := range r.Results {
+		if !r.Results[i].IsSample {
+			r.Results[i].Input = ""
+			r.Results[i].ExpectedOutput = ""
+			r.Results[i].ActualOutput = ""
+		}
+	}
 }
 
 type RunCodeRequest struct {

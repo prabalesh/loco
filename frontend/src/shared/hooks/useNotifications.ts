@@ -111,5 +111,5 @@ export function useNotifications() {
                 eventSource.close()
             }
         }
-    }, [user, isAuthenticated, navigate])
+    }, [user?.id, isAuthenticated, navigate])
 }

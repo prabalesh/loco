@@ -17,17 +17,18 @@ type UserResponse struct {
 }
 
 type UserProfileResponse struct {
-	ID                 int              `json:"id"`
-	Username           string           `json:"username"`
-	Email              string           `json:"email"`
-	IsVerified         bool             `json:"is_verified"`
-	CreatedAt          time.Time        `json:"created_at"`
-	XP                 int              `json:"xp"`
-	Level              int              `json:"level"`
-	Stats              UserStats        `json:"stats"`
-	RecentProblems     []Problem        `json:"recent_problems"`
-	SubmissionHeatmap  []HeatmapEntry   `json:"submission_heatmap"`
-	SolvedDistribution []DifficultyStat `json:"solved_distribution"`
+	ID                 int               `json:"id"`
+	Username           string            `json:"username"`
+	Email              string            `json:"email"`
+	IsVerified         bool              `json:"is_verified"`
+	CreatedAt          time.Time         `json:"created_at"`
+	XP                 int               `json:"xp"`
+	Level              int               `json:"level"`
+	Stats              UserStats         `json:"stats"`
+	RecentProblems     []Problem         `json:"recent_problems"`
+	SubmissionHeatmap  []HeatmapEntry    `json:"submission_heatmap"`
+	SolvedDistribution []DifficultyStat  `json:"solved_distribution"`
+	Achievements       []UserAchievement `json:"achievements"`
 }
 
 type UserStats struct {

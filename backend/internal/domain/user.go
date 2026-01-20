@@ -40,7 +40,7 @@ func (u *User) ToResponse() UserResponse {
 	}
 }
 
-func (u *User) ToUserProfileResponse(stats UserStats, recentProblems []Problem, heatmap []HeatmapEntry, distribution []DifficultyStat) UserProfileResponse {
+func (u *User) ToUserProfileResponse(stats UserStats, recentProblems []Problem, heatmap []HeatmapEntry, distribution []DifficultyStat, achievements []UserAchievement) UserProfileResponse {
 	return UserProfileResponse{
 		ID:                 u.ID,
 		Username:           u.Username,
@@ -53,5 +53,6 @@ func (u *User) ToUserProfileResponse(stats UserStats, recentProblems []Problem, 
 		RecentProblems:     recentProblems,
 		SubmissionHeatmap:  heatmap,
 		SolvedDistribution: distribution,
+		Achievements:       achievements,
 	}
 }

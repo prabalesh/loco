@@ -8,16 +8,18 @@ import (
 )
 
 type UserUsecase struct {
-	userRepo       domain.UserRepository
-	submissionRepo domain.SubmissionRepository
-	logger         *zap.Logger
+	userRepo        domain.UserRepository
+	submissionRepo  domain.SubmissionRepository
+	achievementRepo domain.AchievementRepository
+	logger          *zap.Logger
 }
 
-func NewUserUsecase(userRepo domain.UserRepository, submissionRepo domain.SubmissionRepository, logger *zap.Logger) *UserUsecase {
+func NewUserUsecase(userRepo domain.UserRepository, submissionRepo domain.SubmissionRepository, achievementRepo domain.AchievementRepository, logger *zap.Logger) *UserUsecase {
 	return &UserUsecase{
-		userRepo:       userRepo,
-		submissionRepo: submissionRepo,
-		logger:         logger,
+		userRepo:        userRepo,
+		submissionRepo:  submissionRepo,
+		achievementRepo: achievementRepo,
+		logger:          logger,
 	}
 }
 
@@ -65,7 +67,14 @@ func (u *UserUsecase) GetUserProfile(userID int) (*domain.UserProfileResponse, e
 		heatmap = []domain.HeatmapEntry{}
 	}
 
-	resp := user.ToUserProfileResponse(stats, recentProblems, heatmap, distribution)
+	// Fetch achievements
+	achievements, err := u.achievementRepo.GetUnlockedByUser(user.ID)
+	if err != nil {
+		u.logger.Error("Failed to get user achievements", zap.Error(err))
+		achievements = []domain.UserAchievement{}
+	}
+
+	resp := user.ToUserProfileResponse(stats, recentProblems, heatmap, distribution, achievements)
 	return &resp, nil
 }
 
@@ -124,7 +133,14 @@ func (u *UserUsecase) GetUserProfileByUsername(username string) (*domain.UserPro
 		heatmap = []domain.HeatmapEntry{}
 	}
 
-	resp := user.ToUserProfileResponse(stats, recentProblems, heatmap, distribution)
+	// Fetch achievements
+	achievements, err := u.achievementRepo.GetUnlockedByUser(user.ID)
+	if err != nil {
+		u.logger.Error("Failed to get user achievements", zap.Error(err))
+		achievements = []domain.UserAchievement{}
+	}
+
+	resp := user.ToUserProfileResponse(stats, recentProblems, heatmap, distribution, achievements)
 	return &resp, nil
 }
 

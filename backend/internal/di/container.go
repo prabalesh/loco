@@ -53,7 +53,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 
 	// Usecases
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtService, emailService, cfg, logger)
-	userUsecase := usecase.NewUserUsecase(userRepo, submissionRepo, logger)
+	userUsecase := usecase.NewUserUsecase(userRepo, submissionRepo, achievementRepo, logger)
 	adminUsecase := usecase.NewAdminUsecase(userRepo, submissionRepo, redisClient.Client, logger)
 	problemLanguageUsecase := usecase.NewProblemLanguageUsecase(problemLanguageRepo, problemRepo, languageRepo, logger)
 	problemUsecase := usecase.NewProblemUsecase(problemRepo, testCaseRepo, userProblemStatsRepo, tagRepo, categoryRepo, cfg, logger)

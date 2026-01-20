@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { XCircle, ChevronLeft } from 'lucide-react'
+import { useAuth } from '@/shared/hooks/useAuth'
 import { problemsApi } from '../api/problems'
 import { submissionsApi, type RunCodeResult } from '../api/submissions'
 import { Button } from '@/shared/components/ui/Button'
@@ -67,7 +68,8 @@ export const ProblemDetailPage = () => {
     const { slug } = useParams<{ slug: string }>()
     const navigate = useNavigate()
     const queryClient = useQueryClient()
-    const [activeTab, setActiveTab] = useState<'description' | 'result' | 'submissions'>('description')
+    const { user } = useAuth()
+    const [activeTab, setActiveTab] = useState<'description' | 'testcase' | 'submissions'>('description')
     const [selectedLang, setSelectedLang] = useState<number | null>(null)
     const [code, setCode] = useState('')
     const [leftWidth, setLeftWidth] = useState(50) // Percentage
@@ -104,19 +106,25 @@ export const ProblemDetailPage = () => {
         if (languages && languages.length > 0) {
             if (!selectedLang) {
                 const firstLang = languages[0]
-                const savedCode = localStorage.getItem(`loco-code-${problem?.id}-${firstLang.language_id}`)
+                const storageKey = user?.id
+                    ? `loco-code-${user.id}-${problem?.id}-${firstLang.language_id}`
+                    : `loco-code-guest-${problem?.id}-${firstLang.language_id}`
+                const savedCode = localStorage.getItem(storageKey)
                 setSelectedLang(firstLang.language_id)
                 setCode(savedCode || firstLang.function_code || '')
             }
         }
-    }, [languages, selectedLang, problem?.id])
+    }, [languages, selectedLang, problem?.id, user?.id])
 
     // Save code to localStorage
     useEffect(() => {
         if (problem?.id && selectedLang && code) {
-            localStorage.setItem(`loco-code-${problem.id}-${selectedLang}`, code)
+            const storageKey = user?.id
+                ? `loco-code-${user.id}-${problem.id}-${selectedLang}`
+                : `loco-code-guest-${problem.id}-${selectedLang}`
+            localStorage.setItem(storageKey, code)
         }
-    }, [code, selectedLang, problem?.id])
+    }, [code, selectedLang, problem?.id, user?.id])
 
     const startResizing = (e: React.MouseEvent) => {
         setIsResizing(true)
@@ -158,7 +166,7 @@ export const ProblemDetailPage = () => {
             submissionsApi.runCode(pId, lId, code).then(res => (res.data as any).data),
         onSuccess: (data: RunCodeResult) => {
             setRunResult(data)
-            setActiveTab('result')
+            setActiveTab('testcase')
             setIsRunning(false)
             if (data.status === 'Accepted') {
                 toast.success('All test cases passed!', { id: 'run-result' })
@@ -179,7 +187,7 @@ export const ProblemDetailPage = () => {
         onSuccess: (data: Submission) => {
             setPollingId(data.id)
             setRunResult(null) // Clear run result when submitting
-            setActiveTab('result')
+            setActiveTab('testcase') // Show testcase tab while evaluation is pending or just for progress
             toast.loading('Evaluating...', { id: 'evaluating' })
         },
         onError: (err: any) => {
@@ -202,9 +210,13 @@ export const ProblemDetailPage = () => {
                 }
                 setPollingId(null)
                 queryClient.invalidateQueries({ queryKey: ['user-submissions'] })
+                // Switch to submissions tab after successful evaluation
+                setActiveTab('submissions')
+                // Automatically view the submission result
+                handleViewSubmission(query.state.data as Submission)
                 return false
             }
-            return 3000 // Increased from 1000ms to 3000ms
+            return 3000
         }
     })
 
@@ -219,7 +231,10 @@ export const ProblemDetailPage = () => {
         const lang = languages?.find((l: ProblemLanguage) => l.language_id === langId)
         if (lang) {
             setSelectedLang(langId)
-            const savedCode = localStorage.getItem(`loco-code-${problem?.id}-${langId}`)
+            const storageKey = user?.id
+                ? `loco-code-${user.id}-${problem?.id}-${langId}`
+                : `loco-code-guest-${problem?.id}-${langId}`
+            const savedCode = localStorage.getItem(storageKey)
             setCode(savedCode || lang.function_code || '')
             toast.success(`Switched to ${lang.language_name}`, { duration: 2000 })
         }
@@ -282,17 +297,20 @@ export const ProblemDetailPage = () => {
                 isSubmitting={submitMutation.isPending || runCodeMutation.isPending || !!pollingId || isRunning}
             />
 
-            <main className="flex-1 flex overflow-hidden relative">
+            <main className="flex-1 flex flex-col md:flex-row overflow-visible md:overflow-hidden relative">
                 {/* Left Section: Context */}
                 <section
-                    className="flex flex-col border-r border-gray-200 bg-white shadow-sm overflow-hidden"
-                    style={{ width: `${leftWidth}%` }}
+                    className="flex flex-col border-b md:border-b-0 md:border-r border-gray-200 bg-white shadow-sm overflow-hidden transition-all duration-300"
+                    style={{
+                        width: window.innerWidth >= 768 ? `${leftWidth}%` : '100%',
+                        height: window.innerWidth >= 768 ? '100%' : '40%'
+                    }}
                 >
                     <ProblemTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-                    <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
                         {activeTab === 'description' && <DescriptionTab problem={problem} />}
-                        {activeTab === 'result' && (
+                        {activeTab === 'testcase' && (
                             <ResultTab
                                 submissionResult={submissionResult}
                                 pollingId={pollingId}
@@ -311,15 +329,15 @@ export const ProblemDetailPage = () => {
                     </div>
                 </section>
 
-                {/* Resize Handle */}
+                {/* Resize Handle - Hidden on Mobile */}
                 <div
                     onMouseDown={startResizing}
-                    className={`w-1 hover:w-1.5 transition-all cursor-col-resize bg-gray-200 hover:bg-blue-400 z-50 flex items-center justify-center ${isResizing ? 'bg-blue-500 w-1.5' : ''
+                    className={`hidden md:flex w-1 hover:w-1.5 transition-all cursor-col-resize bg-gray-200 hover:bg-blue-400 z-50 items-center justify-center ${isResizing ? 'bg-blue-500 w-1.5' : ''
                         }`}
                 />
 
                 {/* Right Section: Code Editor */}
-                <div className="flex-1 flex flex-col min-w-0">
+                <div className="flex-1 flex flex-col min-w-0 z-10 relative">
                     <CodeEditor
                         languages={languages}
                         selectedLang={selectedLang}

@@ -76,6 +76,7 @@ export interface Submission {
     problem?: Problem
     status: SubmissionStatus
     code: string
+    function_code: string
     error_message?: string
     runtime: number
     memory: number

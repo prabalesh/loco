@@ -186,6 +186,62 @@ export const ProfilePage = () => {
                             <StatsHeatmap data={profile.submission_heatmap} />
                         </Card>
 
+                        {/* Achievements Section */}
+                        <Card className="p-8 border-0 shadow-xl shadow-gray-200/30 rounded-[2.5rem] bg-white">
+                            <div className="flex items-center justify-between mb-8">
+                                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                                    <Trophy className="h-6 w-6 text-amber-500" />
+                                    Achievements
+                                </h2>
+                                <span className="px-4 py-1.5 bg-gray-50 text-gray-500 rounded-xl text-sm font-bold">
+                                    {profile.achievements?.length || 0} Unlocked
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {profile.achievements && profile.achievements.length > 0 ? (
+                                    profile.achievements.map((ua, index) => (
+                                        <motion.div
+                                            key={ua.id}
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ delay: index * 0.05 }}
+                                            className="group relative p-4 bg-gradient-to-br from-gray-50 to-white rounded-2xl border border-gray-100 hover:border-amber-200 hover:shadow-lg transition-all"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-12 w-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform">
+                                                    {ua.achievement.icon_url ? (
+                                                        <img src={ua.achievement.icon_url} alt={ua.achievement.name} className="h-8 w-8 object-contain" />
+                                                    ) : (
+                                                        <Trophy className="h-6 w-6" />
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="font-bold text-gray-900 group-hover:text-amber-700 transition-colors truncate">
+                                                        {ua.achievement.name}
+                                                    </h4>
+                                                    <p className="text-xs text-gray-500 line-clamp-1">{ua.achievement.description}</p>
+                                                </div>
+                                            </div>
+                                            <div className="mt-3 flex items-center justify-between border-t border-gray-50 pt-3">
+                                                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                                    +{ua.achievement.xp_reward} XP
+                                                </span>
+                                                <span className="text-[10px] text-gray-400 font-medium">
+                                                    {format(new Date(ua.unlocked_at), 'MMM d, yyyy')}
+                                                </span>
+                                            </div>
+                                        </motion.div>
+                                    ))
+                                ) : (
+                                    <div className="col-span-full py-10 text-center text-gray-400 bg-gray-50/50 rounded-2xl border-2 border-dashed border-gray-100">
+                                        <Trophy className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                                        <p className="font-medium">No achievements unlocked yet</p>
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
+
                         {/* Recent Activity placeholder or Solved Problems */}
                         <Card className="p-8 border-0 shadow-xl shadow-gray-200/30 rounded-[2.5rem] bg-white">
                             <div className="flex items-center justify-between mb-8">

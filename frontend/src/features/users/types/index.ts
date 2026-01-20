@@ -18,6 +18,22 @@ export interface HeatmapEntry {
     count: number
 }
 
+export interface Achievement {
+    id: number
+    slug: string
+    name: string
+    description: string
+    icon_url: string
+    xp_reward: number
+    category: string
+}
+
+export interface UserAchievement {
+    id: number
+    unlocked_at: string
+    achievement: Achievement
+}
+
 export interface UserProfile {
     id: number
     username: string
@@ -27,4 +43,5 @@ export interface UserProfile {
     recent_problems: Problem[]
     submission_heatmap: HeatmapEntry[]
     solved_distribution: DifficultyStat[]
+    achievements: UserAchievement[]
 }

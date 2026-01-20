@@ -1,4 +1,5 @@
 import { RouterProvider } from 'react-router-dom'
+import { LazyMotion, domAnimation } from 'framer-motion'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { Toaster } from 'react-hot-toast'
@@ -23,7 +24,9 @@ export const App = () => {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <AppContent />
+        <LazyMotion features={domAnimation}>
+          <AppContent />
+        </LazyMotion>
         <Toaster
           position="top-right"
           toastOptions={{

@@ -2,8 +2,8 @@ import { motion } from 'framer-motion'
 import { FileText, Trophy, History } from 'lucide-react'
 
 interface ProblemTabsProps {
-    activeTab: 'description' | 'result' | 'submissions'
-    onTabChange: (tab: 'description' | 'result' | 'submissions') => void
+    activeTab: 'description' | 'testcase' | 'submissions'
+    onTabChange: (tab: 'description' | 'testcase' | 'submissions') => void
 }
 
 export const ProblemTabs = ({ activeTab, onTabChange }: ProblemTabsProps) => {
@@ -16,10 +16,10 @@ export const ProblemTabs = ({ activeTab, onTabChange }: ProblemTabsProps) => {
                 label="Description"
             />
             <TabButton
-                active={activeTab === 'result'}
-                onClick={() => onTabChange('result')}
+                active={activeTab === 'testcase'}
+                onClick={() => onTabChange('testcase')}
                 icon={<Trophy className="h-4 w-4" />}
-                label="Result"
+                label="Testcase"
             />
             <TabButton
                 active={activeTab === 'submissions'}
@@ -31,26 +31,25 @@ export const ProblemTabs = ({ activeTab, onTabChange }: ProblemTabsProps) => {
     )
 }
 
-const TabButton = ({ 
-    active, 
-    onClick, 
-    icon, 
-    label 
-}: { 
+const TabButton = ({
+    active,
+    onClick,
+    icon,
+    label
+}: {
     active: boolean
     onClick: () => void
     icon: React.ReactNode
-    label: string 
+    label: string
 }) => (
     <button
         onClick={onClick}
-        className={`flex items-center gap-2 px-6 py-3.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 relative ${
-            active 
-                ? 'text-blue-600 bg-gradient-to-b from-blue-50 to-white' 
+        className={`flex items-center gap-2 px-6 py-3.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 relative ${active
+                ? 'text-blue-600 bg-gradient-to-b from-blue-50 to-white'
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50/80'
-        }`}
+            }`}
     >
-        <motion.span 
+        <motion.span
             className="transition-all duration-200"
             animate={{ scale: active ? 1.1 : 1, opacity: active ? 1 : 0.7 }}
         >

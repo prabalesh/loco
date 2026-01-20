@@ -61,7 +61,7 @@ export const CodeEditor = ({
         <section className={`flex flex-col bg-gradient-to-br from-gray-950 to-black font-mono shadow-2xl transition-all duration-300 ${isFullscreen ? 'fixed inset-0 z-[100] h-screen w-screen' : 'flex-1'
             }`}>
             {/* Code Editor Toolbar */}
-            <div className="bg-gray-900/95 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between z-10 shadow-2xl">
+            <div className="bg-gray-900/95 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between z-[60] shadow-2xl relative">
                 <div className="flex items-center gap-3">
                     <LanguageDropdown
                         languages={languages}

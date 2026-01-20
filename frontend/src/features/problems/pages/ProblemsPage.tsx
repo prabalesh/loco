@@ -6,7 +6,7 @@ import { Card } from '@/shared/components/ui/Card'
 import type { Difficulty } from '../types'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Skeleton } from '@/shared/components/ui/Skeleton'
 import { calculateAcceptanceRate } from '@/lib/utils'
 
@@ -43,6 +43,7 @@ export const ProblemsPage = () => {
     const [page, setPage] = useState(1)
     const [selectedTags, setSelectedTags] = useState<string[]>([])
     const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+    const navigate = useNavigate()
 
     // Debounce filter values to avoid excessive API calls
     const debouncedSearch = useDebounce(search, 500)
@@ -165,73 +166,73 @@ export const ProblemsPage = () => {
                 ) : (
                     <div className="space-y-4">
                         {problems.map((problem) => (
-                            <Link
+                            <Card
                                 key={problem.id}
-                                to={`/problems/${problem.slug}`}
-                                className="block group"
+                                onClick={() => navigate(`/problems/${problem.slug}`)}
+                                className="block group cursor-pointer p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border-gray-100 group-hover:border-blue-200"
                             >
-                                <Card className="p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border-gray-100 group-hover:border-blue-200">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-6">
-                                            <div className="hidden sm:flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                                                <Star className="h-6 w-6" />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                                                    {problem.id}. {problem.title}
-                                                </h3>
-                                                <div className="flex items-center gap-4 mt-1">
-                                                    <span className={`px-3 py-0.5 rounded-full text-xs font-semibold capitalize ${DIFFICULTY_COLORS[problem.difficulty]}`}>
-                                                        {problem.difficulty}
-                                                    </span>
-                                                    <span className="text-sm text-gray-500 flex items-center gap-1">
-                                                        Acceptance: {calculateAcceptanceRate(problem.total_accepted, problem.total_submissions).toFixed(1)}%
-                                                    </span>
-                                                    {problem.creator && (
-                                                        <span className="text-sm text-gray-400">
-                                                            by <Link
-                                                                to={`/users/${problem.creator.username}`}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                className="hover:text-blue-500 font-medium transition-colors"
-                                                            >
-                                                                @{problem.creator.username}
-                                                            </Link>
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex flex-wrap gap-2 mt-3">
-                                                    {problem.categories?.map(cat => (
-                                                        <span key={cat.id} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold uppercase tracking-wider border border-blue-100">
-                                                            {cat.name}
-                                                        </span>
-                                                    ))}
-                                                    {problem.tags?.map(tag => (
-                                                        <span key={tag.id} className="px-2 py-0.5 bg-gray-50 text-gray-600 rounded text-[10px] font-medium border border-gray-100">
-                                                            {tag.name}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-6">
+                                        <div className="hidden sm:flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                                            <Star className="h-6 w-6" />
                                         </div>
-                                        <div className="flex items-center gap-4">
-                                            {problem.user_status === 'solved' && (
-                                                <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold uppercase tracking-wider animate-in fade-in zoom-in duration-300">
-                                                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                                    Solved
+                                        <div>
+                                            <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                                {problem.id}. {problem.title}
+                                            </h3>
+                                            <div className="flex items-center gap-4 mt-1">
+                                                <span className={`px-3 py-0.5 rounded-full text-xs font-semibold capitalize ${DIFFICULTY_COLORS[problem.difficulty]}`}>
+                                                    {problem.difficulty}
                                                 </span>
-                                            )}
-                                            {problem.user_status === 'attempted' && (
-                                                <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold uppercase tracking-wider animate-in fade-in zoom-in duration-300">
-                                                    Attempted
+                                                <span className="text-sm text-gray-500 flex items-center gap-1">
+                                                    Acceptance: {calculateAcceptanceRate(problem.total_accepted, problem.total_submissions).toFixed(1)}%
                                                 </span>
-                                            )}
-                                            <div className="text-gray-300 group-hover:text-blue-500 transition-colors transform group-hover:translate-x-1 duration-300">
-                                                <ChevronRight className="h-6 w-6" />
+                                                {problem.creator && (
+                                                    <span className="text-sm text-gray-400">
+                                                        by <Link
+                                                            to={`/users/${problem.creator.username}`}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                            }}
+                                                            className="hover:text-blue-500 font-medium transition-colors relative z-10"
+                                                        >
+                                                            @{problem.creator.username}
+                                                        </Link>
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 mt-3">
+                                                {problem.categories?.map(cat => (
+                                                    <span key={cat.id} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold uppercase tracking-wider border border-blue-100">
+                                                        {cat.name}
+                                                    </span>
+                                                ))}
+                                                {problem.tags?.map(tag => (
+                                                    <span key={tag.id} className="px-2 py-0.5 bg-gray-50 text-gray-600 rounded text-[10px] font-medium border border-gray-100">
+                                                        {tag.name}
+                                                    </span>
+                                                ))}
                                             </div>
                                         </div>
                                     </div>
-                                </Card>
-                            </Link>
+                                    <div className="flex items-center gap-4">
+                                        {problem.user_status === 'solved' && (
+                                            <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold uppercase tracking-wider animate-in fade-in zoom-in duration-300">
+                                                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                Solved
+                                            </span>
+                                        )}
+                                        {problem.user_status === 'attempted' && (
+                                            <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold uppercase tracking-wider animate-in fade-in zoom-in duration-300">
+                                                Attempted
+                                            </span>
+                                        )}
+                                        <div className="text-gray-300 group-hover:text-blue-500 transition-colors transform group-hover:translate-x-1 duration-300">
+                                            <ChevronRight className="h-6 w-6" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </Card>
                         ))}
 
                         {problems.length === 0 && (

@@ -1,26 +1,42 @@
+import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { MainLayout } from '../shared/components/layout/MainLayout'
 import { ProtectedRoute } from '../shared/components/common/ProtectedRoute'
-import { HomePage } from '../pages/HomePage'
-import { NotFoundPage } from '../pages/PageNotFound'
-import { LoginPage } from '../features/auth/pages/LoginPage'
-import { RegisterPage } from '../features/auth/pages/RegisterPage'
 import { ROUTES } from '../shared/constants/routes'
-import { ProfilePage } from '@/pages/ProfilePage'
-import { VerifyEmailPage } from '@/features/auth/pages/VerifyEmailPage'
-import { ForgotPasswordPage } from '@/features/auth/pages/ForgetPasswordPage'
-import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage'
-import { ProblemsPage } from '@/features/problems/pages/ProblemsPage'
-import { ProblemDetailPage } from '@/features/problems/pages/ProblemDetailPage'
-import { ProfilePage as UserProfileView } from '@/features/users/pages/ProfilePage'
-import { SubmissionsPage } from '@/pages/SubmissionsPage'
-import { LeaderboardPage } from '@/features/users/pages/LeaderboardPage'
-import { AchievementsPage } from '@/features/achievements/pages/AchievementsPage'
+import { Skeleton } from '@/shared/components/ui/Skeleton'
+
+// Lazy loaded components
+const HomePage = lazy(() => import('../pages/HomePage').then(m => ({ default: m.HomePage })))
+const NotFoundPage = lazy(() => import('../pages/PageNotFound').then(m => ({ default: m.NotFoundPage })))
+const LoginPage = lazy(() => import('../features/auth/pages/LoginPage').then(m => ({ default: m.LoginPage })))
+const RegisterPage = lazy(() => import('../features/auth/pages/RegisterPage').then(m => ({ default: m.RegisterPage })))
+const ProfilePage = lazy(() => import('@/pages/ProfilePage').then(m => ({ default: m.ProfilePage })))
+const VerifyEmailPage = lazy(() => import('@/features/auth/pages/VerifyEmailPage').then(m => ({ default: m.VerifyEmailPage })))
+const ForgotPasswordPage = lazy(() => import('@/features/auth/pages/ForgetPasswordPage').then(m => ({ default: m.ForgotPasswordPage })))
+const ResetPasswordPage = lazy(() => import('@/features/auth/pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })))
+const ProblemsPage = lazy(() => import('@/features/problems/pages/ProblemsPage').then(m => ({ default: m.ProblemsPage })))
+const ProblemDetailPage = lazy(() => import('@/features/problems/pages/ProblemDetailPage').then(m => ({ default: m.ProblemDetailPage })))
+const UserProfileView = lazy(() => import('@/features/users/pages/ProfilePage').then(m => ({ default: m.ProfilePage })))
+const SubmissionsPage = lazy(() => import('@/pages/SubmissionsPage').then(m => ({ default: m.SubmissionsPage })))
+const LeaderboardPage = lazy(() => import('@/features/users/pages/LeaderboardPage').then(m => ({ default: m.LeaderboardPage })))
+const AchievementsPage = lazy(() => import('@/features/achievements/pages/AchievementsPage').then(m => ({ default: m.AchievementsPage })))
+
+const PageLoader = () => (
+  <div className="p-8 space-y-4">
+    <Skeleton className="h-12 w-3/4" />
+    <Skeleton className="h-64 w-full" />
+    <Skeleton className="h-32 w-full" />
+  </div>
+)
 
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <MainLayout />,
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <MainLayout />
+      </Suspense>
+    ),
     children: [
       {
         index: true,

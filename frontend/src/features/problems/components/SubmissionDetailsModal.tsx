@@ -130,7 +130,7 @@ export const SubmissionDetailsModal = ({ submission, isOpen, onClose }: Submissi
                                             </div>
                                         </div>
                                         <pre className="text-sm font-mono text-gray-300 overflow-x-auto custom-scrollbar-dark leading-relaxed">
-                                            {submission.code}
+                                            {submission.function_code}
                                         </pre>
                                     </div>
                                 </div>

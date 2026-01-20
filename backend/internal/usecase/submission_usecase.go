@@ -74,12 +74,13 @@ func (u *SubmissionUsecase) Submit(userID int, problemID int, req *domain.Create
 	// 3. Create Pending Submission
 	now := time.Now()
 	submission := &domain.Submission{
-		UserID:     userID,
-		ProblemID:  problemID,
-		LanguageID: req.LanguageID,
-		Code:       finalCode,
-		Status:     domain.SubmissionStatusPending,
-		QueuedAt:   &now,
+		UserID:       userID,
+		ProblemID:    problemID,
+		LanguageID:   req.LanguageID,
+		Code:         finalCode,
+		FunctionCode: req.Code,
+		Status:       domain.SubmissionStatusPending,
+		QueuedAt:     &now,
 	}
 
 	if err := u.submissionRepo.Create(submission); err != nil {
@@ -213,7 +214,11 @@ func (u *SubmissionUsecase) evaluateSubmission(submission *domain.Submission, pr
 			if actual != expected {
 				if finalStatus == domain.SubmissionStatusAccepted {
 					finalStatus = domain.SubmissionStatusWrongAnswer
-					errorMessage = fmt.Sprintf("Failed on input: %s\nExpected: %s\nActual: %s", tc.Input, expected, actual)
+					if tc.IsSample {
+						errorMessage = fmt.Sprintf("Failed on input: %s\nExpected: %s\nActual: %s", tc.Input, expected, actual)
+					} else {
+						errorMessage = "Failed on a hidden test case"
+					}
 				}
 				tcResult.Status = "Failed"
 			} else {
