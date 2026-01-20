@@ -21,14 +21,12 @@ type Dependencies struct {
 	AuthHandler *handler.AuthHandler
 	UserHandler *handler.UserHandler
 
-	AdminHandler      *handler.AdminHandler
-	AdminAuthHandler  *handler.AdminAuthHandler
-	ProblemHandler    *handler.ProblemHandler
-	LanguageHandler   *handler.LanguageHandler
-	TestCaseHandler   *handler.TestCaseHandler
-	SubmissionHandler *handler.SubmissionHandler
-	QueueHandler      *handler.QueueHandler
-
+	AdminHandler        *handler.AdminHandler
+	AdminAuthHandler    *handler.AdminAuthHandler
+	ProblemHandler      *handler.ProblemHandler
+	LanguageHandler     *handler.LanguageHandler
+	TestCaseHandler     *handler.TestCaseHandler
+	SubmissionHandler   *handler.SubmissionHandler
 	RateLimit           *middleware.RateLimitMiddleware
 	SubmissionRateLimit *middleware.RateLimitMiddleware
 	RunCodeRateLimit    *middleware.RateLimitMiddleware
@@ -84,9 +82,6 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	mux.Handle("GET /problems/{problem_id}/submissions", authMiddleware(http.HandlerFunc(deps.SubmissionHandler.ListUserProblemSubmissions)))
 	mux.Handle("GET /submissions", authMiddleware(http.HandlerFunc(deps.SubmissionHandler.ListUserSubmissions)))
 	mux.Handle("GET /problems/{problem_id}/submissions/{id}", middleware.RegularOrAdminAuth(deps.JWTService, deps.Log)(http.HandlerFunc(deps.SubmissionHandler.GetSubmission)))
-
-	// ========== QUEUE STATUS ROUTES ==========
-	mux.HandleFunc("GET /queue/status", deps.QueueHandler.GetQueueStatus)
 
 	// ========== LEADERBOARD ROUTES ==========
 	mux.HandleFunc("GET /leaderboard", deps.LeaderboardHandler.GetLeaderboard)

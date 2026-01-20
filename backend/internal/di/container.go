@@ -61,7 +61,6 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	testCaseUsecase := usecase.NewTestCaseUsecase(testCaseRepo, problemRepo, cfg, logger)
 	achievementUsecase := usecase.NewAchievementUsecase(achievementRepo, userRepo, submissionRepo, problemRepo, redisClient, logger)
 	submissionUsecase := usecase.NewSubmissionUsecase(submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, pistonService, jobQueue, achievementUsecase, cfg, logger)
-	queueStatusUsecase := usecase.NewQueueStatusUsecase(submissionRepo, redisClient.Client, logger)
 	notificationUsecase := usecase.NewNotificationUsecase(redisClient, logger)
 
 	// Worker
@@ -76,7 +75,6 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	languageHandler := handler.NewLanguageHandler(languageUsecase, logger, cfg)
 	testCaseHandler := handler.NewTestCaseHandler(testCaseUsecase, logger, cfg)
 	submissionHandler := handler.NewSubmissionHandler(submissionUsecase, logger)
-	queueHandler := handler.NewQueueHandler(queueStatusUsecase, logger)
 	leaderboardUsecase := usecase.NewLeaderboardUsecase(userRepo, logger)
 	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardUsecase, logger)
 	achievementHandler := handler.NewAchievementHandler(achievementUsecase, userUsecase, logger)
@@ -100,7 +98,6 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 		LanguageHandler:     languageHandler,
 		TestCaseHandler:     testCaseHandler,
 		SubmissionHandler:   submissionHandler,
-		QueueHandler:        queueHandler,
 		LeaderboardHandler:  leaderboardHandler,
 		AchievementHandler:  achievementHandler,
 		NotificationHandler: notificationHandler,

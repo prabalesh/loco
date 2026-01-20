@@ -2,7 +2,6 @@ import { motion } from 'framer-motion'
 import { Play, CheckCircle2, XCircle, Clock, Loader2, Zap, Database, Cpu } from 'lucide-react'
 import type { Submission, TestCase } from '../types'
 import type { RunCodeResult } from '../api/submissions'
-import { QueueStatusBanner } from './QueueStatusBanner'
 
 interface ResultTabProps {
     submissionResult?: Submission
@@ -26,8 +25,6 @@ export const ResultTab = ({ submissionResult, pollingId, runResult, isRunning, s
     if (isPending && !hasData) {
         return (
             <div className="space-y-6">
-                <QueueStatusBanner show={!!pollingId} />
-
                 <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
                     <div className="relative mb-10">
                         {/* Outer Glow */}
