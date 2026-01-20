@@ -7,6 +7,8 @@ export interface LeaderboardEntry {
     problems_solved: number
     total_submissions: number
     acceptance_rate: number
+    xp: number
+    level: number
 }
 
 export const leaderboardApi = {

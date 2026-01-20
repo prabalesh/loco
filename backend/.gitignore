@@ -35,3 +35,5 @@ builds/*
 # Editor/IDE
 # .idea/
 # .vscode/
+
+build-scripts/

@@ -426,6 +426,8 @@ func (r *userRepository) GetLeaderboard(limit int) ([]domain.LeaderboardEntry, e
 		SELECT 
 			u.id as user_id, 
 			u.username, 
+			u.xp,
+			u.level,
 			COALESCE(solved_counts.count, 0) as problems_solved,
 			COALESCE(sub_stats.total, 0) as total_submissions,
 			COALESCE(sub_stats.rate, 0) as acceptance_rate

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { leaderboardApi } from '../api/leaderboard'
+import { leaderboardApi, type LeaderboardEntry } from '../api/leaderboard'
 import { Card } from '@/shared/components/ui/Card'
 import { Skeleton } from '@/shared/components/ui/Skeleton'
 import { Trophy, Medal, User, ArrowRight, TrendingUp, Zap } from 'lucide-react'
@@ -9,7 +9,7 @@ import { motion } from 'framer-motion'
 
 export const LeaderboardPage = () => {
     const navigate = useNavigate()
-    const { data: leaderboard, isLoading } = useQuery({
+    const { data: leaderboard, isLoading } = useQuery<LeaderboardEntry[]>({
         queryKey: ['leaderboard'],
         queryFn: () => leaderboardApi.getLeaderboard().then(res => (res.data as any).data),
     })
@@ -58,7 +58,7 @@ export const LeaderboardPage = () => {
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
-                    {leaderboard?.map((entry: any, index: number) => (
+                    {leaderboard?.map((entry: LeaderboardEntry, index: number) => (
                         <motion.div
                             key={entry.user_id}
                             initial={{ opacity: 0, y: 20 }}
@@ -117,7 +117,7 @@ export const LeaderboardPage = () => {
                                                 Level
                                             </div>
                                             <div className="text-2xl font-black text-purple-600">
-                                                {entry.level || 1}
+                                                {entry.level}
                                             </div>
                                         </div>
 
@@ -126,7 +126,7 @@ export const LeaderboardPage = () => {
                                                 <Zap className="h-3 w-3 text-amber-500" />
                                                 XP
                                             </div>
-                                            <div className="text-2xl font-black text-amber-600">{(entry.xp || 0).toLocaleString()}</div>
+                                            <div className="text-2xl font-black text-amber-600">{entry.xp.toLocaleString()}</div>
                                         </div>
 
                                         <div className="sm:ml-4">

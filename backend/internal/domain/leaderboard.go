@@ -7,4 +7,6 @@ type LeaderboardEntry struct {
 	ProblemsSolved   int     `json:"problems_solved"`
 	TotalSubmissions int     `json:"total_submissions"`
 	AcceptanceRate   float64 `json:"acceptance_rate"`
+	XP               int     `json:"xp"`
+	Level            int     `json:"level"`
 }
