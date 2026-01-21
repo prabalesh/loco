@@ -211,12 +211,16 @@ func (r *problemRepository) List(filters domain.ProblemFilters) ([]*domain.Probl
 	return problems, int(total), nil
 }
 
-func (r *problemRepository) SlugExists(slug string) (bool, error) {
+func (r *problemRepository) SlugExists(slug string, excludeID int) (bool, error) {
 	ctx, cancel := database.WithShortTimeout()
 	defer cancel()
 
 	var count int64
-	err := r.db.DB.WithContext(ctx).Model(&domain.Problem{}).Where("slug = ?", slug).Count(&count).Error
+	query := r.db.DB.WithContext(ctx).Model(&domain.Problem{}).Where("slug = ?", slug)
+	if excludeID > 0 {
+		query = query.Where("id != ?", excludeID)
+	}
+	err := query.Count(&count).Error
 	if err != nil {
 		return false, fmt.Errorf("failed to check slug: %w", err)
 	}

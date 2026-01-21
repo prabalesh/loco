@@ -28,6 +28,22 @@ func (r *testCaseRepository) Create(testCase *domain.TestCase) error {
 	return nil
 }
 
+func (r *testCaseRepository) CreateMany(testCases []domain.TestCase) error {
+	ctx, cancel := database.WithLongTimeout()
+	defer cancel()
+
+	if len(testCases) == 0 {
+		return nil
+	}
+
+	result := r.db.DB.WithContext(ctx).Create(&testCases)
+	if result.Error != nil {
+		return fmt.Errorf("failed to create test cases: %w", result.Error)
+	}
+
+	return nil
+}
+
 func (r *testCaseRepository) Update(testCase *domain.TestCase) error {
 	ctx, cancel := database.WithMediumTimeout()
 	defer cancel()

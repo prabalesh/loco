@@ -32,6 +32,7 @@ A modern, full-stack competitive programming platform built with **Go** and **Re
 - 🎮 **Gamification** - Earn XP, level up, unlock achievements, and maintain submission streaks
 - 💻 **Problem Library** - Comprehensive collection of coding challenges with multi-language support
 - ✅ **Code Submission** - Secure code execution via Piston with real-time feedback
+- ✅ **Reference Solution Validation** - Mandatory problem validation against reference solutions before publishing
 - 🏆 **Leaderboard** - Global rankings based on XP and problem-solving prowess
 - 🛠️ **Admin Portal** - Robust management interface for problems, users, and system monitoring
 - 📊 **Progress Tracking** - Detailed statistics and progress visualization
@@ -273,6 +274,17 @@ Or deploy the `dist/` folder to any static hosting service.
 
 ---
 
+### Problem Publishing Workflow (Admin)
+
+To ensure problem quality and test case correctness, Loco enforces a strict validation workflow:
+
+1. **Create Draft**: Use the V2 Problem Creation Form to define problem metadata, parameters, and test cases.
+2. **Implement Reference Solution**: Navigate to the Problem Management page for your draft.
+3. **Validate**: Submit a reference solution in any supported language. The system executes this solution against all test cases.
+4. **Publish**: Only after a successful validation (100% test cases passed) will the "Publish" button be enabled to make the problem public.
+
+---
+
 ### Request/Response Examples
 
 #### Register User
@@ -485,6 +497,8 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - [x] User submission history & statistics
 - [x] Achievements & Badges system
 - [x] Admin Dashboard for problem management
+- [x] Reference Solution Validation System (V2)
+- [ ] Contest system and live rankings
 - [ ] Contest system and live rankings
 - [ ] Discussion forums per problem
 - [ ] OAuth integration (Google, GitHub)

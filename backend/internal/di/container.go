@@ -14,6 +14,10 @@ import (
 	"github.com/prabalesh/loco/backend/internal/infrastructure/queue"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/worker"
 	"github.com/prabalesh/loco/backend/internal/repository/postgres"
+	"github.com/prabalesh/loco/backend/internal/services/codegen"
+	"github.com/prabalesh/loco/backend/internal/services/execution"
+	"github.com/prabalesh/loco/backend/internal/services/problem"
+	"github.com/prabalesh/loco/backend/internal/services/validation"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/prabalesh/loco/backend/pkg/database"
@@ -37,6 +41,8 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	tagRepo := postgres.NewTagRepository(db)
 	categoryRepo := postgres.NewCategoryRepository(db)
 	achievementRepo := postgres.NewAchievementRepository(db)
+	boilerplateRepo := postgres.NewBoilerplateRepository(db)
+	referenceSolutionRepo := postgres.NewReferenceSolutionRepository(db)
 
 	// Redis client
 	redisClient, err := redis.NewRedisClient(cfg.Redis, logger)
@@ -49,6 +55,8 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	emailService := email.NewEmailService(cfg, logger)
 	pistonService := piston.NewPistonService(cfg, logger)
 	jobQueue := queue.NewJobQueue(redisClient, logger)
+	codeGenService := codegen.NewCodeGenService()
+	boilerplateService := codegen.NewBoilerplateService(boilerplateRepo, languageRepo, codeGenService)
 
 	cookieManager := cookies.NewCookieManager(cfg)
 
@@ -57,7 +65,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	userUsecase := usecase.NewUserUsecase(userRepo, submissionRepo, achievementRepo, logger)
 	adminUsecase := usecase.NewAdminUsecase(userRepo, submissionRepo, redisClient.Client, logger)
 	problemLanguageUsecase := usecase.NewProblemLanguageUsecase(problemLanguageRepo, problemRepo, languageRepo, logger)
-	problemUsecase := usecase.NewProblemUsecase(problemRepo, testCaseRepo, userProblemStatsRepo, tagRepo, categoryRepo, cfg, logger)
+	problemUsecase := usecase.NewProblemUsecase(problemRepo, testCaseRepo, userProblemStatsRepo, tagRepo, categoryRepo, boilerplateService, cfg, logger)
 	languageUsecase := usecase.NewLanguageUsecase(languageRepo, cfg, logger)
 	testCaseUsecase := usecase.NewTestCaseUsecase(testCaseRepo, problemRepo, cfg, logger)
 	achievementUsecase := usecase.NewAchievementUsecase(achievementRepo, userRepo, submissionRepo, problemRepo, redisClient, logger)
@@ -80,7 +88,16 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardUsecase, logger)
 	achievementHandler := handler.NewAchievementHandler(achievementUsecase, userUsecase, logger)
 	notificationHandler := handler.NewNotificationHandler(notificationUsecase, logger)
-	codeGenHandler := v2.NewCodeGenHandler(problemRepo)
+	codeGenHandler := v2.NewCodeGenHandler(problemRepo, languageRepo, boilerplateService)
+
+	executionService := execution.NewExecutionService(cfg.Server.PistonURL, boilerplateService)
+	codeExecutionHandler := v2.NewSubmissionHandler(executionService, problemRepo, testCaseRepo, languageRepo)
+
+	v2ProblemService := problem.NewProblemService(problemRepo, testCaseRepo, boilerplateService)
+	v2ProblemHandler := v2.NewProblemHandler(v2ProblemService)
+
+	validationService := validation.NewValidationService(referenceSolutionRepo, problemRepo, testCaseRepo, executionService)
+	validationHandler := v2.NewValidationHandler(validationService, languageRepo)
 
 	// Middleware
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(redisClient.Client, logger, &cfg.RateLimit)
@@ -88,25 +105,28 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	runCodeRateLimitMiddleware := middleware.NewRunCodeRateLimitMiddleware(redisClient.Client, logger, &cfg.RunCodeRateLimit)
 
 	deps := &router.Dependencies{
-		Log:                 logger,
-		Cfg:                 cfg,
-		Db:                  db,
-		JWTService:          jwtService,
-		AuthHandler:         authHanlder,
-		UserHandler:         userHandler,
-		AdminHandler:        adminHandler,
-		AdminAuthHandler:    adminAuthHandler,
-		ProblemHandler:      problemHandler,
-		LanguageHandler:     languageHandler,
-		TestCaseHandler:     testCaseHandler,
-		SubmissionHandler:   submissionHandler,
-		LeaderboardHandler:  leaderboardHandler,
-		AchievementHandler:  achievementHandler,
-		NotificationHandler: notificationHandler,
-		CodeGenHandler:      codeGenHandler,
-		RateLimit:           rateLimitMiddleware,
-		SubmissionRateLimit: submissionRateLimitMiddleware,
-		RunCodeRateLimit:    runCodeRateLimitMiddleware,
+		Log:                  logger,
+		Cfg:                  cfg,
+		Db:                   db,
+		JWTService:           jwtService,
+		AuthHandler:          authHanlder,
+		UserHandler:          userHandler,
+		AdminHandler:         adminHandler,
+		AdminAuthHandler:     adminAuthHandler,
+		ProblemHandler:       problemHandler,
+		LanguageHandler:      languageHandler,
+		TestCaseHandler:      testCaseHandler,
+		SubmissionHandler:    submissionHandler,
+		LeaderboardHandler:   leaderboardHandler,
+		AchievementHandler:   achievementHandler,
+		NotificationHandler:  notificationHandler,
+		CodeGenHandler:       codeGenHandler,
+		CodeExecutionHandler: codeExecutionHandler,
+		V2ProblemHandler:     v2ProblemHandler,
+		ValidationHandler:    validationHandler,
+		RateLimit:            rateLimitMiddleware,
+		SubmissionRateLimit:  submissionRateLimitMiddleware,
+		RunCodeRateLimit:     runCodeRateLimitMiddleware,
 	}
 
 	return &Container{

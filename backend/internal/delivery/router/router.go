@@ -33,10 +33,13 @@ type Dependencies struct {
 	SubmissionRateLimit *middleware.RateLimitMiddleware
 	RunCodeRateLimit    *middleware.RateLimitMiddleware
 
-	LeaderboardHandler  *handler.LeaderboardHandler
-	AchievementHandler  *handler.AchievementHandler
-	NotificationHandler *handler.NotificationHandler
-	CodeGenHandler      *v2.CodeGenHandler
+	LeaderboardHandler   *handler.LeaderboardHandler
+	AchievementHandler   *handler.AchievementHandler
+	NotificationHandler  *handler.NotificationHandler
+	CodeGenHandler       *v2.CodeGenHandler
+	CodeExecutionHandler *v2.SubmissionHandler
+	V2ProblemHandler     *v2.ProblemHandler
+	ValidationHandler    *v2.ValidationHandler
 }
 
 func SetupRouter(deps *Dependencies) http.Handler {
@@ -168,6 +171,19 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	// ========== V2 CODEGEN ROUTES ==========
 	mux.Handle("POST /api/v2/codegen/stub", adminAuthMiddleware(http.HandlerFunc(deps.CodeGenHandler.GenerateStub)))
 	mux.Handle("GET /api/v2/problems/{problem_id}/stub", http.HandlerFunc(deps.CodeGenHandler.GetProblemStub))
+	mux.Handle("GET /api/v2/problems/{problem_id}/boilerplates", adminAuthMiddleware(http.HandlerFunc(deps.CodeGenHandler.GetProblemBoilerplates)))
+	mux.Handle("POST /api/v2/problems/{problem_id}/submit", authMiddleware(http.HandlerFunc(deps.CodeExecutionHandler.SubmitCode)))
+
+	// V2 Problems
+	mux.Handle("POST /api/v2/admin/problems", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.CreateProblem)))
+	mux.Handle("GET /api/v2/admin/problems/{id}", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.AdminGetProblem)))
+	mux.Handle("POST /api/v2/admin/problems/{id}/publish", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.PublishProblem)))
+	mux.HandleFunc("GET /api/v2/problems", deps.V2ProblemHandler.ListProblems)
+	mux.HandleFunc("GET /api/v2/problems/{slug}", deps.V2ProblemHandler.GetProblem)
+
+	// V2 Validation
+	mux.Handle("POST /api/v2/admin/problems/{id}/validate", adminAuthMiddleware(http.HandlerFunc(deps.ValidationHandler.ValidateReferenceSolution)))
+	mux.Handle("GET /api/v2/admin/problems/{id}/validation-status", adminAuthMiddleware(http.HandlerFunc(deps.ValidationHandler.GetValidationStatus)))
 
 	handler := middleware.Logging(deps.Log)(mux)
 	handler = middleware.CORS(deps.Log, deps.Cfg.CORS.AllowedOrigins)(handler)

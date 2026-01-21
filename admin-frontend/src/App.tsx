@@ -16,6 +16,7 @@ const ProblemTestCases = lazy(() => import('./features/problems/pages/ProblemTes
 const ProblemLanguage = lazy(() => import('./features/problems/pages/ProblemLanguage'))
 const ProblemValidate = lazy(() => import('./features/problems/pages/ProblemValidate'))
 const ProblemCreationFormV2 = lazy(() => import('./components/v2/ProblemCreationForm').then(m => ({ default: m.ProblemCreationForm })))
+const ProblemManagement = lazy(() => import('./pages/ProblemManagement').then(m => ({ default: m.ProblemManagement })))
 
 import { AdminLayout } from './components/layout/AdminLayout'
 import { ProtectedRoute } from './features/auth/components/ProtectedRoute'
@@ -120,6 +121,7 @@ function App() {
                 <Route path="/problems/:problemId/testcases" element={<ProblemTestCases />} />
                 <Route path="/problems/:problemId/languages" element={<ProblemLanguage />} />
                 <Route path="/problems/:problemId/validate" element={<ProblemValidate />} />
+                <Route path="/problems/:id/manage" element={<ProblemManagement />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

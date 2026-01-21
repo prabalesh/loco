@@ -9,30 +9,42 @@ import (
 	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/internal/domain/uerror"
 	"github.com/prabalesh/loco/backend/internal/domain/validator" // This import is kept because it's used later in the file.
+	"github.com/prabalesh/loco/backend/internal/services/codegen"
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/prabalesh/loco/backend/pkg/utils"
 	"go.uber.org/zap"
 )
 
 type ProblemUsecase struct {
-	problemRepo   domain.ProblemRepository
-	testcaseRepo  domain.TestCaseRepository
-	userStatsRepo domain.UserProblemStatsRepository
-	tagRepo       domain.TagRepository
-	categoryRepo  domain.CategoryRepository
-	cfg           *config.Config
-	logger        *zap.Logger
+	problemRepo        domain.ProblemRepository
+	testcaseRepo       domain.TestCaseRepository
+	userStatsRepo      domain.UserProblemStatsRepository
+	tagRepo            domain.TagRepository
+	categoryRepo       domain.CategoryRepository
+	boilerplateService *codegen.BoilerplateService
+	cfg                *config.Config
+	logger             *zap.Logger
 }
 
-func NewProblemUsecase(problemRepo domain.ProblemRepository, testcaseRepo domain.TestCaseRepository, userStatsRepo domain.UserProblemStatsRepository, tagRepo domain.TagRepository, categoryRepo domain.CategoryRepository, cfg *config.Config, logger *zap.Logger) *ProblemUsecase {
+func NewProblemUsecase(
+	problemRepo domain.ProblemRepository,
+	testcaseRepo domain.TestCaseRepository,
+	userStatsRepo domain.UserProblemStatsRepository,
+	tagRepo domain.TagRepository,
+	categoryRepo domain.CategoryRepository,
+	boilerplateService *codegen.BoilerplateService,
+	cfg *config.Config,
+	logger *zap.Logger,
+) *ProblemUsecase {
 	return &ProblemUsecase{
-		problemRepo:   problemRepo,
-		testcaseRepo:  testcaseRepo,
-		userStatsRepo: userStatsRepo,
-		tagRepo:       tagRepo,
-		categoryRepo:  categoryRepo,
-		cfg:           cfg,
-		logger:        logger,
+		problemRepo:        problemRepo,
+		testcaseRepo:       testcaseRepo,
+		userStatsRepo:      userStatsRepo,
+		tagRepo:            tagRepo,
+		categoryRepo:       categoryRepo,
+		boilerplateService: boilerplateService,
+		cfg:                cfg,
+		logger:             logger,
 	}
 }
 
@@ -55,7 +67,7 @@ func (u *ProblemUsecase) CreateProblem(req *domain.CreateProblemRequest, adminID
 	}
 
 	// Check if slug already exists
-	exists, err := u.problemRepo.SlugExists(slug)
+	exists, err := u.problemRepo.SlugExists(slug, 0)
 	if err != nil {
 		u.logger.Error("Failed to check slug existence",
 			zap.Error(err),
@@ -112,6 +124,9 @@ func (u *ProblemUsecase) CreateProblem(req *domain.CreateProblemRequest, adminID
 		Visibility:    visibility,
 		IsActive:      req.IsActive,
 		CreatedBy:     &adminID,
+		FunctionName:  req.FunctionName,
+		ReturnType:    req.ReturnType,
+		Parameters:    req.Parameters,
 	}
 
 	// Map Tags
@@ -135,6 +150,18 @@ func (u *ProblemUsecase) CreateProblem(req *domain.CreateProblemRequest, adminID
 			zap.Int("admin_id", adminID),
 		)
 		return nil, errors.New("failed to create problem")
+	}
+
+	// V2: Generate boilerplates if signature is provided
+	if problem.FunctionName != nil && problem.Parameters != nil {
+		if err := u.boilerplateService.GenerateAllBoilerplatesForProblem(problem); err != nil {
+			u.logger.Warn("Failed to generate boilerplates after creation",
+				zap.Error(err),
+				zap.Int("problem_id", problem.ID),
+			)
+		} else {
+			u.logger.Info("Successfully generated boilerplates", zap.Int("problem_id", problem.ID))
+		}
 	}
 
 	u.logger.Info("Problem created successfully",
@@ -219,6 +246,18 @@ func (u *ProblemUsecase) UpdateProblem(problemID int, req *domain.UpdateProblemR
 		problem.IsActive = *req.IsActive
 	}
 
+	if req.FunctionName != nil {
+		problem.FunctionName = req.FunctionName
+	}
+
+	if req.ReturnType != nil {
+		problem.ReturnType = req.ReturnType
+	}
+
+	if req.Parameters != nil {
+		problem.Parameters = req.Parameters
+	}
+
 	// Map Tags for Update
 	if req.TagIDs != nil {
 		problem.Tags = []domain.Tag{}
@@ -241,6 +280,16 @@ func (u *ProblemUsecase) UpdateProblem(problemID int, req *domain.UpdateProblemR
 			zap.Int("problem_id", problemID),
 		)
 		return nil, errors.New("failed to update problem")
+	}
+
+	// Regenerate boilerplates if signature was updated
+	if req.FunctionName != nil || req.ReturnType != nil || req.Parameters != nil {
+		if err := u.boilerplateService.RegenerateBoilerplatesForProblem(problem); err != nil {
+			u.logger.Warn("Failed to regenerate boilerplates after update",
+				zap.Error(err),
+				zap.Int("problem_id", problem.ID),
+			)
+		}
 	}
 
 	u.logger.Info("Problem updated successfully",

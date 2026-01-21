@@ -22,7 +22,10 @@ export const problemsApi = {
         apiClient.get<ApiResponse<Category[]>>('/categories'),
 
     getStub: (problemId: number, language: string) =>
-        apiClient.get<ApiResponse<{ stub_code: string }>>(`/v2/problems/${problemId}/stub`, {
+        apiClient.get<ApiResponse<{ stub_code: string }>>(`/api/v2/problems/${problemId}/stub`, {
             params: { language }
         }),
+
+    submit: (problemId: number, data: { code: string; language_slug: string }) =>
+        apiClient.post<ApiResponse<any>>(`/api/v2/problems/${problemId}/submit`, data),
 }

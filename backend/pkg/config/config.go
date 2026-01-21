@@ -52,6 +52,7 @@ type ServerConfig struct {
 	Port       string
 	Env        string // "development" or "production"
 	AppBaseUrl string
+	PistonURL  string
 }
 
 type DatabaseConfig struct {
@@ -119,6 +120,7 @@ func InitConfig() {
 				Port:       getEnv("PORT", "8080"),
 				Env:        env,
 				AppBaseUrl: getEnv("APP_BASE_URL", "http://localhost:5173"),
+				PistonURL:  getEnv("PISTON_API_URL", "https://emkc.org/api/v2/piston"),
 			},
 			Database: DatabaseConfig{
 				Host:     getEnv("DB_HOST", "localhost"),

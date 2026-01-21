@@ -11,14 +11,22 @@ import (
 )
 
 type CodeGenHandler struct {
-	codeGenService *codegen.CodeGenService
-	problemRepo    domain.ProblemRepository
+	codeGenService     *codegen.CodeGenService
+	boilerplateService *codegen.BoilerplateService
+	languageRepo       domain.LanguageRepository
+	problemRepo        domain.ProblemRepository
 }
 
-func NewCodeGenHandler(problemRepo domain.ProblemRepository) *CodeGenHandler {
+func NewCodeGenHandler(
+	problemRepo domain.ProblemRepository,
+	languageRepo domain.LanguageRepository,
+	boilerplateService *codegen.BoilerplateService,
+) *CodeGenHandler {
 	return &CodeGenHandler{
-		codeGenService: codegen.NewCodeGenService(),
-		problemRepo:    problemRepo,
+		codeGenService:     codegen.NewCodeGenService(),
+		problemRepo:        problemRepo,
+		languageRepo:       languageRepo,
+		boilerplateService: boilerplateService,
 	}
 }
 
@@ -72,36 +80,71 @@ func (h *CodeGenHandler) GetProblemStub(w http.ResponseWriter, r *http.Request) 
 		languageSlug = "python" // default
 	}
 
-	problem, err := h.problemRepo.GetByID(problemID)
+	// Get language by slug to get ID
+	language, err := h.languageRepo.GetBySlug(languageSlug)
 	if err != nil {
-		handler.RespondError(w, http.StatusNotFound, "Problem not found")
+		handler.RespondError(w, http.StatusNotFound, "Language not found")
 		return
 	}
 
-	if problem.FunctionName == nil || problem.ReturnType == nil || problem.Parameters == nil {
-		handler.RespondError(w, http.StatusBadRequest, "Problem signature not defined")
-		return
-	}
-
-	var params []codegen.Parameter
-	if err := json.Unmarshal([]byte(*problem.Parameters), &params); err != nil {
-		handler.RespondError(w, http.StatusInternalServerError, "Failed to parse problem parameters")
-		return
-	}
-
-	signature := codegen.ProblemSignature{
-		FunctionName: *problem.FunctionName,
-		ReturnType:   *problem.ReturnType,
-		Parameters:   params,
-	}
-
-	stubCode, err := h.codeGenService.GenerateStubCode(signature, languageSlug)
+	// Try to get cached stub code
+	stubCode, err := h.boilerplateService.GetStubCode(problemID, language.ID)
 	if err != nil {
-		handler.RespondError(w, http.StatusBadRequest, err.Error())
-		return
+		// FALLBACK: If not found in cache, generate it (but this shouldn't happen with pre-generation)
+		// For now, we return error as per requirement 5 (Handle missing boilerplates gracefully - wait, requirement 5 says regenerate on-demand)
+
+		problem, err := h.problemRepo.GetByID(problemID)
+		if err != nil {
+			handler.RespondError(w, http.StatusNotFound, "Problem not found")
+			return
+		}
+
+		if problem.FunctionName == nil || problem.ReturnType == nil || problem.Parameters == nil {
+			handler.RespondError(w, http.StatusBadRequest, "Problem signature not defined")
+			return
+		}
+
+		var params []codegen.Parameter
+		if err := json.Unmarshal([]byte(*problem.Parameters), &params); err != nil {
+			handler.RespondError(w, http.StatusInternalServerError, "Failed to parse problem parameters")
+			return
+		}
+
+		signature := codegen.ProblemSignature{
+			FunctionName: *problem.FunctionName,
+			ReturnType:   *problem.ReturnType,
+			Parameters:   params,
+		}
+
+		// Generate on-demand and store it too
+		err = h.boilerplateService.GenerateBoilerplateForLanguage(problemID, language.ID, signature, languageSlug)
+		if err != nil {
+			handler.RespondError(w, http.StatusInternalServerError, "Failed to generate boilerplate on-demand")
+			return
+		}
+
+		stubCode, _ = h.boilerplateService.GetStubCode(problemID, language.ID)
 	}
 
 	handler.RespondJSON(w, http.StatusOK, GenerateStubResponse{
 		StubCode: stubCode,
 	})
+}
+
+// GET /api/v2/problems/{problem_id}/boilerplates
+func (h *CodeGenHandler) GetProblemBoilerplates(w http.ResponseWriter, r *http.Request) {
+	problemIDStr := r.PathValue("problem_id")
+	problemID, err := strconv.Atoi(problemIDStr)
+	if err != nil {
+		handler.RespondError(w, http.StatusBadRequest, "Invalid problem ID")
+		return
+	}
+
+	boilerplates, err := h.boilerplateService.GetBoilerplateStats(problemID)
+	if err != nil {
+		handler.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	handler.RespondJSON(w, http.StatusOK, boilerplates)
 }

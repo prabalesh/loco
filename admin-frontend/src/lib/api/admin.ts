@@ -73,6 +73,21 @@ export const adminProblemApi = {
   publish: (problemId: string) =>
     axiosInstance.post<SimpleResponse>(`/admin/problems/${problemId}/publish`),
 
+  v2Create: (data: any) =>
+    axiosInstance.post<Response<Problem>>('/api/v2/admin/problems', data),
+
+  v2GetById: (id: string | number) =>
+    axiosInstance.get<Response<Problem>>(`/api/v2/admin/problems/${id}`),
+
+  v2Publish: (id: string | number) =>
+    axiosInstance.post<Response<any>>(`/api/v2/admin/problems/${id}/publish`),
+
+  v2Validate: (id: string | number, data: { language_slug: string; code: string }) =>
+    axiosInstance.post<Response<any>>(`/api/v2/admin/problems/${id}/validate`, data),
+
+  v2GetValidationStatus: (id: string | number) =>
+    axiosInstance.get<Response<any>>(`/api/v2/admin/problems/${id}/validation-status`),
+
   getTags: () => axiosInstance.get<Response<Tag[]>>('/tags'),
   getCategories: () => axiosInstance.get<Response<Category[]>>('/categories'),
 }
@@ -140,4 +155,7 @@ export const adminCodeGenApi = {
     parameters: Array<{ name: string; type: string; is_custom: boolean }>;
     language_slug: string;
   }) => axiosInstance.post<Response<{ stub_code: string }>>('/api/v2/codegen/stub', data),
+
+  getBoilerplateStats: (problemId: number) =>
+    axiosInstance.get<Response<{ total_languages: number; languages: string[] }>>(`/api/v2/problems/${problemId}/boilerplates`),
 }

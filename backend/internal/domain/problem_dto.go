@@ -1,5 +1,7 @@
 package domain
 
+import "gorm.io/datatypes"
+
 // Request DTOs
 type CreateProblemRequest struct {
 	Title         string `json:"title"`
@@ -17,6 +19,11 @@ type CreateProblemRequest struct {
 	IsActive      bool   `json:"is_active"`
 	TagIDs        []int  `json:"tag_ids"`
 	CategoryIDs   []int  `json:"category_ids"`
+
+	// V2 fields
+	FunctionName *string         `json:"function_name,omitempty"`
+	ReturnType   *string         `json:"return_type,omitempty"`
+	Parameters   *datatypes.JSON `json:"parameters,omitempty"`
 }
 
 type UpdateProblemRequest struct {
@@ -35,6 +42,11 @@ type UpdateProblemRequest struct {
 	IsActive      *bool  `json:"is_active"`
 	TagIDs        []int  `json:"tag_ids"`
 	CategoryIDs   []int  `json:"category_ids"`
+
+	// V2 fields
+	FunctionName *string         `json:"function_name,omitempty"`
+	ReturnType   *string         `json:"return_type,omitempty"`
+	Parameters   *datatypes.JSON `json:"parameters,omitempty"`
 }
 
 type ListProblemsRequest struct {

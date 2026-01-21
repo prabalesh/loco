@@ -58,7 +58,7 @@ type ProblemRepository interface {
 	List(filters ProblemFilters) ([]*Problem, int, error)
 	Update(problem *Problem) error
 	Delete(id int) error
-	SlugExists(slug string) (bool, error)
+	SlugExists(slug string, excludeID int) (bool, error)
 	UpdateCurrentStep(id int, newCurrentStep int) error
 	UpdateStats(id int, acceptanceRate float64, totalSubmissions, totalAccepted int) error
 	IncrementStats(id int, isAccepted bool) error
@@ -110,6 +110,7 @@ type TestCaseFilters struct {
 // TestCaseRepository interface
 type TestCaseRepository interface {
 	Create(testCase *TestCase) error
+	CreateMany(testCases []TestCase) error
 	Update(testCase *TestCase) error
 	Delete(id int) error
 	GetByID(id int) (*TestCase, error)
@@ -171,4 +172,24 @@ type ProblemLanguageRepository interface {
 	GetByProblemAndLanguage(problemID int, languageID int) (*ProblemLanguage, error)
 	Update(problemLanguage *ProblemLanguage) error
 	Delete(problemID int, languageID int) error
+}
+
+// BoilerplateRepository interface
+type BoilerplateRepository interface {
+	Create(boilerplate *ProblemBoilerplate) error
+	GetByProblemAndLanguage(problemID, languageID int) (*ProblemBoilerplate, error)
+	GetByProblemID(problemID int) ([]ProblemBoilerplate, error)
+	Update(boilerplate *ProblemBoilerplate) error
+	DeleteByProblemID(problemID int) error
+	Exists(problemID, languageID int) (bool, error)
+}
+
+// ReferenceSolutionRepository interface
+type ReferenceSolutionRepository interface {
+	Create(solution *ProblemReferenceSolution) error
+	GetByProblemAndLanguage(problemID, languageID int) (*ProblemReferenceSolution, error)
+	GetAllByProblemID(problemID int) ([]ProblemReferenceSolution, error)
+	Update(solution *ProblemReferenceSolution) error
+	Delete(id int) error
+	Exists(problemID, languageID int) (bool, error)
 }
