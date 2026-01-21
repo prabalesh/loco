@@ -43,6 +43,7 @@ type Problem struct {
 	HasReferenceSolution    bool            `json:"has_reference_solution" gorm:"default:false"`
 
 	// New relationships
+	TestCases          []TestCase                 `json:"test_cases,omitempty" gorm:"foreignKey:ProblemID"`
 	Boilerplates       []ProblemBoilerplate       `json:"boilerplates,omitempty" gorm:"foreignKey:ProblemID"`
 	ReferenceSolutions []ProblemReferenceSolution `json:"reference_solutions,omitempty" gorm:"foreignKey:ProblemID"`
 

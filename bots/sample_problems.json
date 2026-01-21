@@ -1,0 +1,139 @@
+{
+    "problems": [
+        {
+            "title": "Two Sum",
+            "description": "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target. You may assume that each input would have exactly one solution, and you may not use the same element twice.",
+            "difficulty": "easy",
+            "category_ids": [
+                1
+            ],
+            "tag_ids": [
+                1
+            ],
+            "function_name": "twoSum",
+            "return_type": "int[]",
+            "parameters": [
+                {
+                    "name": "nums",
+                    "type": "int[]",
+                    "is_custom": false
+                },
+                {
+                    "name": "target",
+                    "type": "int",
+                    "is_custom": false
+                }
+            ],
+            "validation_type": "EXACT",
+            "expected_time_complexity": "O(n)",
+            "expected_space_complexity": "O(n)",
+            "test_cases": [
+                {
+                    "input": [
+                        [
+                            2,
+                            7,
+                            11,
+                            15
+                        ],
+                        9
+                    ],
+                    "expected_output": [
+                        0,
+                        1
+                    ],
+                    "is_sample": true
+                },
+                {
+                    "input": [
+                        [
+                            3,
+                            2,
+                            4
+                        ],
+                        6
+                    ],
+                    "expected_output": [
+                        1,
+                        2
+                    ],
+                    "is_sample": false
+                },
+                {
+                    "input": [
+                        [
+                            3,
+                            3
+                        ],
+                        6
+                    ],
+                    "expected_output": [
+                        0,
+                        1
+                    ],
+                    "is_sample": false
+                }
+            ],
+            "reference_solution": {
+                "language_slug": "python",
+                "code": "def twoSum(nums, target):\n    seen = {}\n    for i, num in enumerate(nums):\n        if target - num in seen:\n            return [seen[target-num], i]\n        seen[num] = i"
+            }
+        },
+        {
+            "title": "Reverse Integer",
+            "description": "Given a signed 32-bit integer x, return x with its digits reversed. If reversing x causes the value to go outside the signed 32-bit integer range [-2^31, 2^31 - 1], then return 0.",
+            "difficulty": "medium",
+            "category_ids": [
+                1
+            ],
+            "tag_ids": [
+                1,
+                2
+            ],
+            "function_name": "reverse",
+            "return_type": "int",
+            "parameters": [
+                {
+                    "name": "x",
+                    "type": "int",
+                    "is_custom": false
+                }
+            ],
+            "validation_type": "EXACT",
+            "expected_time_complexity": "O(log(x))",
+            "expected_space_complexity": "O(1)",
+            "test_cases": [
+                {
+                    "input": [
+                        123
+                    ],
+                    "expected_output": 321,
+                    "is_sample": true
+                },
+                {
+                    "input": [
+                        -123
+                    ],
+                    "expected_output": -321,
+                    "is_sample": true
+                },
+                {
+                    "input": [
+                        120
+                    ],
+                    "expected_output": 21,
+                    "is_sample": false
+                }
+            ],
+            "reference_solution": {
+                "language_slug": "python",
+                "code": "def reverse(x):\n    sign = 1 if x >= 0 else -1\n    x = abs(x)\n    res = 0\n    while x > 0:\n        res = res * 10 + x % 10\n        x //= 10\n    \n    res *= sign\n    if res < -2**31 or res > 2**31 - 1:\n        return 0\n    return res"
+            }
+        }
+    ],
+    "options": {
+        "validate_references": true,
+        "skip_duplicates": true,
+        "stop_on_error": false
+    }
+}

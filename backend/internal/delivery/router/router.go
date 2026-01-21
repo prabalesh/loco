@@ -40,6 +40,7 @@ type Dependencies struct {
 	CodeExecutionHandler *v2.SubmissionHandler
 	V2ProblemHandler     *v2.ProblemHandler
 	ValidationHandler    *v2.ValidationHandler
+	BulkHandler          *v2.BulkHandler
 }
 
 func SetupRouter(deps *Dependencies) http.Handler {
@@ -175,15 +176,26 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	mux.Handle("POST /api/v2/problems/{problem_id}/submit", authMiddleware(http.HandlerFunc(deps.CodeExecutionHandler.SubmitCode)))
 
 	// V2 Problems
+	mux.Handle("GET /api/v2/admin/problems", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.AdminListProblems)))
 	mux.Handle("POST /api/v2/admin/problems", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.CreateProblem)))
 	mux.Handle("GET /api/v2/admin/problems/{id}", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.AdminGetProblem)))
+	mux.Handle("DELETE /api/v2/admin/problems/{id}", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.DeleteProblem)))
 	mux.Handle("POST /api/v2/admin/problems/{id}/publish", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.PublishProblem)))
+	mux.Handle("POST /api/v2/admin/problems/{id}/boilerplates", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.RegenerateBoilerplates)))
 	mux.HandleFunc("GET /api/v2/problems", deps.V2ProblemHandler.ListProblems)
 	mux.HandleFunc("GET /api/v2/problems/{slug}", deps.V2ProblemHandler.GetProblem)
 
 	// V2 Validation
 	mux.Handle("POST /api/v2/admin/problems/{id}/validate", adminAuthMiddleware(http.HandlerFunc(deps.ValidationHandler.ValidateReferenceSolution)))
 	mux.Handle("GET /api/v2/admin/problems/{id}/validation-status", adminAuthMiddleware(http.HandlerFunc(deps.ValidationHandler.GetValidationStatus)))
+
+	// V2 Custom Types
+	mux.Handle("GET /api/v2/admin/custom-types", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.GetCustomTypes)))
+
+	// V2 Bulk Import
+	bulkRateLimiter := middleware.NewRateLimiter(10, 1*time.Hour)
+	mux.Handle("POST /api/v2/admin/problems/bulk", adminAuthMiddleware(bulkRateLimiter.Middleware(deps.BulkHandler.BulkImportProblems)))
+	mux.Handle("POST /api/v2/admin/problems/bulk-async", adminAuthMiddleware(bulkRateLimiter.Middleware(deps.BulkHandler.BulkImportProblemsAsync)))
 
 	handler := middleware.Logging(deps.Log)(mux)
 	handler = middleware.CORS(deps.Log, deps.Cfg.CORS.AllowedOrigins)(handler)

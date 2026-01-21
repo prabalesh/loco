@@ -1,6 +1,6 @@
 import axiosInstance from '../axios'
 import type { User, AdminAnalytics, LoginCredentials, Language, Problem, TestCase, Tag, Category } from '../../types'
-import type { PaginatedResponse, Response, SimpleResponse } from '../../types/repsonse'
+import type { PaginatedResponse, Response, SimpleResponse } from '../../types/response'
 import type { CreateOrUpdateLanguageRequest, CreateOrUpdateProblemRequest, CreateTestCaseRequest } from '../../types/request'
 import type { ProblemLanguage, CreateProblemLanguageRequest, UpdateProblemLanguageRequest } from '../../types/problemLanguage'
 
@@ -88,6 +88,19 @@ export const adminProblemApi = {
   v2GetValidationStatus: (id: string | number) =>
     axiosInstance.get<Response<any>>(`/api/v2/admin/problems/${id}/validation-status`),
 
+  v2List: (page = 1, limit = 20, filters: any = {}) =>
+    axiosInstance.get<PaginatedResponse<{ data: Problem[] }>>('/api/v2/admin/problems', {
+      params: { page, limit, ...filters }
+    }),
+
+  v2Delete: (id: string | number) =>
+    axiosInstance.delete<SimpleResponse>(`/api/v2/admin/problems/${id}`),
+
+  v2RegenerateBoilerplates: (id: string | number) =>
+    axiosInstance.post<SimpleResponse>(`/api/v2/admin/problems/${id}/boilerplates`),
+
+  getCustomTypes: () => axiosInstance.get<Response<{ id: number; name: string; description: string }[]>>('/api/v2/admin/custom-types'),
+
   getTags: () => axiosInstance.get<Response<Tag[]>>('/tags'),
   getCategories: () => axiosInstance.get<Response<Category[]>>('/categories'),
 }
@@ -158,4 +171,16 @@ export const adminCodeGenApi = {
 
   getBoilerplateStats: (problemId: number) =>
     axiosInstance.get<Response<{ total_languages: number; languages: string[] }>>(`/api/v2/problems/${problemId}/boilerplates`),
+
+  v2GetStub: (problemId: number, languageSlug: string) =>
+    axiosInstance.get<Response<{ stub_code: string }>>(`/api/v2/problems/${problemId}/stub`, {
+      params: { language: languageSlug }
+    }),
+}
+
+export const adminBulkApi = {
+  import: (data: any) =>
+    axiosInstance.post<Response<any>>('/api/v2/admin/problems/bulk', data),
+  importAsync: (data: any) =>
+    axiosInstance.post<Response<any>>('/api/v2/admin/problems/bulk-async', data),
 }

@@ -13,6 +13,7 @@ import {
   Tag,
   Grid,
   Sparkles,
+  Upload,
 } from 'lucide-react'
 import { useAuthStore } from '../../features/auth/store/authStore'
 import { adminAuthApi } from '../../lib/api/admin'
@@ -77,6 +78,12 @@ export const AdminLayout = () => {
       icon: <Grid className="w-5 h-5" />,
       label: 'Categories',
       onClick: () => navigate('/categories'),
+    },
+    {
+      key: '/problems/bulk-import',
+      icon: <Upload className="w-5 h-5" />,
+      label: 'Bulk Import',
+      onClick: () => navigate('/problems/bulk-import'),
     },
   ]
 

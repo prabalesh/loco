@@ -21,9 +21,10 @@ func NewCodeGenHandler(
 	problemRepo domain.ProblemRepository,
 	languageRepo domain.LanguageRepository,
 	boilerplateService *codegen.BoilerplateService,
+	codeGenService *codegen.CodeGenService,
 ) *CodeGenHandler {
 	return &CodeGenHandler{
-		codeGenService:     codegen.NewCodeGenService(),
+		codeGenService:     codeGenService,
 		problemRepo:        problemRepo,
 		languageRepo:       languageRepo,
 		boilerplateService: boilerplateService,

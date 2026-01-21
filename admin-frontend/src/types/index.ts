@@ -58,6 +58,7 @@ export interface Problem {
   output_format: string
   constraints: string
   status: "draft" | "published"
+  validation_status: "draft" | "validated"
   is_active: boolean
   acceptance_rate: number
   total_submissions: number
@@ -111,10 +112,7 @@ export interface LoginCredentials {
   password: string
 }
 
-export interface ApiError {
-  error: string
-}
 
 export * from './request'
-export * from './repsonse'
+export * from './response'
 export * from './problemLanguage'

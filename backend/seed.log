@@ -1,0 +1,48 @@
+2026/01/21 18:13:59 Initializing configuration...
+2026/01/21 18:13:59 Configuration loaded successfully
+2026/01/21 18:13:59 Environment: development
+2026/01/21 18:13:59 Cookie Secure: false
+{"level":"info","msg":"Connecting to database","host":"localhost","port":"5432","database":"loco"}
+{"level":"info","msg":"Database connected successfully","max_open_conns":25,"max_idle_conns":5,"conn_max_lifetime":"5m0s"}
+2026/01/21 18:13:59 Running migrations...
+2026/01/21 18:14:00 Seeding languages...
+
+2026/01/21 18:14:00 [31;1m/home/neo/Desktop/Me/loco/backend/internal/seeds/languages_seed.go:23 [35;1mrecord not found
+[0m[33m[1.141ms] [34;1m[rows:0][0m SELECT * FROM "languages" WHERE slug = 'python' ORDER BY "languages"."id" LIMIT 1
+2026/01/21 18:14:00 Created Language: Python
+
+2026/01/21 18:14:00 [31;1m/home/neo/Desktop/Me/loco/backend/internal/seeds/languages_seed.go:23 [35;1mrecord not found
+[0m[33m[0.447ms] [34;1m[rows:0][0m SELECT * FROM "languages" WHERE slug = 'javascript' ORDER BY "languages"."id" LIMIT 1
+2026/01/21 18:14:00 Created Language: JavaScript
+2026/01/21 18:14:00 Language Java already exists
+
+2026/01/21 18:14:00 [31;1m/home/neo/Desktop/Me/loco/backend/internal/seeds/languages_seed.go:23 [35;1mrecord not found
+[0m[33m[0.385ms] [34;1m[rows:0][0m SELECT * FROM "languages" WHERE slug = 'cpp' ORDER BY "languages"."id" LIMIT 1
+2026/01/21 18:14:00 Created Language: C++
+
+2026/01/21 18:14:00 [31;1m/home/neo/Desktop/Me/loco/backend/internal/seeds/languages_seed.go:23 [35;1mrecord not found
+[0m[33m[0.527ms] [34;1m[rows:0][0m SELECT * FROM "languages" WHERE slug = 'go' ORDER BY "languages"."id" LIMIT 1
+2026/01/21 18:14:00 Created Language: Go
+2026/01/21 18:14:00 Seeding custom types...
+2026/01/21 18:14:00 CustomType TreeNode already exists
+2026/01/21 18:14:00 CustomType ListNode already exists
+2026/01/21 18:14:00 CustomType GraphNode already exists
+2026/01/21 18:14:00 CustomType Node already exists
+2026/01/21 18:14:00 Seeding type implementations...
+
+2026/01/21 18:14:00 [31;1m/home/neo/Desktop/Me/loco/backend/internal/seeds/type_implementations_seed.go:251 [35;1mrecord not found
+[0m[33m[0.694ms] [34;1m[rows:0][0m SELECT * FROM "type_implementations" WHERE custom_type_id = 1 AND language_id = 3 ORDER BY "type_implementations"."id" LIMIT 1
+2026/01/21 18:14:00 Created TypeImplementation for Type 1 / Lang 3
+
+2026/01/21 18:14:00 [31;1m/home/neo/Desktop/Me/loco/backend/internal/seeds/type_implementations_seed.go:251 [35;1mrecord not found
+[0m[33m[0.500ms] [34;1m[rows:0][0m SELECT * FROM "type_implementations" WHERE custom_type_id = 2 AND language_id = 3 ORDER BY "type_implementations"."id" LIMIT 1
+2026/01/21 18:14:00 Created TypeImplementation for Type 2 / Lang 3
+
+2026/01/21 18:14:00 [31;1m/home/neo/Desktop/Me/loco/backend/internal/seeds/type_implementations_seed.go:251 [35;1mrecord not found
+[0m[33m[0.469ms] [34;1m[rows:0][0m SELECT * FROM "type_implementations" WHERE custom_type_id = 1 AND language_id = 4 ORDER BY "type_implementations"."id" LIMIT 1
+2026/01/21 18:14:00 Created TypeImplementation for Type 1 / Lang 4
+
+2026/01/21 18:14:00 [31;1m/home/neo/Desktop/Me/loco/backend/internal/seeds/type_implementations_seed.go:251 [35;1mrecord not found
+[0m[33m[0.578ms] [34;1m[rows:0][0m SELECT * FROM "type_implementations" WHERE custom_type_id = 2 AND language_id = 4 ORDER BY "type_implementations"."id" LIMIT 1
+2026/01/21 18:14:00 Created TypeImplementation for Type 2 / Lang 4
+2026/01/21 18:14:00 Seeding completed successfully!

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/prabalesh/loco/backend/internal/domain"
 )
 
 type Parameter struct {
@@ -18,10 +20,14 @@ type ProblemSignature struct {
 	Parameters   []Parameter `json:"parameters"`
 }
 
-type CodeGenService struct{}
+type CodeGenService struct {
+	typeImplRepo domain.TypeImplementationRepository
+}
 
-func NewCodeGenService() *CodeGenService {
-	return &CodeGenService{}
+func NewCodeGenService(typeImplRepo domain.TypeImplementationRepository) *CodeGenService {
+	return &CodeGenService{
+		typeImplRepo: typeImplRepo,
+	}
 }
 
 // GenerateStubCode generates starter code for users
@@ -34,27 +40,63 @@ func (s *CodeGenService) GenerateStubCode(signature ProblemSignature, languageSl
 		return "", errors.New("at least one parameter is required")
 	}
 
-	// Check for custom types (not supported yet)
-	for _, param := range signature.Parameters {
-		if param.IsCustom {
-			return "", errors.New("custom types not supported yet")
-		}
-	}
+	// Identify custom types
+	customTypes := s.identifyCustomTypes(signature)
 
 	switch languageSlug {
 	case "python":
-		return s.generatePythonStub(signature)
+		return s.generatePythonStub(signature, customTypes)
 	case "javascript":
-		return s.generateJavaScriptStub(signature)
+		return s.generateJavaScriptStub(signature, customTypes)
 	case "java":
+		// Java support for custom types todo
+		if len(customTypes) > 0 {
+			return "", errors.New("custom types not supported for Java yet")
+		}
 		return s.generateJavaStub(signature)
 	case "cpp":
+		if len(customTypes) > 0 {
+			return "", errors.New("custom types not supported for C++ yet")
+		}
 		return s.generateCppStub(signature)
 	case "go":
+		if len(customTypes) > 0 {
+			return "", errors.New("custom types not supported for Go yet")
+		}
 		return s.generateGoStub(signature)
 	default:
 		return "", fmt.Errorf("unsupported language: %s", languageSlug)
 	}
+}
+
+func (s *CodeGenService) identifyCustomTypes(sig ProblemSignature) []string {
+	types := []string{}
+	seen := make(map[string]bool)
+
+	if s.isCustomType(sig.ReturnType) {
+		types = append(types, sig.ReturnType)
+		seen[sig.ReturnType] = true
+	}
+
+	for _, param := range sig.Parameters {
+		if param.IsCustom && !seen[param.Type] {
+			types = append(types, param.Type)
+			seen[param.Type] = true
+		}
+	}
+
+	return types
+}
+
+func (s *CodeGenService) isCustomType(typeName string) bool {
+	// This could be dynamic, but checking seeded types for now
+	validTypes := []string{"TreeNode", "ListNode", "GraphNode", "Node"}
+	for _, vt := range validTypes {
+		if typeName == vt {
+			return true
+		}
+	}
+	return false
 }
 
 // GenerateTestHarness generates wrapper code that runs test cases
@@ -64,23 +106,27 @@ func (s *CodeGenService) GenerateTestHarness(signature ProblemSignature, userCod
 		return "", errors.New("user code is required")
 	}
 
-	// Check for custom types
-	for _, param := range signature.Parameters {
-		if param.IsCustom {
-			return "", errors.New("custom types not supported yet")
-		}
-	}
+	customTypes := s.identifyCustomTypes(signature)
 
 	switch languageSlug {
 	case "python":
-		return s.generatePythonHarness(signature, userCode)
+		return s.generatePythonHarness(signature, userCode, customTypes)
 	case "javascript":
-		return s.generateJavaScriptHarness(signature, userCode)
+		return s.generateJavaScriptHarness(signature, userCode, customTypes)
 	case "java":
+		if len(customTypes) > 0 {
+			return "", errors.New("custom types not supported for Java yet")
+		}
 		return s.generateJavaHarness(signature, userCode)
 	case "cpp":
+		if len(customTypes) > 0 {
+			return "", errors.New("custom types not supported for C++ yet")
+		}
 		return s.generateCppHarness(signature, userCode)
 	case "go":
+		if len(customTypes) > 0 {
+			return "", errors.New("custom types not supported for Go yet")
+		}
 		return s.generateGoHarness(signature, userCode)
 	default:
 		return "", fmt.Errorf("unsupported language: %s", languageSlug)
@@ -153,9 +199,20 @@ func (s *CodeGenService) mapTypeToGo(typ string) string {
 }
 
 // Python stub generator
-func (s *CodeGenService) generatePythonStub(sig ProblemSignature) (string, error) {
+func (s *CodeGenService) generatePythonStub(sig ProblemSignature, customTypes []string) (string, error) {
 	var sb strings.Builder
-	sb.WriteString("from typing import List\n\n")
+	sb.WriteString("from typing import List, Optional\n\n")
+
+	// Add custom type definitions
+	for _, typeName := range customTypes {
+		impl, err := s.typeImplRepo.GetByTypeAndLanguageSlug(typeName, "python")
+		if err != nil {
+			return "", fmt.Errorf("failed to get implementation for %s: %w", typeName, err)
+		}
+		sb.WriteString(impl.ClassDefinition)
+		sb.WriteString("\n")
+	}
+
 	sb.WriteString(fmt.Sprintf("def %s(", sig.FunctionName))
 	params := []string{}
 	for _, param := range sig.Parameters {
@@ -171,9 +228,25 @@ func (s *CodeGenService) generatePythonStub(sig ProblemSignature) (string, error
 }
 
 // Python harness generator
-func (s *CodeGenService) generatePythonHarness(sig ProblemSignature, userCode string) (string, error) {
+func (s *CodeGenService) generatePythonHarness(sig ProblemSignature, userCode string, customTypes []string) (string, error) {
 	var sb strings.Builder
 	sb.WriteString("import json\nimport sys\n\n")
+
+	// Add custom type definitions and helpers
+	for _, typeName := range customTypes {
+		impl, err := s.typeImplRepo.GetByTypeAndLanguageSlug(typeName, "python")
+		if err != nil {
+			return "", fmt.Errorf("failed to get implementation for %s: %w", typeName, err)
+		}
+		sb.WriteString(fmt.Sprintf("# Custom type: %s\n", typeName))
+		sb.WriteString(impl.ClassDefinition)
+		sb.WriteString("\n")
+		sb.WriteString(impl.DeserializerCode)
+		sb.WriteString("\n")
+		sb.WriteString(impl.SerializerCode)
+		sb.WriteString("\n\n")
+	}
+
 	sb.WriteString("# User's solution\n")
 	sb.WriteString(userCode)
 	sb.WriteString("\n\n")
@@ -184,9 +257,17 @@ func (s *CodeGenService) generatePythonHarness(sig ProblemSignature, userCode st
 	sb.WriteString("    for test in test_cases:\n")
 	sb.WriteString("        try:\n")
 	sb.WriteString("            # Unpack parameters\n")
+
+	// Parameter deserialization
 	for i, param := range sig.Parameters {
-		sb.WriteString(fmt.Sprintf("            %s = test['input'][%d]\n", param.Name, i))
+		if param.IsCustom {
+			deserializerFunc := fmt.Sprintf("deserialize_%s", strings.ToLower(param.Type))
+			sb.WriteString(fmt.Sprintf("            %s = %s(test['input'][%d])\n", param.Name, deserializerFunc, i))
+		} else {
+			sb.WriteString(fmt.Sprintf("            %s = test['input'][%d]\n", param.Name, i))
+		}
 	}
+
 	sb.WriteString("            \n")
 	sb.WriteString("            # Call user function\n")
 	paramNames := []string{}
@@ -194,6 +275,13 @@ func (s *CodeGenService) generatePythonHarness(sig ProblemSignature, userCode st
 		paramNames = append(paramNames, param.Name)
 	}
 	sb.WriteString(fmt.Sprintf("            result = %s(%s)\n", sig.FunctionName, strings.Join(paramNames, ", ")))
+
+	// Serialize result if custom
+	if s.isCustomType(sig.ReturnType) {
+		serializerFunc := fmt.Sprintf("serialize_%s", strings.ToLower(sig.ReturnType))
+		sb.WriteString(fmt.Sprintf("            result = %s(result)\n", serializerFunc))
+	}
+
 	sb.WriteString("            results.append({'output': result, 'error': None})\n")
 	sb.WriteString("        except Exception as e:\n")
 	sb.WriteString("            results.append({'output': None, 'error': str(e)})\n")
@@ -203,8 +291,19 @@ func (s *CodeGenService) generatePythonHarness(sig ProblemSignature, userCode st
 }
 
 // JavaScript stub generator
-func (s *CodeGenService) generateJavaScriptStub(sig ProblemSignature) (string, error) {
+func (s *CodeGenService) generateJavaScriptStub(sig ProblemSignature, customTypes []string) (string, error) {
 	var sb strings.Builder
+
+	// Add custom type definitions
+	for _, typeName := range customTypes {
+		impl, err := s.typeImplRepo.GetByTypeAndLanguageSlug(typeName, "javascript")
+		if err != nil {
+			return "", fmt.Errorf("failed to get implementation for %s: %w", typeName, err)
+		}
+		sb.WriteString(impl.ClassDefinition)
+		sb.WriteString("\n")
+	}
+
 	sb.WriteString(fmt.Sprintf("function %s(", sig.FunctionName))
 	params := []string{}
 	for _, param := range sig.Parameters {
@@ -218,8 +317,24 @@ func (s *CodeGenService) generateJavaScriptStub(sig ProblemSignature) (string, e
 }
 
 // JavaScript harness generator
-func (s *CodeGenService) generateJavaScriptHarness(sig ProblemSignature, userCode string) (string, error) {
+func (s *CodeGenService) generateJavaScriptHarness(sig ProblemSignature, userCode string, customTypes []string) (string, error) {
 	var sb strings.Builder
+
+	// Add custom type definitions and helpers
+	for _, typeName := range customTypes {
+		impl, err := s.typeImplRepo.GetByTypeAndLanguageSlug(typeName, "javascript")
+		if err != nil {
+			return "", fmt.Errorf("failed to get implementation for %s: %w", typeName, err)
+		}
+		sb.WriteString(fmt.Sprintf("// Custom type: %s\n", typeName))
+		sb.WriteString(impl.ClassDefinition)
+		sb.WriteString("\n")
+		sb.WriteString(impl.DeserializerCode)
+		sb.WriteString("\n")
+		sb.WriteString(impl.SerializerCode)
+		sb.WriteString("\n\n")
+	}
+
 	sb.WriteString("// User's solution\n")
 	sb.WriteString(userCode)
 	sb.WriteString("\n\n")
@@ -228,14 +343,29 @@ func (s *CodeGenService) generateJavaScriptHarness(sig ProblemSignature, userCod
 	sb.WriteString("const results = [];\n\n")
 	sb.WriteString("for (const test of testCases) {\n")
 	sb.WriteString("    try {\n")
+
+	// Parameter deserialization
 	for i, param := range sig.Parameters {
-		sb.WriteString(fmt.Sprintf("        const %s = test.input[%d];\n", param.Name, i))
+		if param.IsCustom {
+			deserializerFunc := fmt.Sprintf("deserialize%s", param.Type) // e.g. deserializeTreeNode
+			sb.WriteString(fmt.Sprintf("        const %s = %s(test.input[%d]);\n", param.Name, deserializerFunc, i))
+		} else {
+			sb.WriteString(fmt.Sprintf("        const %s = test.input[%d];\n", param.Name, i))
+		}
 	}
+
 	paramNames := []string{}
 	for _, param := range sig.Parameters {
 		paramNames = append(paramNames, param.Name)
 	}
-	sb.WriteString(fmt.Sprintf("        const result = %s(%s);\n", sig.FunctionName, strings.Join(paramNames, ", ")))
+	sb.WriteString(fmt.Sprintf("        let result = %s(%s);\n", sig.FunctionName, strings.Join(paramNames, ", ")))
+
+	// Serialize result if custom
+	if s.isCustomType(sig.ReturnType) {
+		serializerFunc := fmt.Sprintf("serialize%s", sig.ReturnType) // e.g. serializeTreeNode
+		sb.WriteString(fmt.Sprintf("        result = %s(result);\n", serializerFunc))
+	}
+
 	sb.WriteString("        results.push({ output: result, error: null });\n")
 	sb.WriteString("    } catch (e) {\n")
 	sb.WriteString("        results.push({ output: null, error: e.message });\n")

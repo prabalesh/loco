@@ -146,6 +146,13 @@ func (s *BoilerplateService) GetBoilerplateStats(problemID int) (map[string]inte
 		}
 	}
 	stats["languages"] = languages
-
 	return stats, nil
+}
+
+func (s *BoilerplateService) GetBoilerplatesByProblemID(problemID int) ([]domain.ProblemBoilerplate, error) {
+	return s.boilerplateRepo.GetByProblemID(problemID)
+}
+
+func (s *BoilerplateService) DeleteBoilerplatesByProblemID(problemID int) error {
+	return s.boilerplateRepo.DeleteByProblemID(problemID)
 }

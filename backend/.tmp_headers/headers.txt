@@ -1,0 +1,7 @@
+HTTP/1.1 200 OK
+Content-Type: application/json
+Set-Cookie: adminAccessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1LCJlbWFpbCI6ImFkbWluX3YyQGV4YW1wbGUuY29tIiwicm9sZSI6ImFkbWluIiwiaXNzIjoibG9jbyIsImV4cCI6MTc2OTAwMTE5OCwiaWF0IjoxNzY5MDAwNTk4fQ.5dhKjBxLxRZteNfto58FITaDgfi95fef8j7LIBBhgQQ; Path=/; Max-Age=600; HttpOnly; SameSite=Lax
+Set-Cookie: adminRefreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1LCJlbWFpbCI6ImFkbWluX3YyQGV4YW1wbGUuY29tIiwicm9sZSI6IiIsImlzcyI6ImxvY28iLCJleHAiOjE3Njk3MTMzOTgsImlhdCI6MTc2OTAwMDU5OH0.VtF1O9MXmMWU7uOwcYDeqOtucL6oeRfNQXaxbFq65Ig; Path=/; Max-Age=28800; HttpOnly; SameSite=Lax
+Date: Wed, 21 Jan 2026 13:03:18 GMT
+Content-Length: 216
+

@@ -26,11 +26,13 @@ import {
     PlayArrow as PlayIcon,
 } from '@mui/icons-material';
 import Editor from '@monaco-editor/react';
-import { adminProblemApi } from '../../lib/api/admin';
+import { adminProblemApi, adminCodeGenApi } from '../../lib/api/admin';
 import toast from 'react-hot-toast';
+import { Refresh as RefreshIcon } from '@mui/icons-material';
 
 interface ReferenceSolutionValidatorProps {
     problemId: number;
+    onValidationSuccess?: () => void;
 }
 
 const LANGUAGES = [
@@ -41,16 +43,36 @@ const LANGUAGES = [
     { value: 'go', label: 'Go' },
 ];
 
-export const ReferenceSolutionValidator: React.FC<ReferenceSolutionValidatorProps> = ({ problemId }) => {
+export const ReferenceSolutionValidator: React.FC<ReferenceSolutionValidatorProps> = ({ problemId, onValidationSuccess }) => {
     const [code, setCode] = useState('');
     const [language, setLanguage] = useState('python');
     const [validating, setValidating] = useState(false);
+    const [fetchingStub, setFetchingStub] = useState(false);
     const [validationResult, setValidationResult] = useState<any>(null);
     const [validationStatus, setValidationStatus] = useState<any>(null);
 
     useEffect(() => {
         fetchValidationStatus();
     }, [problemId]);
+
+    useEffect(() => {
+        if (!code.trim()) {
+            handleFetchStub();
+        }
+    }, [language, problemId]);
+
+    const handleFetchStub = async () => {
+        setFetchingStub(true);
+        try {
+            const response = await adminCodeGenApi.v2GetStub(problemId, language);
+            setCode(response.data.data.stub_code);
+        } catch (error) {
+            console.error('Failed to fetch stub:', error);
+            // Don't toast error here as it might be expected if no boilerplate exists yet
+        } finally {
+            setFetchingStub(false);
+        }
+    };
 
     const fetchValidationStatus = async () => {
         try {
@@ -79,6 +101,9 @@ export const ReferenceSolutionValidator: React.FC<ReferenceSolutionValidatorProp
 
             if (data.is_validated) {
                 toast.success('Reference solution validated! All test cases passed.');
+                if (onValidationSuccess) {
+                    onValidationSuccess();
+                }
             } else {
                 toast.error('Validation failed. Check test results below.');
             }
@@ -134,20 +159,32 @@ export const ReferenceSolutionValidator: React.FC<ReferenceSolutionValidatorProp
                 )}
 
                 <Box sx={{ mb: 3 }}>
-                    <TextField
-                        select
-                        label="Select Language"
-                        value={language}
-                        onChange={(e) => setLanguage(e.target.value)}
-                        sx={{ width: 200, mb: 2 }}
-                        size="small"
-                    >
-                        {LANGUAGES.map((option) => (
-                            <MenuItem key={option.value} value={option.value}>
-                                {option.label}
-                            </MenuItem>
-                        ))}
-                    </TextField>
+                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                        <TextField
+                            select
+                            label="Select Language"
+                            value={language}
+                            onChange={(e) => setLanguage(e.target.value)}
+                            sx={{ width: 200 }}
+                            size="small"
+                        >
+                            {LANGUAGES.map((option) => (
+                                <MenuItem key={option.value} value={option.value}>
+                                    {option.label}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+
+                        <Button
+                            startIcon={fetchingStub ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />}
+                            onClick={handleFetchStub}
+                            disabled={fetchingStub}
+                            size="small"
+                            variant="outlined"
+                        >
+                            {fetchingStub ? 'Loading...' : 'Load Stub'}
+                        </Button>
+                    </Stack>
 
                     <Box sx={{ border: '1px solid #ccc', borderRadius: 1, overflow: 'hidden', mb: 2 }}>
                         <Editor

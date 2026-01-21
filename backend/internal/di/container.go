@@ -14,6 +14,7 @@ import (
 	"github.com/prabalesh/loco/backend/internal/infrastructure/queue"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/worker"
 	"github.com/prabalesh/loco/backend/internal/repository/postgres"
+	"github.com/prabalesh/loco/backend/internal/services/bulk"
 	"github.com/prabalesh/loco/backend/internal/services/codegen"
 	"github.com/prabalesh/loco/backend/internal/services/execution"
 	"github.com/prabalesh/loco/backend/internal/services/problem"
@@ -55,7 +56,8 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	emailService := email.NewEmailService(cfg, logger)
 	pistonService := piston.NewPistonService(cfg, logger)
 	jobQueue := queue.NewJobQueue(redisClient, logger)
-	codeGenService := codegen.NewCodeGenService()
+	typeImplementationRepo := postgres.NewTypeImplementationRepository(db.DB)
+	codeGenService := codegen.NewCodeGenService(typeImplementationRepo)
 	boilerplateService := codegen.NewBoilerplateService(boilerplateRepo, languageRepo, codeGenService)
 
 	cookieManager := cookies.NewCookieManager(cfg)
@@ -88,16 +90,20 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardUsecase, logger)
 	achievementHandler := handler.NewAchievementHandler(achievementUsecase, userUsecase, logger)
 	notificationHandler := handler.NewNotificationHandler(notificationUsecase, logger)
-	codeGenHandler := v2.NewCodeGenHandler(problemRepo, languageRepo, boilerplateService)
+	codeGenHandler := v2.NewCodeGenHandler(problemRepo, languageRepo, boilerplateService, codeGenService)
 
 	executionService := execution.NewExecutionService(cfg.Server.PistonURL, boilerplateService)
 	codeExecutionHandler := v2.NewSubmissionHandler(executionService, problemRepo, testCaseRepo, languageRepo)
 
-	v2ProblemService := problem.NewProblemService(problemRepo, testCaseRepo, boilerplateService)
+	customTypeRepo := postgres.NewCustomTypeRepository(db.DB)
+	v2ProblemService := problem.NewProblemService(problemRepo, testCaseRepo, customTypeRepo, referenceSolutionRepo, boilerplateService)
 	v2ProblemHandler := v2.NewProblemHandler(v2ProblemService)
 
 	validationService := validation.NewValidationService(referenceSolutionRepo, problemRepo, testCaseRepo, executionService)
 	validationHandler := v2.NewValidationHandler(validationService, languageRepo)
+
+	bulkImportService := bulk.NewBulkImportService(v2ProblemService, validationService, db.DB)
+	bulkHandler := v2.NewBulkHandler(bulkImportService)
 
 	// Middleware
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(redisClient.Client, logger, &cfg.RateLimit)
@@ -124,6 +130,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 		CodeExecutionHandler: codeExecutionHandler,
 		V2ProblemHandler:     v2ProblemHandler,
 		ValidationHandler:    validationHandler,
+		BulkHandler:          bulkHandler,
 		RateLimit:            rateLimitMiddleware,
 		SubmissionRateLimit:  submissionRateLimitMiddleware,
 		RunCodeRateLimit:     runCodeRateLimitMiddleware,

@@ -193,3 +193,15 @@ type ReferenceSolutionRepository interface {
 	Delete(id int) error
 	Exists(problemID, languageID int) (bool, error)
 }
+
+type CustomTypeRepository interface {
+	Create(customType *CustomType) error
+	GetByName(name string) (*CustomType, error)
+	GetAll() ([]CustomType, error)
+}
+
+type TypeImplementationRepository interface {
+	Create(impl *TypeImplementation) error
+	GetByTypeAndLanguage(customTypeID, languageID int) (*TypeImplementation, error)
+	GetByTypeAndLanguageSlug(typeName, languageSlug string) (*TypeImplementation, error)
+}

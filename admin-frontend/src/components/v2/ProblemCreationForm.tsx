@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardHeader,
@@ -29,12 +29,12 @@ interface Parameter {
 }
 
 const PRIMITIVE_TYPES = [
-  { value: 'int', label: 'int' },
-  { value: 'int[]', label: 'int[]' },
-  { value: 'string', label: 'string' },
-  { value: 'string[]', label: 'string[]' },
-  { value: 'bool', label: 'bool' },
-  { value: 'double', label: 'double' },
+  { value: 'int', label: 'int', is_custom: false },
+  { value: 'int[]', label: 'int[]', is_custom: false },
+  { value: 'string', label: 'string', is_custom: false },
+  { value: 'string[]', label: 'string[]', is_custom: false },
+  { value: 'bool', label: 'bool', is_custom: false },
+  { value: 'double', label: 'double', is_custom: false },
 ];
 
 const VALIDATION_TYPES = [
@@ -59,6 +59,8 @@ const LANGUAGES = [
 ];
 
 export const ProblemCreationForm: React.FC = () => {
+  const [customTypes, setCustomTypes] = useState<{ value: string; label: string; is_custom: boolean }[]>([]);
+  const [allTypes, setAllTypes] = useState<any[]>([...PRIMITIVE_TYPES]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [difficulty, setDifficulty] = useState('medium');
@@ -79,6 +81,31 @@ export const ProblemCreationForm: React.FC = () => {
   const [boilerplateStats, setBoilerplateStats] = useState<{ total_languages: number; languages: string[] } | null>(null);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    fetchCustomTypes();
+  }, []);
+
+  const fetchCustomTypes = async () => {
+    try {
+      const response = await adminProblemApi.getCustomTypes();
+      const types = response.data.data.map((ct: any) => ({
+        value: ct.name,
+        label: ct.name,
+        is_custom: true,
+      }));
+      setCustomTypes(types);
+      setAllTypes([...PRIMITIVE_TYPES, ...types]);
+    } catch (err) {
+      console.error('Failed to fetch custom types', err);
+    }
+  };
+
+  useEffect(() => {
+    if (customTypes.length > 0) {
+      console.log('Loaded custom types:', customTypes);
+    }
+  }, [customTypes]);
+
   const addParameter = () => {
     setParameters([...parameters, { name: '', type: 'int', is_custom: false }]);
   };
@@ -91,7 +118,13 @@ export const ProblemCreationForm: React.FC = () => {
 
   const updateParameter = (index: number, field: keyof Parameter, value: any) => {
     const newParams = [...parameters];
-    newParams[index] = { ...newParams[index], [field]: value };
+    if (field === 'type') {
+      // Check if custom
+      const typeObj = allTypes.find(t => t.value === value);
+      newParams[index] = { ...newParams[index], type: value, is_custom: typeObj?.is_custom || false };
+    } else {
+      newParams[index] = { ...newParams[index], [field]: value };
+    }
     setParameters(newParams);
   };
 
@@ -297,7 +330,7 @@ export const ProblemCreationForm: React.FC = () => {
                         value={returnType}
                         onChange={(e) => setReturnType(e.target.value)}
                       >
-                        {PRIMITIVE_TYPES.map((opt) => (
+                        {allTypes.map((opt) => (
                           <MenuItem key={opt.value} value={opt.value}>
                             {opt.label}
                           </MenuItem>
@@ -332,7 +365,7 @@ export const ProblemCreationForm: React.FC = () => {
                           onChange={(e) => updateParameter(index, 'type', e.target.value)}
                           sx={{ width: 150 }}
                         >
-                          {PRIMITIVE_TYPES.map((opt) => (
+                          {allTypes.map((opt) => (
                             <MenuItem key={opt.value} value={opt.value}>
                               {opt.label}
                             </MenuItem>

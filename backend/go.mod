@@ -11,6 +11,7 @@ require (
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.46.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
+	gorm.io/datatypes v1.2.7
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
 )
@@ -31,6 +32,5 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
-	gorm.io/datatypes v1.2.7 // indirect
 	gorm.io/driver/mysql v1.5.6 // indirect
 )

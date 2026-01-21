@@ -85,6 +85,8 @@ func main() {
 		&domain.Category{},
 		&domain.ProblemBoilerplate{},
 		&domain.ProblemReferenceSolution{},
+		&domain.CustomType{},
+		&domain.TypeImplementation{},
 	); err != nil {
 		log.Fatal("Failed to run auto migrations", zap.Error(err))
 	}

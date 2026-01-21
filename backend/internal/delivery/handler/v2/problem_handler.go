@@ -113,6 +113,17 @@ func (h *ProblemHandler) ListProblems(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GET /api/v2/admin/problems
+func (h *ProblemHandler) AdminListProblems(w http.ResponseWriter, r *http.Request) {
+	// Re-use ListProblems logic but ensure admin check
+	role, ok := middleware.GetUserRole(r.Context())
+	if !ok || role != "admin" {
+		handler.RespondError(w, http.StatusForbidden, "forbidden: admin access required")
+		return
+	}
+	h.ListProblems(w, r)
+}
+
 // GET /api/v2/admin/problems/:id
 func (h *ProblemHandler) AdminGetProblem(w http.ResponseWriter, r *http.Request) {
 	// Check admin
@@ -130,13 +141,40 @@ func (h *ProblemHandler) AdminGetProblem(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	problem, err := h.problemService.GetByID(problemID)
+	problem, err := h.problemService.GetAdminByID(problemID)
 	if err != nil {
 		handler.RespondError(w, http.StatusNotFound, "problem not found")
 		return
 	}
 
 	handler.RespondJSON(w, http.StatusOK, problem)
+}
+
+// DELETE /api/v2/admin/problems/:id
+func (h *ProblemHandler) DeleteProblem(w http.ResponseWriter, r *http.Request) {
+	// Check admin
+	role, ok := middleware.GetUserRole(r.Context())
+	if !ok || role != "admin" {
+		handler.RespondError(w, http.StatusForbidden, "forbidden: admin access required")
+		return
+	}
+
+	// Get problem ID
+	problemIDStr := r.PathValue("id")
+	problemID, err := strconv.Atoi(problemIDStr)
+	if err != nil {
+		handler.RespondError(w, http.StatusBadRequest, "invalid problem ID")
+		return
+	}
+
+	if err := h.problemService.DeleteProblem(problemID); err != nil {
+		handler.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	handler.RespondJSON(w, http.StatusOK, map[string]string{
+		"message": "Problem deleted successfully",
+	})
 }
 
 // POST /api/v2/admin/problems/:id/publish
@@ -163,5 +201,43 @@ func (h *ProblemHandler) PublishProblem(w http.ResponseWriter, r *http.Request) 
 
 	handler.RespondJSON(w, http.StatusOK, map[string]string{
 		"message": "problem published successfully",
+	})
+}
+
+// GET /api/v2/admin/custom-types
+func (h *ProblemHandler) GetCustomTypes(w http.ResponseWriter, r *http.Request) {
+	customTypes, err := h.problemService.GetCustomTypes()
+	if err != nil {
+		handler.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	handler.RespondJSON(w, http.StatusOK, customTypes)
+}
+
+// POST /api/v2/admin/problems/:id/boilerplates
+func (h *ProblemHandler) RegenerateBoilerplates(w http.ResponseWriter, r *http.Request) {
+	// Check admin
+	role, ok := middleware.GetUserRole(r.Context())
+	if !ok || role != "admin" {
+		handler.RespondError(w, http.StatusForbidden, "forbidden: admin access required")
+		return
+	}
+
+	// Get problem ID
+	problemIDStr := r.PathValue("id")
+	problemID, err := strconv.Atoi(problemIDStr)
+	if err != nil {
+		handler.RespondError(w, http.StatusBadRequest, "invalid problem ID")
+		return
+	}
+
+	if err := h.problemService.RegenerateBoilerplates(problemID); err != nil {
+		handler.RespondError(w, http.StatusInternalServerError, "failed to regenerate boilerplates: "+err.Error())
+		return
+	}
+
+	handler.RespondJSON(w, http.StatusOK, map[string]string{
+		"message": "boilerplates regenerated successfully",
 	})
 }

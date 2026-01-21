@@ -15,17 +15,23 @@ import (
 type ProblemService struct {
 	problemRepo        domain.ProblemRepository
 	testCaseRepo       domain.TestCaseRepository
+	customTypeRepo     domain.CustomTypeRepository
+	referenceRepo      domain.ReferenceSolutionRepository
 	boilerplateService *codegen.BoilerplateService
 }
 
 func NewProblemService(
 	problemRepo domain.ProblemRepository,
 	testCaseRepo domain.TestCaseRepository,
+	customTypeRepo domain.CustomTypeRepository,
+	referenceRepo domain.ReferenceSolutionRepository,
 	boilerplateService *codegen.BoilerplateService,
 ) *ProblemService {
 	return &ProblemService{
 		problemRepo:        problemRepo,
 		testCaseRepo:       testCaseRepo,
+		customTypeRepo:     customTypeRepo,
+		referenceRepo:      referenceRepo,
 		boilerplateService: boilerplateService,
 	}
 }
@@ -62,7 +68,7 @@ func (s *ProblemService) CreateProblem(req CreateProblemRequest, createdBy int) 
 	}
 
 	// Generate slug
-	slug := s.generateSlug(req.Title)
+	slug := s.GenerateSlug(req.Title)
 
 	// Ensure slug is unique
 	slug, err := s.ensureUniqueSlug(slug, 0)
@@ -182,7 +188,10 @@ func (s *ProblemService) validateCreateRequest(req CreateProblemRequest) error {
 			return errors.New("parameter type cannot be empty")
 		}
 		if param.IsCustom {
-			return errors.New("custom types not supported yet")
+			// Validate custom type exists
+			if _, err := s.customTypeRepo.GetByName(param.Type); err != nil {
+				return fmt.Errorf("invalid custom type: %s", param.Type)
+			}
 		}
 	}
 
@@ -217,8 +226,8 @@ func (s *ProblemService) validateCreateRequest(req CreateProblemRequest) error {
 	return nil
 }
 
-// generateSlug generates a URL-friendly slug from title
-func (s *ProblemService) generateSlug(title string) string {
+// GenerateSlug generates a URL-friendly slug from title
+func (s *ProblemService) GenerateSlug(title string) string {
 	// Convert to lowercase
 	slug := strings.ToLower(title)
 
@@ -357,6 +366,33 @@ func (s *ProblemService) GetByID(id int) (*domain.Problem, error) {
 	return s.problemRepo.GetByID(id)
 }
 
+func (s *ProblemService) GetAdminByID(id int) (*domain.Problem, error) {
+	problem, err := s.problemRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch additional admin info
+	testCases, _ := s.testCaseRepo.GetByProblemID(id)
+	problem.TestCases = testCases
+
+	boilerplates, _ := s.boilerplateService.GetBoilerplatesByProblemID(id)
+	problem.Boilerplates = boilerplates
+
+	referenceSolutions, _ := s.referenceRepo.GetAllByProblemID(id)
+	problem.ReferenceSolutions = referenceSolutions
+
+	return problem, nil
+}
+
+func (s *ProblemService) DeleteProblem(id int) error {
+	// Delete related test cases first (optional if DB has cascade, but safer here)
+	s.testCaseRepo.DeleteByProblemID(id)
+	s.boilerplateService.DeleteBoilerplatesByProblemID(id)
+	// Delete problem
+	return s.problemRepo.Delete(id)
+}
+
 func (s *ProblemService) PublishProblem(id int) error {
 	problem, err := s.problemRepo.GetByID(id)
 	if err != nil {
@@ -371,4 +407,22 @@ func (s *ProblemService) PublishProblem(id int) error {
 	problem.Visibility = "public"
 
 	return s.problemRepo.Update(problem)
+}
+
+func (s *ProblemService) RegenerateBoilerplates(id int) error {
+	problem, err := s.problemRepo.GetByID(id)
+	if err != nil {
+		return err
+	}
+
+	return s.boilerplateService.RegenerateBoilerplatesForProblem(problem)
+}
+
+func (s *ProblemService) GetCustomTypes() ([]domain.CustomType, error) {
+	return s.customTypeRepo.GetAll()
+}
+
+// SlugExists checks if a slug already exists
+func (s *ProblemService) SlugExists(slug string, excludeID int) (bool, error) {
+	return s.problemRepo.SlugExists(slug, excludeID)
 }
