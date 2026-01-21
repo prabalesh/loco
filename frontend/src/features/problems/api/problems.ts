@@ -20,4 +20,9 @@ export const problemsApi = {
 
     getCategories: () =>
         apiClient.get<ApiResponse<Category[]>>('/categories'),
+
+    getStub: (problemId: number, language: string) =>
+        apiClient.get<ApiResponse<{ stub_code: string }>>(`/v2/problems/${problemId}/stub`, {
+            params: { language }
+        }),
 }

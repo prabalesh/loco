@@ -1,6 +1,10 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/datatypes"
+)
 
 // Problem entity
 type Problem struct {
@@ -27,6 +31,21 @@ type Problem struct {
 	Creator          *User      `json:"creator,omitempty" gorm:"foreignKey:CreatedBy;references:ID;constraint:OnDelete:SET NULL"`
 	Tags             []Tag      `json:"tags,omitempty" gorm:"many2many:problem_tags"`
 	Categories       []Category `json:"categories,omitempty" gorm:"many2many:problem_categories"`
-	CreatedAt        time.Time  `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt        time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+
+	// V2 additions
+	FunctionName            *string         `json:"function_name,omitempty" gorm:"size:255"`
+	ReturnType              *string         `json:"return_type,omitempty" gorm:"size:100"`
+	Parameters              *datatypes.JSON `json:"parameters,omitempty" gorm:"type:jsonb"`
+	ValidationType          string          `json:"validation_type" gorm:"size:50;default:EXACT"`
+	ValidationStatus        string          `json:"validation_status" gorm:"size:50;default:draft"`
+	ExpectedTimeComplexity  *string         `json:"expected_time_complexity,omitempty" gorm:"size:50"`
+	ExpectedSpaceComplexity *string         `json:"expected_space_complexity,omitempty" gorm:"size:50"`
+	HasReferenceSolution    bool            `json:"has_reference_solution" gorm:"default:false"`
+
+	// New relationships
+	Boilerplates       []ProblemBoilerplate       `json:"boilerplates,omitempty" gorm:"foreignKey:ProblemID"`
+	ReferenceSolutions []ProblemReferenceSolution `json:"reference_solutions,omitempty" gorm:"foreignKey:ProblemID"`
+
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }

@@ -11,6 +11,8 @@ import (
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/prabalesh/loco/backend/pkg/database"
 	"go.uber.org/zap"
+
+	v2 "github.com/prabalesh/loco/backend/internal/delivery/handler/v2"
 )
 
 type Dependencies struct {
@@ -34,6 +36,7 @@ type Dependencies struct {
 	LeaderboardHandler  *handler.LeaderboardHandler
 	AchievementHandler  *handler.AchievementHandler
 	NotificationHandler *handler.NotificationHandler
+	CodeGenHandler      *v2.CodeGenHandler
 }
 
 func SetupRouter(deps *Dependencies) http.Handler {
@@ -161,6 +164,10 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	mux.Handle("POST /admin/categories", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.CreateCategory)))
 	mux.Handle("PUT /admin/categories/{id}", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.UpdateCategory)))
 	mux.Handle("DELETE /admin/categories/{id}", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.DeleteCategory)))
+
+	// ========== V2 CODEGEN ROUTES ==========
+	mux.Handle("POST /api/v2/codegen/stub", adminAuthMiddleware(http.HandlerFunc(deps.CodeGenHandler.GenerateStub)))
+	mux.Handle("GET /api/v2/problems/{problem_id}/stub", http.HandlerFunc(deps.CodeGenHandler.GetProblemStub))
 
 	handler := middleware.Logging(deps.Log)(mux)
 	handler = middleware.CORS(deps.Log, deps.Cfg.CORS.AllowedOrigins)(handler)

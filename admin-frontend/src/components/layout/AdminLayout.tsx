@@ -12,6 +12,7 @@ import {
   Globe,
   Tag,
   Grid,
+  Sparkles,
 } from 'lucide-react'
 import { useAuthStore } from '../../features/auth/store/authStore'
 import { adminAuthApi } from '../../lib/api/admin'
@@ -52,6 +53,12 @@ export const AdminLayout = () => {
       icon: <Code2 className="w-5 h-5" />,
       label: 'Problems',
       onClick: () => navigate('/problems'),
+    },
+    {
+      key: '/problems/create/v2',
+      icon: <Sparkles className="w-5 h-5 text-purple-500" />,
+      label: 'Create Problem (V2)',
+      onClick: () => navigate('/problems/create/v2'),
     },
     {
       key: '/languages',

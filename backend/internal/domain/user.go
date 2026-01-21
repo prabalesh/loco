@@ -24,6 +24,9 @@ type User struct {
 	// Gamification
 	XP    int `json:"xp" db:"xp" gorm:"default:0"`
 	Level int `json:"level" db:"level" gorm:"default:1"`
+
+	// V2 addition
+	IsBot bool `json:"is_bot" gorm:"default:false"`
 }
 
 // ToUserResponse converts User entity to UserResponse DTO

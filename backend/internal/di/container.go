@@ -5,6 +5,7 @@ import (
 
 	"github.com/prabalesh/loco/backend/internal/delivery/cookies"
 	"github.com/prabalesh/loco/backend/internal/delivery/handler"
+	v2 "github.com/prabalesh/loco/backend/internal/delivery/handler/v2"
 	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
 	"github.com/prabalesh/loco/backend/internal/delivery/router"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/auth"
@@ -79,6 +80,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardUsecase, logger)
 	achievementHandler := handler.NewAchievementHandler(achievementUsecase, userUsecase, logger)
 	notificationHandler := handler.NewNotificationHandler(notificationUsecase, logger)
+	codeGenHandler := v2.NewCodeGenHandler(problemRepo)
 
 	// Middleware
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(redisClient.Client, logger, &cfg.RateLimit)
@@ -101,6 +103,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 		LeaderboardHandler:  leaderboardHandler,
 		AchievementHandler:  achievementHandler,
 		NotificationHandler: notificationHandler,
+		CodeGenHandler:      codeGenHandler,
 		RateLimit:           rateLimitMiddleware,
 		SubmissionRateLimit: submissionRateLimitMiddleware,
 		RunCodeRateLimit:    runCodeRateLimitMiddleware,

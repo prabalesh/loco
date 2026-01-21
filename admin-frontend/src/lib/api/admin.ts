@@ -132,3 +132,12 @@ export const adminCategoryApi = {
 export const adminSubmissionsApi = {
   getById: (problemId: number, submissionId: number) => axiosInstance.get<Response<any>>(`problems/${problemId}/submissions/${submissionId}`),
 }
+
+export const adminCodeGenApi = {
+  generateStub: (data: {
+    function_name: string;
+    return_type: string;
+    parameters: Array<{ name: string; type: string; is_custom: boolean }>;
+    language_slug: string;
+  }) => axiosInstance.post<Response<{ stub_code: string }>>('/api/v2/codegen/stub', data),
+}

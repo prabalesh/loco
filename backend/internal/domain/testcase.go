@@ -4,6 +4,8 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"time"
+
+	"gorm.io/datatypes"
 )
 
 // TestCase represents a test case (sample or hidden) for a problem
@@ -15,7 +17,14 @@ type TestCase struct {
 	IsSample         bool             `json:"is_sample" gorm:"default:false"`
 	ValidationConfig ValidationConfig `json:"validation_config" gorm:"type:jsonb;serializer:json"`
 	OrderIndex       int              `json:"order_index" gorm:"default:0"`
-	CreatedAt        time.Time        `json:"created_at" gorm:"autoCreateTime"`
+
+	// V2 additions
+	ExpectedOutputs *datatypes.JSON `json:"expected_outputs,omitempty" gorm:"type:jsonb"`
+	InputSize       *int            `json:"input_size,omitempty"`
+	TimeLimitMs     *int            `json:"time_limit_ms,omitempty"`
+	MemoryLimitMb   *int            `json:"memory_limit_mb,omitempty"`
+
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
 
 // ValidationConfig is a custom type for JSONB handling
