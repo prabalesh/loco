@@ -12,6 +12,7 @@ import (
 	"github.com/prabalesh/loco/backend/internal/infrastructure/queue"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/worker"
 	"github.com/prabalesh/loco/backend/internal/repository/postgres"
+	"github.com/prabalesh/loco/backend/internal/services/codegen"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/prabalesh/loco/backend/pkg/database"
@@ -64,10 +65,14 @@ func main() {
 	userProblemStatsRepo := postgres.NewUserProblemStatsRepository(db)
 	achievementRepo := postgres.NewAchievementRepository(db)
 	userRepo := postgres.NewUserRepository(db)
+	boilerplateRepo := postgres.NewBoilerplateRepository(db)
+	typeImplementationRepo := postgres.NewTypeImplementationRepository(db.DB)
 
 	// 6. Initialize Services
 	pistonService := piston.NewPistonService(cfg, loggers)
 	jobQueue := queue.NewJobQueue(redisClient, loggers)
+	codeGenService := codegen.NewCodeGenService(typeImplementationRepo)
+	boilerplateService := codegen.NewBoilerplateService(boilerplateRepo, languageRepo, testCaseRepo, codeGenService)
 
 	achievementUsecase := usecase.NewAchievementUsecase(
 		achievementRepo,
@@ -87,6 +92,7 @@ func main() {
 		languageRepo,
 		problemLanguageRepo,
 		pistonService,
+		boilerplateService,
 		userProblemStatsRepo,
 		loggers,
 		redisClient.Client,

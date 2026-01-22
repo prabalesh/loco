@@ -56,9 +56,7 @@ export const ReferenceSolutionValidator: React.FC<ReferenceSolutionValidatorProp
     }, [problemId]);
 
     useEffect(() => {
-        if (!code.trim()) {
-            handleFetchStub();
-        }
+        handleFetchStub();
     }, [language, problemId]);
 
     const handleFetchStub = async () => {

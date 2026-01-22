@@ -4,6 +4,8 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"time"
+
+	"gorm.io/datatypes"
 )
 
 type SubmissionStatus string
@@ -21,11 +23,15 @@ const (
 )
 
 type TestCaseResult struct {
+	TestID         int    `json:"test_id"`
 	Input          string `json:"input"`
 	ExpectedOutput string `json:"expected_output"`
 	ActualOutput   string `json:"actual_output"`
-	Status         string `json:"status"` // "Passed" or "Failed"
+	Status         string `json:"status"` // "passed", "failed", "timeout", "runtime_error"
+	TimeMS         int    `json:"time_ms"`
+	MemoryKB       int    `json:"memory_kb"`
 	IsSample       bool   `json:"is_sample"`
+	Error          string `json:"error,omitempty"`
 }
 
 // Slice of TestCaseResult
@@ -51,19 +57,20 @@ func (t *TestCaseResults) Scan(value interface{}) error {
 }
 
 type Submission struct {
-	ID              int              `json:"id" gorm:"primaryKey"`
-	UserID          int              `json:"user_id" gorm:"not null"`
-	ProblemID       int              `json:"problem_id" gorm:"not null"`
-	LanguageID      int              `json:"language_id" gorm:"not null"`
-	Code            string           `json:"code,omitempty" gorm:"type:text;not null"`
-	FunctionCode    string           `json:"function_code" gorm:"type:text;default:''"`
-	Status          SubmissionStatus `json:"status" gorm:"type:varchar(50);default:'Pending'"`
-	ErrorMessage    string           `json:"error_message,omitempty" gorm:"type:text"` // For compile/runtime errors
-	Runtime         int              `json:"runtime" gorm:"default:0"`                 // in milliseconds
-	Memory          int              `json:"memory" gorm:"default:0"`                  // in kilobytes
-	PassedTestCases int              `json:"passed_test_cases" gorm:"default:0"`
-	TotalTestCases  int              `json:"total_test_cases" gorm:"default:0"`
-	CreatedAt       time.Time        `json:"created_at" gorm:"autoCreateTime"`
+	ID                int              `json:"id" gorm:"primaryKey"`
+	UserID            int              `json:"user_id" gorm:"not null"`
+	ProblemID         int              `json:"problem_id" gorm:"not null"`
+	LanguageID        int              `json:"language_id" gorm:"not null"`
+	Code              string           `json:"code,omitempty" gorm:"type:text;not null"`
+	FunctionCode      string           `json:"function_code" gorm:"type:text;default:''"`
+	Status            SubmissionStatus `json:"status" gorm:"type:varchar(50);default:'Pending'"`
+	ErrorMessage      string           `json:"error_message,omitempty" gorm:"type:text"` // For compile/runtime errors
+	ExecutionMetadata datatypes.JSON   `json:"execution_metadata,omitempty" gorm:"type:jsonb"`
+	Runtime           int              `json:"runtime" gorm:"default:0"` // in milliseconds
+	Memory            int              `json:"memory" gorm:"default:0"`  // in kilobytes
+	PassedTestCases   int              `json:"passed_test_cases" gorm:"default:0"`
+	TotalTestCases    int              `json:"total_test_cases" gorm:"default:0"`
+	CreatedAt         time.Time        `json:"created_at" gorm:"autoCreateTime"`
 
 	// Detailed results
 	TestCaseResults TestCaseResults `json:"test_case_results" gorm:"type:jsonb"`

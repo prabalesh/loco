@@ -5,7 +5,6 @@ import (
 
 	"github.com/prabalesh/loco/backend/internal/delivery/cookies"
 	"github.com/prabalesh/loco/backend/internal/delivery/handler"
-	v2 "github.com/prabalesh/loco/backend/internal/delivery/handler/v2"
 	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
 	"github.com/prabalesh/loco/backend/internal/delivery/router"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/auth"
@@ -44,6 +43,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	achievementRepo := postgres.NewAchievementRepository(db)
 	boilerplateRepo := postgres.NewBoilerplateRepository(db)
 	referenceSolutionRepo := postgres.NewReferenceSolutionRepository(db)
+	customTypeRepo := postgres.NewCustomTypeRepository(db.DB)
 
 	// Redis client
 	redisClient, err := redis.NewRedisClient(cfg.Redis, logger)
@@ -58,7 +58,8 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	jobQueue := queue.NewJobQueue(redisClient, logger)
 	typeImplementationRepo := postgres.NewTypeImplementationRepository(db.DB)
 	codeGenService := codegen.NewCodeGenService(typeImplementationRepo)
-	boilerplateService := codegen.NewBoilerplateService(boilerplateRepo, languageRepo, codeGenService)
+	boilerplateService := codegen.NewBoilerplateService(boilerplateRepo, languageRepo, testCaseRepo, codeGenService)
+	executionService := execution.NewExecutionService(cfg.Server.PistonURL, boilerplateService)
 
 	cookieManager := cookies.NewCookieManager(cfg)
 
@@ -67,15 +68,15 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	userUsecase := usecase.NewUserUsecase(userRepo, submissionRepo, achievementRepo, logger)
 	adminUsecase := usecase.NewAdminUsecase(userRepo, submissionRepo, redisClient.Client, logger)
 	problemLanguageUsecase := usecase.NewProblemLanguageUsecase(problemLanguageRepo, problemRepo, languageRepo, logger)
-	problemUsecase := usecase.NewProblemUsecase(problemRepo, testCaseRepo, userProblemStatsRepo, tagRepo, categoryRepo, boilerplateService, cfg, logger)
+	problemUsecase := usecase.NewProblemUsecase(problemRepo, testCaseRepo, userProblemStatsRepo, tagRepo, categoryRepo, customTypeRepo, boilerplateService, cfg, logger)
 	languageUsecase := usecase.NewLanguageUsecase(languageRepo, cfg, logger)
 	testCaseUsecase := usecase.NewTestCaseUsecase(testCaseRepo, problemRepo, cfg, logger)
 	achievementUsecase := usecase.NewAchievementUsecase(achievementRepo, userRepo, submissionRepo, problemRepo, redisClient, logger)
-	submissionUsecase := usecase.NewSubmissionUsecase(submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, pistonService, jobQueue, achievementUsecase, cfg, logger)
+	submissionUsecase := usecase.NewSubmissionUsecase(submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, pistonService, executionService, jobQueue, achievementUsecase, cfg, logger)
 	notificationUsecase := usecase.NewNotificationUsecase(redisClient, logger)
 
 	// Worker
-	submissionWorker := worker.NewWorker(jobQueue, submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, pistonService, userProblemStatsRepo, logger, redisClient.Client, cfg)
+	submissionWorker := worker.NewWorker(jobQueue, submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, pistonService, boilerplateService, userProblemStatsRepo, logger, redisClient.Client, cfg)
 
 	// Handlers
 	authHanlder := handler.NewAuthHandler(authUsecase, logger, cfg, cookieManager)
@@ -90,20 +91,25 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardUsecase, logger)
 	achievementHandler := handler.NewAchievementHandler(achievementUsecase, userUsecase, logger)
 	notificationHandler := handler.NewNotificationHandler(notificationUsecase, logger)
-	codeGenHandler := v2.NewCodeGenHandler(problemRepo, languageRepo, boilerplateService, codeGenService)
+	codeGenHandler := handler.NewCodeGenHandler(problemRepo, languageRepo, testCaseRepo, boilerplateService, codeGenService)
 
-	executionService := execution.NewExecutionService(cfg.Server.PistonURL, boilerplateService)
-	codeExecutionHandler := v2.NewSubmissionHandler(executionService, problemRepo, testCaseRepo, languageRepo)
+	// codeExecutionHandler (V2) removed - V1 SubmissionHandler takes over
 
-	customTypeRepo := postgres.NewCustomTypeRepository(db.DB)
-	v2ProblemService := problem.NewProblemService(problemRepo, testCaseRepo, customTypeRepo, referenceSolutionRepo, boilerplateService)
-	v2ProblemHandler := v2.NewProblemHandler(v2ProblemService)
+	// v2ProblemService and v2ProblemHandler removed
 
 	validationService := validation.NewValidationService(referenceSolutionRepo, problemRepo, testCaseRepo, executionService)
-	validationHandler := v2.NewValidationHandler(validationService, languageRepo)
+	validationHandler := handler.NewValidationHandler(validationService, languageRepo)
+
+	// Note: v2ProblemService is used by BulkImport so we might need to keep it or refactor BulkImport to use ProblemUsecase?
+	// BulkImportService uses internal/services/problem/ProblemService.
+	// The container uses problem.NewProblemService.
+	// We need to keep ProblemService for BulkImport implementation for now, or check if we can migrate.
+	// But let's check imports.
+	// "github.com/prabalesh/loco/backend/internal/services/problem" is imported.
+	v2ProblemService := problem.NewProblemService(problemRepo, testCaseRepo, customTypeRepo, referenceSolutionRepo, boilerplateService)
 
 	bulkImportService := bulk.NewBulkImportService(v2ProblemService, validationService, db.DB)
-	bulkHandler := v2.NewBulkHandler(bulkImportService)
+	bulkHandler := handler.NewBulkHandler(bulkImportService)
 
 	// Middleware
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(redisClient.Client, logger, &cfg.RateLimit)
@@ -111,29 +117,27 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	runCodeRateLimitMiddleware := middleware.NewRunCodeRateLimitMiddleware(redisClient.Client, logger, &cfg.RunCodeRateLimit)
 
 	deps := &router.Dependencies{
-		Log:                  logger,
-		Cfg:                  cfg,
-		Db:                   db,
-		JWTService:           jwtService,
-		AuthHandler:          authHanlder,
-		UserHandler:          userHandler,
-		AdminHandler:         adminHandler,
-		AdminAuthHandler:     adminAuthHandler,
-		ProblemHandler:       problemHandler,
-		LanguageHandler:      languageHandler,
-		TestCaseHandler:      testCaseHandler,
-		SubmissionHandler:    submissionHandler,
-		LeaderboardHandler:   leaderboardHandler,
-		AchievementHandler:   achievementHandler,
-		NotificationHandler:  notificationHandler,
-		CodeGenHandler:       codeGenHandler,
-		CodeExecutionHandler: codeExecutionHandler,
-		V2ProblemHandler:     v2ProblemHandler,
-		ValidationHandler:    validationHandler,
-		BulkHandler:          bulkHandler,
-		RateLimit:            rateLimitMiddleware,
-		SubmissionRateLimit:  submissionRateLimitMiddleware,
-		RunCodeRateLimit:     runCodeRateLimitMiddleware,
+		Log:                 logger,
+		Cfg:                 cfg,
+		Db:                  db,
+		JWTService:          jwtService,
+		AuthHandler:         authHanlder,
+		UserHandler:         userHandler,
+		AdminHandler:        adminHandler,
+		AdminAuthHandler:    adminAuthHandler,
+		ProblemHandler:      problemHandler,
+		LanguageHandler:     languageHandler,
+		TestCaseHandler:     testCaseHandler,
+		SubmissionHandler:   submissionHandler,
+		LeaderboardHandler:  leaderboardHandler,
+		AchievementHandler:  achievementHandler,
+		NotificationHandler: notificationHandler,
+		CodeGenHandler:      codeGenHandler,
+		ValidationHandler:   validationHandler,
+		BulkHandler:         bulkHandler,
+		RateLimit:           rateLimitMiddleware,
+		SubmissionRateLimit: submissionRateLimitMiddleware,
+		RunCodeRateLimit:    runCodeRateLimitMiddleware,
 	}
 
 	return &Container{

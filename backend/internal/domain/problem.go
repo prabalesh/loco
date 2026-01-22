@@ -15,11 +15,6 @@ type Problem struct {
 	Difficulty       string     `json:"difficulty" gorm:"size:50;default:'medium'"`
 	TimeLimit        int        `json:"time_limit" gorm:"default:1000"`
 	MemoryLimit      int        `json:"memory_limit" gorm:"default:256"`
-	CurrentStep      int        `json:"current_step" gorm:"default:1"`
-	ValidatorType    string     `json:"validator_type" gorm:"size:50;default:'exact'"`
-	InputFormat      string     `json:"input_format" gorm:"type:text"`
-	OutputFormat     string     `json:"output_format" gorm:"type:text"`
-	Constraints      string     `json:"constraints" gorm:"type:text"`
 	Status           string     `json:"status" gorm:"size:50;default:'draft'"`
 	Visibility       string     `json:"visibility" gorm:"size:50;default:'private'"`
 	IsActive         bool       `json:"is_active" gorm:"default:true"`
@@ -32,7 +27,7 @@ type Problem struct {
 	Tags             []Tag      `json:"tags,omitempty" gorm:"many2many:problem_tags"`
 	Categories       []Category `json:"categories,omitempty" gorm:"many2many:problem_categories"`
 
-	// V2 additions
+	// Standardized Fields (Formerly V2)
 	FunctionName            *string         `json:"function_name,omitempty" gorm:"size:255"`
 	ReturnType              *string         `json:"return_type,omitempty" gorm:"size:100"`
 	Parameters              *datatypes.JSON `json:"parameters,omitempty" gorm:"type:jsonb"`

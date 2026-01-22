@@ -11,8 +11,6 @@ import (
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/prabalesh/loco/backend/pkg/database"
 	"go.uber.org/zap"
-
-	v2 "github.com/prabalesh/loco/backend/internal/delivery/handler/v2"
 )
 
 type Dependencies struct {
@@ -33,14 +31,12 @@ type Dependencies struct {
 	SubmissionRateLimit *middleware.RateLimitMiddleware
 	RunCodeRateLimit    *middleware.RateLimitMiddleware
 
-	LeaderboardHandler   *handler.LeaderboardHandler
-	AchievementHandler   *handler.AchievementHandler
-	NotificationHandler  *handler.NotificationHandler
-	CodeGenHandler       *v2.CodeGenHandler
-	CodeExecutionHandler *v2.SubmissionHandler
-	V2ProblemHandler     *v2.ProblemHandler
-	ValidationHandler    *v2.ValidationHandler
-	BulkHandler          *v2.BulkHandler
+	LeaderboardHandler  *handler.LeaderboardHandler
+	AchievementHandler  *handler.AchievementHandler
+	NotificationHandler *handler.NotificationHandler
+	CodeGenHandler      *handler.CodeGenHandler
+	ValidationHandler   *handler.ValidationHandler
+	BulkHandler         *handler.BulkHandler
 }
 
 func SetupRouter(deps *Dependencies) http.Handler {
@@ -169,33 +165,23 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	mux.Handle("PUT /admin/categories/{id}", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.UpdateCategory)))
 	mux.Handle("DELETE /admin/categories/{id}", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.DeleteCategory)))
 
-	// ========== V2 CODEGEN ROUTES ==========
-	mux.Handle("POST /api/v2/codegen/stub", adminAuthMiddleware(http.HandlerFunc(deps.CodeGenHandler.GenerateStub)))
-	mux.Handle("GET /api/v2/problems/{problem_id}/stub", http.HandlerFunc(deps.CodeGenHandler.GetProblemStub))
-	mux.Handle("GET /api/v2/problems/{problem_id}/boilerplates", adminAuthMiddleware(http.HandlerFunc(deps.CodeGenHandler.GetProblemBoilerplates)))
-	mux.Handle("POST /api/v2/problems/{problem_id}/submit", authMiddleware(http.HandlerFunc(deps.CodeExecutionHandler.SubmitCode)))
+	// ========== CODEGEN ROUTES ==========
+	mux.Handle("POST /codegen/stub", adminAuthMiddleware(http.HandlerFunc(deps.CodeGenHandler.GenerateStub)))
+	mux.Handle("GET /problems/{problem_id}/stub", http.HandlerFunc(deps.CodeGenHandler.GetProblemStub))
+	mux.Handle("GET /problems/{problem_id}/boilerplates", adminAuthMiddleware(http.HandlerFunc(deps.CodeGenHandler.GetProblemBoilerplates)))
 
-	// V2 Problems
-	mux.Handle("GET /api/v2/admin/problems", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.AdminListProblems)))
-	mux.Handle("POST /api/v2/admin/problems", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.CreateProblem)))
-	mux.Handle("GET /api/v2/admin/problems/{id}", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.AdminGetProblem)))
-	mux.Handle("DELETE /api/v2/admin/problems/{id}", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.DeleteProblem)))
-	mux.Handle("POST /api/v2/admin/problems/{id}/publish", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.PublishProblem)))
-	mux.Handle("POST /api/v2/admin/problems/{id}/boilerplates", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.RegenerateBoilerplates)))
-	mux.HandleFunc("GET /api/v2/problems", deps.V2ProblemHandler.ListProblems)
-	mux.HandleFunc("GET /api/v2/problems/{slug}", deps.V2ProblemHandler.GetProblem)
+	// ========== VALIDATION ROUTES ==========
+	mux.Handle("POST /admin/problems/{id}/validate-solution", adminAuthMiddleware(http.HandlerFunc(deps.ValidationHandler.ValidateReferenceSolution)))
+	mux.Handle("GET /admin/problems/{id}/validation-status", adminAuthMiddleware(http.HandlerFunc(deps.ValidationHandler.GetValidationStatus)))
 
-	// V2 Validation
-	mux.Handle("POST /api/v2/admin/problems/{id}/validate", adminAuthMiddleware(http.HandlerFunc(deps.ValidationHandler.ValidateReferenceSolution)))
-	mux.Handle("GET /api/v2/admin/problems/{id}/validation-status", adminAuthMiddleware(http.HandlerFunc(deps.ValidationHandler.GetValidationStatus)))
+	// ========== CUSTOM TYPES ROUTES ==========
+	mux.Handle("GET /admin/custom-types", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.GetCustomTypes)))
+	mux.Handle("POST /admin/problems/{id}/boilerplates", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.RegenerateBoilerplates)))
 
-	// V2 Custom Types
-	mux.Handle("GET /api/v2/admin/custom-types", adminAuthMiddleware(http.HandlerFunc(deps.V2ProblemHandler.GetCustomTypes)))
-
-	// V2 Bulk Import
+	// ========== BULK IMPORT ROUTES ==========
 	bulkRateLimiter := middleware.NewRateLimiter(10, 1*time.Hour)
-	mux.Handle("POST /api/v2/admin/problems/bulk", adminAuthMiddleware(bulkRateLimiter.Middleware(deps.BulkHandler.BulkImportProblems)))
-	mux.Handle("POST /api/v2/admin/problems/bulk-async", adminAuthMiddleware(bulkRateLimiter.Middleware(deps.BulkHandler.BulkImportProblemsAsync)))
+	mux.Handle("POST /admin/problems/bulk", adminAuthMiddleware(bulkRateLimiter.Middleware(deps.BulkHandler.BulkImportProblems)))
+	mux.Handle("POST /admin/problems/bulk-async", adminAuthMiddleware(bulkRateLimiter.Middleware(deps.BulkHandler.BulkImportProblemsAsync)))
 
 	handler := middleware.Logging(deps.Log)(mux)
 	handler = middleware.CORS(deps.Log, deps.Cfg.CORS.AllowedOrigins)(handler)

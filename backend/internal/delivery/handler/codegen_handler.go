@@ -1,11 +1,10 @@
-package v2
+package handler
 
 import (
 	"encoding/json"
 	"net/http"
 	"strconv"
 
-	"github.com/prabalesh/loco/backend/internal/delivery/handler"
 	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/internal/services/codegen"
 )
@@ -15,11 +14,13 @@ type CodeGenHandler struct {
 	boilerplateService *codegen.BoilerplateService
 	languageRepo       domain.LanguageRepository
 	problemRepo        domain.ProblemRepository
+	testCaseRepo       domain.TestCaseRepository
 }
 
 func NewCodeGenHandler(
 	problemRepo domain.ProblemRepository,
 	languageRepo domain.LanguageRepository,
+	testCaseRepo domain.TestCaseRepository,
 	boilerplateService *codegen.BoilerplateService,
 	codeGenService *codegen.CodeGenService,
 ) *CodeGenHandler {
@@ -27,6 +28,7 @@ func NewCodeGenHandler(
 		codeGenService:     codeGenService,
 		problemRepo:        problemRepo,
 		languageRepo:       languageRepo,
+		testCaseRepo:       testCaseRepo,
 		boilerplateService: boilerplateService,
 	}
 }
@@ -46,7 +48,7 @@ type GenerateStubResponse struct {
 func (h *CodeGenHandler) GenerateStub(w http.ResponseWriter, r *http.Request) {
 	var req GenerateStubRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		handler.RespondError(w, http.StatusBadRequest, "Invalid request body")
+		RespondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
@@ -58,11 +60,11 @@ func (h *CodeGenHandler) GenerateStub(w http.ResponseWriter, r *http.Request) {
 
 	stubCode, err := h.codeGenService.GenerateStubCode(signature, req.LanguageSlug)
 	if err != nil {
-		handler.RespondError(w, http.StatusBadRequest, err.Error())
+		RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	handler.RespondJSON(w, http.StatusOK, GenerateStubResponse{
+	RespondJSON(w, http.StatusOK, GenerateStubResponse{
 		StubCode: stubCode,
 	})
 }
@@ -72,7 +74,7 @@ func (h *CodeGenHandler) GetProblemStub(w http.ResponseWriter, r *http.Request) 
 	problemIDStr := r.PathValue("problem_id")
 	problemID, err := strconv.Atoi(problemIDStr)
 	if err != nil {
-		handler.RespondError(w, http.StatusBadRequest, "Invalid problem ID")
+		RespondError(w, http.StatusBadRequest, "Invalid problem ID")
 		return
 	}
 
@@ -84,7 +86,7 @@ func (h *CodeGenHandler) GetProblemStub(w http.ResponseWriter, r *http.Request) 
 	// Get language by slug to get ID
 	language, err := h.languageRepo.GetBySlug(languageSlug)
 	if err != nil {
-		handler.RespondError(w, http.StatusNotFound, "Language not found")
+		RespondError(w, http.StatusNotFound, "Language not found")
 		return
 	}
 
@@ -96,18 +98,18 @@ func (h *CodeGenHandler) GetProblemStub(w http.ResponseWriter, r *http.Request) 
 
 		problem, err := h.problemRepo.GetByID(problemID)
 		if err != nil {
-			handler.RespondError(w, http.StatusNotFound, "Problem not found")
+			RespondError(w, http.StatusNotFound, "Problem not found")
 			return
 		}
 
 		if problem.FunctionName == nil || problem.ReturnType == nil || problem.Parameters == nil {
-			handler.RespondError(w, http.StatusBadRequest, "Problem signature not defined")
+			RespondError(w, http.StatusBadRequest, "Problem signature not defined")
 			return
 		}
 
 		var params []codegen.Parameter
 		if err := json.Unmarshal([]byte(*problem.Parameters), &params); err != nil {
-			handler.RespondError(w, http.StatusInternalServerError, "Failed to parse problem parameters")
+			RespondError(w, http.StatusInternalServerError, "Failed to parse problem parameters")
 			return
 		}
 
@@ -117,17 +119,23 @@ func (h *CodeGenHandler) GetProblemStub(w http.ResponseWriter, r *http.Request) 
 			Parameters:   params,
 		}
 
-		// Generate on-demand and store it too
-		err = h.boilerplateService.GenerateBoilerplateForLanguage(problemID, language.ID, signature, languageSlug)
+		testCases, err := h.testCaseRepo.GetByProblemID(problemID)
 		if err != nil {
-			handler.RespondError(w, http.StatusInternalServerError, "Failed to generate boilerplate on-demand")
+			RespondError(w, http.StatusInternalServerError, "Failed to fetch test cases")
+			return
+		}
+
+		// Generate on-demand and store it too
+		err = h.boilerplateService.GenerateBoilerplateForLanguage(problemID, language.ID, signature, languageSlug, testCases, problem.ValidationType)
+		if err != nil {
+			RespondError(w, http.StatusInternalServerError, "Failed to generate boilerplate on-demand")
 			return
 		}
 
 		stubCode, _ = h.boilerplateService.GetStubCode(problemID, language.ID)
 	}
 
-	handler.RespondJSON(w, http.StatusOK, GenerateStubResponse{
+	RespondJSON(w, http.StatusOK, GenerateStubResponse{
 		StubCode: stubCode,
 	})
 }
@@ -137,15 +145,15 @@ func (h *CodeGenHandler) GetProblemBoilerplates(w http.ResponseWriter, r *http.R
 	problemIDStr := r.PathValue("problem_id")
 	problemID, err := strconv.Atoi(problemIDStr)
 	if err != nil {
-		handler.RespondError(w, http.StatusBadRequest, "Invalid problem ID")
+		RespondError(w, http.StatusBadRequest, "Invalid problem ID")
 		return
 	}
 
 	boilerplates, err := h.boilerplateService.GetBoilerplateStats(problemID)
 	if err != nil {
-		handler.RespondError(w, http.StatusInternalServerError, err.Error())
+		RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	handler.RespondJSON(w, http.StatusOK, boilerplates)
+	RespondJSON(w, http.StatusOK, boilerplates)
 }

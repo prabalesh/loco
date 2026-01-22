@@ -10,8 +10,7 @@ import { AdminLogin } from './features/auth/components/AdminLogin'
 // Core Components
 import { Dashboard } from './features/dashboard/components/Dashboard'
 import { UsersList as Users } from './features/users/components/UsersList'
-import Problems from './features/problems/components/ProblemList'
-import ProblemCreateV2 from './features/problems/pages/CreateProblem'
+import ProblemCreateV2 from './pages/ProblemCreateV2'
 import Languages from './features/languages/components/LanguageList'
 import Tags from './features/tags/components/TagList'
 import Categories from './features/categories/components/CategoryList'
@@ -36,8 +35,7 @@ export const App = () => {
         <Route element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/users" element={<Users />} />
-          <Route path="/problems/old" element={<Problems />} />
-          <Route path="/problems/create/v2" element={<ProblemCreateV2 />} />
+          <Route path="/problems/create" element={<ProblemCreateV2 />} />
           <Route path="/languages" element={<Languages />} />
           <Route path="/tags" element={<Tags />} />
           <Route path="/categories" element={<Categories />} />

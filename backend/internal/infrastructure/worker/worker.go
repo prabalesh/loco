@@ -2,15 +2,15 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
-	"sync"
-
 	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/piston"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/queue"
+	"github.com/prabalesh/loco/backend/internal/services/codegen"
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
@@ -24,6 +24,7 @@ type Worker struct {
 	languageRepo         domain.LanguageRepository
 	problemLanguageRepo  domain.ProblemLanguageRepository
 	pistonService        piston.PistonService
+	boilerplateService   *codegen.BoilerplateService
 	userProblemStatsRepo domain.UserProblemStatsRepository
 	logger               *zap.Logger
 	stopChan             chan struct{}
@@ -40,6 +41,7 @@ func NewWorker(
 	languageRepo domain.LanguageRepository,
 	problemLanguageRepo domain.ProblemLanguageRepository,
 	pistonService piston.PistonService,
+	boilerplateService *codegen.BoilerplateService,
 	userProblemStatsRepo domain.UserProblemStatsRepository,
 	logger *zap.Logger,
 	redisClient *redis.Client,
@@ -53,6 +55,7 @@ func NewWorker(
 		languageRepo:         languageRepo,
 		problemLanguageRepo:  problemLanguageRepo,
 		pistonService:        pistonService,
+		boilerplateService:   boilerplateService,
 		userProblemStatsRepo: userProblemStatsRepo,
 		logger:               logger,
 		stopChan:             make(chan struct{}),
@@ -206,157 +209,117 @@ func (w *Worker) evaluateSubmission(submission *domain.Submission, problem *doma
 		testCases, err = w.testCaseRepo.GetByProblemID(submission.ProblemID)
 	}
 	if err != nil {
-		w.logger.Error("Failed to fetch test cases",
-			zap.Error(err),
-			zap.Int("submission_id", submission.ID),
-		)
+		w.logger.Error("Failed to fetch test cases", zap.Error(err), zap.Int("submission_id", submission.ID))
 		w.updateSubmissionError(submission, domain.SubmissionStatusInternalError, "Failed to fetch test cases")
 		return
 	}
 
-	finalCode := submission.Code
-	finalStatus := domain.SubmissionStatusAccepted
-	errorMessage := ""
-	passCount := 0
-	totalCount := len(testCases)
+	submission.TotalTestCases = len(testCases)
 
-	submission.TotalTestCases = totalCount
-
-	// Results channel to collect test case results
-	type tcResult struct {
-		index  int
-		result *piston.ExecutionResult
-		err    error
+	// 1. Get test harness template
+	harnessTemplate, err := w.boilerplateService.GetTestHarnessTemplate(submission.ProblemID, submission.LanguageID)
+	if err != nil {
+		w.logger.Error("Failed to get harness template", zap.Error(err), zap.Int("submission_id", submission.ID))
+		w.updateSubmissionError(submission, domain.SubmissionStatusInternalError, "Harness template not found")
+		return
 	}
-	resultsChan := make(chan tcResult, totalCount)
 
-	// Semaphore to limit concurrent test cases within one submission
-	tcSem := make(chan struct{}, w.config.Worker.MaxConcurrentTestCases)
+	// 2. Inject user code
+	fullCode := w.boilerplateService.InjectUserCodeIntoHarness(harnessTemplate, submission.Code)
 
-	var wg sync.WaitGroup
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+	// 3. Prepare test cases input (JSON)
+	type TestInput struct {
+		Input    interface{} `json:"input"`
+		Expected interface{} `json:"expected"`
+	}
+	inputs := make([]TestInput, len(testCases))
 	for i, tc := range testCases {
-		wg.Add(1)
-		go func(idx int, testCase domain.TestCase) {
-			defer wg.Done()
+		var inputData interface{}
+		_ = json.Unmarshal([]byte(tc.Input), &inputData)
+		var expectedData interface{}
+		_ = json.Unmarshal([]byte(tc.ExpectedOutput), &expectedData)
+		inputs[i] = TestInput{Input: inputData, Expected: expectedData}
+	}
+	testInputJSON, _ := json.Marshal(inputs)
 
-			// Acquire semaphore slot
-			select {
-			case tcSem <- struct{}{}:
-				defer func() { <-tcSem }()
-			case <-ctx.Done():
-				return
-			}
-
-			res, err := w.pistonService.Execute(language.Slug, language.Version, finalCode, testCase.Input)
-			resultsChan <- tcResult{index: idx, result: res, err: err}
-
-			// If any test case fails, we can stop others (optional optimization)
-			if err != nil || (res != nil && (res.ExitCode != 0 || strings.TrimSpace(res.Output) != strings.TrimSpace(testCase.ExpectedOutput))) {
-				// We don't want to cancel immediately if we want to run all tests,
-				// but typically for "Accepted" we need all to pass.
-				// For competitive programming, we often stop at first fail.
-				// However, if we want full results, we shouldn't cancel.
-				// Let's keep it running for all if we want total pass count.
-			}
-		}(i, tc)
+	// 4. Execute on Piston
+	res, err := w.pistonService.Execute(language.Slug, language.Version, fullCode, string(testInputJSON))
+	if err != nil {
+		w.logger.Error("Piston execution failed", zap.Error(err), zap.Int("submission_id", submission.ID))
+		w.updateSubmissionError(submission, domain.SubmissionStatusInternalError, "Execution system error")
+		return
 	}
 
-	// Close results channel when all goroutines are done
-	go func() {
-		wg.Wait()
-		close(resultsChan)
-	}()
-
-	// Process results as they come in
-	// Note: since we need total passCount, we must wait for all or handle them as they arrive.
-	// To maintain short-circuiting logic but still get counts, it's tricky.
-	// Let's collect all results for now to keep it simple and accurate for passCount.
-	allResults := make([]tcResult, totalCount)
-	for res := range resultsChan {
-		allResults[res.index] = res
+	// 5. Check for compilation error
+	if res.ExitCode != 0 && res.Error != "" && !strings.Contains(res.Output, "[{\"test_id\"") {
+		w.updateSubmissionError(submission, domain.SubmissionStatusCompilationError, res.Error)
+		return
 	}
 
-	// Now analyze results in order to find the first failure (if any)
-	for i, r := range allResults {
-		if r.err != nil {
-			w.logger.Error("Piston execution failed",
-				zap.Error(r.err),
-				zap.Int("submission_id", submission.ID),
-				zap.Int("test_case_index", i),
-			)
-			if finalStatus == domain.SubmissionStatusAccepted {
-				finalStatus = domain.SubmissionStatusInternalError
-				errorMessage = "Execution system error"
+	// 6. Parse detailed results
+	var testResults []domain.TestCaseResult
+	if err := json.Unmarshal([]byte(res.Output), &testResults); err != nil {
+		// If parsing fails, it might be a runtime error of the harness itself
+		w.updateSubmissionError(submission, domain.SubmissionStatusRuntimeError, res.Error+"\n"+res.Output)
+		return
+	}
+
+	// 7. Process results and determine final status
+	finalStatus := domain.SubmissionStatusAccepted
+	passCount := 0
+	maxTime := 0
+	maxMemory := 0
+	errorMessage := ""
+
+	for i := range testResults {
+		tr := &testResults[i]
+		if i < len(testCases) {
+			tr.IsSample = testCases[i].IsSample
+			// If not provided by harness, fill from DB for completeness
+			if tr.Input == "" {
+				tr.Input = testCases[i].Input
 			}
-			continue
+			if tr.ExpectedOutput == "" {
+				tr.ExpectedOutput = testCases[i].ExpectedOutput
+			}
 		}
 
-		if r.result.ExitCode != 0 {
-			if finalStatus == domain.SubmissionStatusAccepted {
+		if tr.Status == "passed" {
+			passCount++
+		} else if finalStatus == domain.SubmissionStatusAccepted {
+			switch tr.Status {
+			case "timeout":
+				finalStatus = domain.SubmissionStatusTimeLimitExceeded
+			case "runtime_error":
 				finalStatus = domain.SubmissionStatusRuntimeError
-				errorMessage = r.result.Error
-			}
-			continue
-		}
-
-		actual := strings.TrimSpace(r.result.Output)
-		expected := strings.TrimSpace(testCases[i].ExpectedOutput)
-
-		if actual != expected {
-			if finalStatus == domain.SubmissionStatusAccepted {
+				errorMessage = tr.Error
+			default:
 				finalStatus = domain.SubmissionStatusWrongAnswer
-				errorMessage = fmt.Sprintf("Failed on input: %s\nExpected: %s\nActual: %s", testCases[i].Input, expected, actual)
+				errorMessage = fmt.Sprintf("Failed on test %d", tr.TestID)
 			}
-			continue
 		}
-		passCount++
+
+		if tr.TimeMS > maxTime {
+			maxTime = tr.TimeMS
+		}
+		if tr.MemoryKB > maxMemory {
+			maxMemory = tr.MemoryKB
+		}
 	}
 
 	submission.PassedTestCases = passCount
-
-	// Aggregating metrics (using max for runtime and memory)
-	maxRuntime := 0
-	maxMemory := 0
-	for _, r := range allResults {
-		if r.result != nil {
-			if r.result.Runtime > maxRuntime {
-				maxRuntime = r.result.Runtime
-			}
-			if r.result.Memory > maxMemory {
-				maxMemory = r.result.Memory
-			}
-		}
-	}
-	submission.Runtime = maxRuntime
+	submission.Runtime = maxTime
 	submission.Memory = maxMemory
+	submission.TestCaseResults = testResults
+	submission.ExecutionMetadata, _ = json.Marshal(testResults)
 
 	// Update submission status
 	w.updateSubmissionResult(submission, finalStatus, errorMessage)
 
-	// If it's a validation submission, update ProblemLanguage status
+	// Update ProblemLanguage status if validation
 	if submission.IsValidationSubmission {
-		now := time.Now()
-		pl, err := w.problemLanguageRepo.GetByProblemAndLanguage(submission.ProblemID, submission.LanguageID)
-		if err == nil {
-			pl.LastValidationStatus = string(finalStatus)
-			pl.LastValidationError = errorMessage
-			pl.LastPassCount = passCount
-			pl.LastTotalCount = totalCount
-
-			if finalStatus == domain.SubmissionStatusAccepted {
-				pl.IsValidated = true
-				pl.ValidatedAt = &now
-			} else {
-				pl.IsValidated = false
-				pl.ValidatedAt = &now
-			}
-			w.problemLanguageRepo.Update(pl)
-		}
+		w.updateValidationStatus(submission, finalStatus, errorMessage, passCount, len(testCases))
 	} else {
-		// Update Problem and User stats for regular submissions
 		w.updateProblemAndUserStats(submission, finalStatus)
 	}
 
@@ -364,8 +327,23 @@ func (w *Worker) evaluateSubmission(submission *domain.Submission, problem *doma
 		zap.Int("submission_id", submission.ID),
 		zap.String("status", string(finalStatus)),
 		zap.Int("passed", passCount),
-		zap.Int("total", totalCount),
+		zap.Int("total", len(testCases)),
 	)
+}
+
+func (w *Worker) updateValidationStatus(submission *domain.Submission, status domain.SubmissionStatus, errorMsg string, passCount, totalCount int) {
+	now := time.Now()
+	pl, err := w.problemLanguageRepo.GetByProblemAndLanguage(submission.ProblemID, submission.LanguageID)
+	if err != nil {
+		return
+	}
+	pl.LastValidationStatus = string(status)
+	pl.LastValidationError = errorMsg
+	pl.LastPassCount = passCount
+	pl.LastTotalCount = totalCount
+	pl.IsValidated = (status == domain.SubmissionStatusAccepted)
+	pl.ValidatedAt = &now
+	w.problemLanguageRepo.Update(pl)
 }
 
 func (w *Worker) updateProblemAndUserStats(submission *domain.Submission, finalStatus domain.SubmissionStatus) {

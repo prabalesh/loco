@@ -27,7 +27,6 @@ import {
   Add as PlusOutlined,
   Edit as EditOutlined,
   Delete as DeleteOutlined,
-  AutoAwesome as SparklesIcon,
 } from "@mui/icons-material";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
@@ -115,39 +114,21 @@ export default function ProblemList() {
             Manage coding problems for your platform
           </Typography>
         </div>
-        <Stack direction="row" spacing={2}>
-          <Button
-            variant="outlined"
-            color="secondary"
-            startIcon={<SparklesIcon />}
-            onClick={() => navigate("/problems/create/v2")}
-            sx={{
-              borderRadius: 2,
-              borderColor: "secondary.main",
-              color: "secondary.main",
-              "&:hover": {
-                bgcolor: alpha(theme.palette.secondary.main, 0.1),
-              },
-            }}
-          >
-            Create (V2)
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<PlusOutlined />}
-            onClick={() => navigate("/problems/create")}
-            sx={{
-              borderRadius: 2,
-              boxShadow: 1,
-              "&:hover": {
-                boxShadow: 2,
-              },
-            }}
-          >
-            Create Problem
-          </Button>
-        </Stack>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<PlusOutlined />}
+          onClick={() => navigate("/problems/create")}
+          sx={{
+            borderRadius: 2,
+            boxShadow: 1,
+            "&:hover": {
+              boxShadow: 2,
+            },
+          }}
+        >
+          Create Problem
+        </Button>
       </Stack>
 
       <Paper
@@ -365,6 +346,6 @@ export default function ProblemList() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Box >
   );
 }

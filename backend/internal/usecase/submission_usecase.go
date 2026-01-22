@@ -9,6 +9,7 @@ import (
 	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/piston"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/queue"
+	"github.com/prabalesh/loco/backend/internal/services/execution"
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"go.uber.org/zap"
 )
@@ -20,6 +21,7 @@ type SubmissionUsecase struct {
 	languageRepo        domain.LanguageRepository
 	problemLanguageRepo domain.ProblemLanguageRepository
 	pistonService       piston.PistonService
+	executionService    *execution.ExecutionService
 	jobQueue            queue.JobQueue
 	achievementUsecase  *AchievementUsecase
 	cfg                 *config.Config
@@ -33,6 +35,7 @@ func NewSubmissionUsecase(
 	languageRepo domain.LanguageRepository,
 	problemLanguageRepo domain.ProblemLanguageRepository,
 	pistonService piston.PistonService,
+	executionService *execution.ExecutionService,
 	jobQueue queue.JobQueue,
 	achievementUsecase *AchievementUsecase,
 	cfg *config.Config,
@@ -45,6 +48,7 @@ func NewSubmissionUsecase(
 		languageRepo:        languageRepo,
 		problemLanguageRepo: problemLanguageRepo,
 		pistonService:       pistonService,
+		executionService:    executionService,
 		jobQueue:            jobQueue,
 		achievementUsecase:  achievementUsecase,
 		cfg:                 cfg,
@@ -413,81 +417,37 @@ func (u *SubmissionUsecase) RunCode(problemID int, req *domain.RunCodeRequest) (
 		return nil, fmt.Errorf("language not found")
 	}
 
-	// 2. Get ProblemLanguage to combine code
-	pl, err := u.problemLanguageRepo.GetByProblemAndLanguage(problemID, req.LanguageID)
-	finalCode := req.Code
-	if err == nil && pl != nil {
-		finalCode = pl.GetCombinedCode(language.DefaultTemplate, req.Code)
-	}
-
-	// 3. Get only public (sample) test cases
+	// 2. Get only public (sample) test cases
 	testCases, err := u.testCaseRepo.GetSamples(problemID)
 	if err != nil {
 		u.logger.Error("Failed to fetch test cases", zap.Error(err))
 		return nil, fmt.Errorf("failed to fetch test cases: %w", err)
 	}
 
-	// 4. Execute test cases
-	finalStatus := domain.SubmissionStatusAccepted
-	errorMessage := ""
-	passCount := 0
-	totalCount := len(testCases)
-
-	var results []domain.TestCaseResult
-
-	for _, tc := range testCases {
-		result, err := u.pistonService.Execute(language.Slug, language.Version, finalCode, tc.Input)
-
-		tcResult := domain.TestCaseResult{
-			Input:          tc.Input,
-			ExpectedOutput: tc.ExpectedOutput,
-			IsSample:       tc.IsSample,
-		}
-
-		if err != nil {
-			u.logger.Error("Piston execution failed", zap.Error(err))
-			finalStatus = domain.SubmissionStatusInternalError
-			errorMessage = "Execution system error"
-			tcResult.Status = "Failed"
-			tcResult.ActualOutput = "System Error"
-			results = append(results, tcResult)
-			break
-		}
-
-		if result.ExitCode != 0 {
-			if finalStatus == domain.SubmissionStatusAccepted {
-				finalStatus = domain.SubmissionStatusRuntimeError
-				errorMessage = result.Error
-			}
-			tcResult.Status = "Failed"
-			tcResult.ActualOutput = result.Error
-		} else {
-			// Normalize output (trim whitespace)
-			actual := strings.TrimSpace(result.Output)
-			expected := strings.TrimSpace(tc.ExpectedOutput)
-
-			tcResult.ActualOutput = actual
-
-			if actual != expected {
-				if finalStatus == domain.SubmissionStatusAccepted {
-					finalStatus = domain.SubmissionStatusWrongAnswer
-					errorMessage = fmt.Sprintf("Failed on input: %s\nExpected: %s\nActual: %s", tc.Input, expected, actual)
-				}
-				tcResult.Status = "Failed"
-			} else {
-				tcResult.Status = "Passed"
-				passCount++
-			}
-		}
-
-		results = append(results, tcResult)
+	if len(testCases) == 0 {
+		return nil, fmt.Errorf("no sample test cases found for this problem")
 	}
 
+	// 3. Execute using ExecutionService
+	execReq := execution.ExecutionRequest{
+		ProblemID:  problemID,
+		LanguageID: req.LanguageID,
+		UserCode:   req.Code,
+		TestCases:  testCases,
+	}
+
+	result, err := u.executionService.ExecuteSubmission(execReq, language.Slug)
+	if err != nil {
+		u.logger.Error("Execution failed", zap.Error(err))
+		return nil, fmt.Errorf("execution failed: %w", err)
+	}
+
+	// 4. Map result
 	return &domain.RunCodeResult{
-		Status:          finalStatus,
-		ErrorMessage:    errorMessage,
-		PassedTestCases: passCount,
-		TotalTestCases:  totalCount,
-		Results:         results,
+		Status:          result.Status,
+		ErrorMessage:    result.ErrorMessage,
+		PassedTestCases: result.PassedTests,
+		TotalTestCases:  result.TotalTests,
+		Results:         result.TestResults,
 	}, nil
 }

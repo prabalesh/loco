@@ -9,6 +9,7 @@ import (
 
 	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/prabalesh/loco/backend/internal/domain/uerror"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"github.com/prabalesh/loco/backend/pkg/config"
@@ -66,7 +67,7 @@ func (h *ProblemHandler) GetProblem(w http.ResponseWriter, r *http.Request) {
 
 // ListProblems retrieves problems with filters (public endpoint)
 func (h *ProblemHandler) ListProblems(w http.ResponseWriter, r *http.Request) {
-	req := &domain.ListProblemsRequest{
+	req := &dto.ListProblemsRequest{
 		Page:       getIntQuery(r, "page", 1),
 		Limit:      getIntQuery(r, "limit", 20),
 		Difficulty: r.URL.Query().Get("difficulty"),
@@ -107,7 +108,7 @@ func (h *ProblemHandler) CreateProblem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request
-	var req domain.CreateProblemRequest
+	var req dto.CreateProblemRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Warn("Invalid JSON in create problem request", zap.Error(err))
 		RespondError(w, http.StatusBadRequest, "invalid request body")
@@ -166,7 +167,7 @@ func (h *ProblemHandler) UpdateProblem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request
-	var req domain.UpdateProblemRequest
+	var req dto.UpdateProblemRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Warn("Invalid JSON in update problem request", zap.Error(err))
 		RespondError(w, http.StatusBadRequest, "invalid request body")
@@ -273,7 +274,7 @@ func (h *ProblemHandler) DeleteProblem(w http.ResponseWriter, r *http.Request) {
 
 // ListAllProblems retrieves all problems including drafts (admin only)
 func (h *ProblemHandler) ListAllProblems(w http.ResponseWriter, r *http.Request) {
-	req := &domain.AdminListProblemsRequest{
+	req := &dto.ListProblemsRequest{
 		Page:       getIntQuery(r, "page", 1),
 		Limit:      getIntQuery(r, "limit", 20),
 		Difficulty: r.URL.Query().Get("difficulty"),
@@ -359,6 +360,29 @@ func (h *ProblemHandler) ArchiveProblem(w http.ResponseWriter, r *http.Request) 
 	RespondJSON(w, http.StatusOK, map[string]string{
 		"message": "Problem archived successfully",
 	})
+}
+
+// RegenerateBoilerplates (admin only)
+func (h *ProblemHandler) RegenerateBoilerplates(w http.ResponseWriter, r *http.Request) {
+	adminID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		RespondError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	problemID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "invalid problem ID")
+		return
+	}
+
+	if err := h.problemUsecase.RegenerateBoilerplates(problemID, adminID); err != nil {
+		h.logger.Error("Failed to regenerate boilerplates", zap.Error(err))
+		RespondError(w, http.StatusInternalServerError, "failed to regenerate boilerplates")
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, map[string]string{"message": "Boilerplates regenerated successfully"})
 }
 
 // GetProblemStats returns problem statistics (admin only)
@@ -675,6 +699,22 @@ func (h *ProblemHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *ProblemHandler) GetCustomTypes(w http.ResponseWriter, r *http.Request) {
+	// Admin access required
+	_, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		RespondError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	types, err := h.problemUsecase.GetCustomTypes()
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, "failed to get custom types")
+		return
+	}
+	RespondJSON(w, http.StatusOK, types)
 }
 
 // ========== HELPER FUNCTIONS ==========

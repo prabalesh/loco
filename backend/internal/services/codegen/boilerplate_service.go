@@ -6,22 +6,26 @@ import (
 	"strings"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"gorm.io/datatypes"
 )
 
 type BoilerplateService struct {
 	boilerplateRepo domain.BoilerplateRepository
 	languageRepo    domain.LanguageRepository
+	testCaseRepo    domain.TestCaseRepository
 	codeGenService  *CodeGenService
 }
 
 func NewBoilerplateService(
 	boilerplateRepo domain.BoilerplateRepository,
 	languageRepo domain.LanguageRepository,
+	testCaseRepo domain.TestCaseRepository,
 	codeGenService *CodeGenService,
 ) *BoilerplateService {
 	return &BoilerplateService{
 		boilerplateRepo: boilerplateRepo,
 		languageRepo:    languageRepo,
+		testCaseRepo:    testCaseRepo,
 		codeGenService:  codeGenService,
 	}
 }
@@ -53,8 +57,13 @@ func (s *BoilerplateService) GenerateAllBoilerplatesForProblem(problem *domain.P
 		return fmt.Errorf("failed to list active languages: %w", err)
 	}
 
+	testCases, err := s.testCaseRepo.GetByProblemID(problem.ID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch test cases: %w", err)
+	}
+
 	for _, lang := range languages {
-		err := s.GenerateBoilerplateForLanguage(problem.ID, lang.ID, signature, lang.Slug)
+		err := s.GenerateBoilerplateForLanguage(problem.ID, lang.ID, signature, lang.Slug, testCases, problem.ValidationType)
 		if err != nil {
 			// Log error but continue with other languages
 			fmt.Printf("Warning: failed to generate boilerplate for language %s (ID: %d): %v\n", lang.Name, lang.ID, err)
@@ -65,13 +74,13 @@ func (s *BoilerplateService) GenerateAllBoilerplatesForProblem(problem *domain.P
 	return nil
 }
 
-func (s *BoilerplateService) GenerateBoilerplateForLanguage(problemID, languageID int, signature ProblemSignature, languageSlug string) error {
+func (s *BoilerplateService) GenerateBoilerplateForLanguage(problemID, languageID int, signature ProblemSignature, languageSlug string, testCases []domain.TestCase, validationType string) error {
 	stubCode, err := s.codeGenService.GenerateStubCode(signature, languageSlug)
 	if err != nil {
 		return fmt.Errorf("failed to generate stub code: %w", err)
 	}
 
-	harnessTemplate, err := s.codeGenService.GenerateTestHarness(signature, "{USER_CODE}", languageSlug)
+	harnessTemplate, err := s.codeGenService.GenerateTestHarness(signature, "{USER_CODE}", languageSlug, testCases, validationType)
 	if err != nil {
 		return fmt.Errorf("failed to generate test harness template: %w", err)
 	}
@@ -87,15 +96,17 @@ func (s *BoilerplateService) GenerateBoilerplateForLanguage(problemID, languageI
 			return err
 		}
 		existing.StubCode = stubCode
-		existing.TestHarnessTemplate = harnessTemplate
+		harnessJSON, _ := json.Marshal(map[string]string{languageSlug: harnessTemplate})
+		existing.TestHarnessTemplate = datatypes.JSON(harnessJSON)
 		return s.boilerplateRepo.Update(existing)
 	}
 
+	harnessJSON, _ := json.Marshal(map[string]string{languageSlug: harnessTemplate})
 	boilerplate := &domain.ProblemBoilerplate{
 		ProblemID:           problemID,
 		LanguageID:          languageID,
 		StubCode:            stubCode,
-		TestHarnessTemplate: harnessTemplate,
+		TestHarnessTemplate: datatypes.JSON(harnessJSON),
 	}
 
 	return s.boilerplateRepo.Create(boilerplate)
@@ -114,7 +125,22 @@ func (s *BoilerplateService) GetTestHarnessTemplate(problemID, languageID int) (
 	if err != nil {
 		return "", err
 	}
-	return bp.TestHarnessTemplate, nil
+
+	var templates map[string]string
+	if err := json.Unmarshal(bp.TestHarnessTemplate, &templates); err != nil {
+		return "", fmt.Errorf("failed to parse harness template: %w", err)
+	}
+
+	// The map should contain the template for the specific language slug
+	// However, we don't have the slug here easily without another query or passing it in.
+	// But since it's a map with one key (usually), we can just take the first value or logic it out.
+	// Better: the caller should know what they want.
+	// For now, let's just return the first string value found in the map.
+	for _, template := range templates {
+		return template, nil
+	}
+
+	return "", fmt.Errorf("no template found in JSON")
 }
 
 func (s *BoilerplateService) InjectUserCodeIntoHarness(template, userCode string) string {

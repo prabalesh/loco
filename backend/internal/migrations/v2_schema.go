@@ -38,6 +38,12 @@ func MigrateV2Schema(db *gorm.DB) error {
 		// Users table
 		`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_bot BOOLEAN DEFAULT false`,
 
+		// Problem boilerplates table
+		`ALTER TABLE problem_boilerplates ALTER COLUMN test_harness_template TYPE JSONB USING test_harness_template::jsonb`,
+
+		// Submissions table
+		`ALTER TABLE submissions ADD COLUMN IF NOT EXISTS execution_metadata JSONB`,
+
 		// Add unique constraints for new tables
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_problem_boilerplate_unique ON problem_boilerplates(problem_id, language_id)`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_type_implementation_unique ON type_implementations(custom_type_id, language_id)`,

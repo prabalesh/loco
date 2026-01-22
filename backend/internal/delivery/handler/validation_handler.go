@@ -1,11 +1,10 @@
-package v2
+package handler
 
 import (
 	"encoding/json"
 	"net/http"
 	"strconv"
 
-	"github.com/prabalesh/loco/backend/internal/delivery/handler"
 	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
 	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/internal/services/validation"
@@ -28,7 +27,7 @@ func (h *ValidationHandler) ValidateReferenceSolution(w http.ResponseWriter, r *
 	// Check admin
 	role, ok := middleware.GetUserRole(r.Context())
 	if !ok || role != "admin" {
-		handler.RespondError(w, http.StatusForbidden, "forbidden: admin access required")
+		RespondError(w, http.StatusForbidden, "forbidden: admin access required")
 		return
 	}
 
@@ -36,7 +35,7 @@ func (h *ValidationHandler) ValidateReferenceSolution(w http.ResponseWriter, r *
 	problemIDStr := r.PathValue("id")
 	problemID, err := strconv.Atoi(problemIDStr)
 	if err != nil {
-		handler.RespondError(w, http.StatusBadRequest, "invalid problem ID")
+		RespondError(w, http.StatusBadRequest, "invalid problem ID")
 		return
 	}
 
@@ -46,24 +45,24 @@ func (h *ValidationHandler) ValidateReferenceSolution(w http.ResponseWriter, r *
 		Code         string `json:"code"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		handler.RespondError(w, http.StatusBadRequest, "invalid request body")
+		RespondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	// Validate inputs
 	if req.Code == "" {
-		handler.RespondError(w, http.StatusBadRequest, "code is required")
+		RespondError(w, http.StatusBadRequest, "code is required")
 		return
 	}
 	if req.LanguageSlug == "" {
-		handler.RespondError(w, http.StatusBadRequest, "language_slug is required")
+		RespondError(w, http.StatusBadRequest, "language_slug is required")
 		return
 	}
 
 	// Get language
 	language, err := h.languageRepo.GetBySlug(req.LanguageSlug)
 	if err != nil {
-		handler.RespondError(w, http.StatusNotFound, "language not found")
+		RespondError(w, http.StatusNotFound, "language not found")
 		return
 	}
 
@@ -76,7 +75,7 @@ func (h *ValidationHandler) ValidateReferenceSolution(w http.ResponseWriter, r *
 
 	referenceSolution, validationResult, err := h.validationService.SaveReferenceSolution(validateReq, language.ID)
 	if err != nil {
-		handler.RespondError(w, http.StatusInternalServerError, err.Error())
+		RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -86,7 +85,7 @@ func (h *ValidationHandler) ValidateReferenceSolution(w http.ResponseWriter, r *
 		"validation_result":     validationResult,
 	}
 
-	handler.RespondJSON(w, http.StatusOK, response)
+	RespondJSON(w, http.StatusOK, response)
 }
 
 // GET /api/v2/admin/problems/:id/validation-status
@@ -94,7 +93,7 @@ func (h *ValidationHandler) GetValidationStatus(w http.ResponseWriter, r *http.R
 	// Check admin
 	role, ok := middleware.GetUserRole(r.Context())
 	if !ok || role != "admin" {
-		handler.RespondError(w, http.StatusForbidden, "forbidden: admin access required")
+		RespondError(w, http.StatusForbidden, "forbidden: admin access required")
 		return
 	}
 
@@ -102,15 +101,15 @@ func (h *ValidationHandler) GetValidationStatus(w http.ResponseWriter, r *http.R
 	problemIDStr := r.PathValue("id")
 	problemID, err := strconv.Atoi(problemIDStr)
 	if err != nil {
-		handler.RespondError(w, http.StatusBadRequest, "invalid problem ID")
+		RespondError(w, http.StatusBadRequest, "invalid problem ID")
 		return
 	}
 
 	status, err := h.validationService.GetValidationStatus(problemID)
 	if err != nil {
-		handler.RespondError(w, http.StatusInternalServerError, err.Error())
+		RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	handler.RespondJSON(w, http.StatusOK, status)
+	RespondJSON(w, http.StatusOK, status)
 }

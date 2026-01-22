@@ -56,10 +56,10 @@ export const AdminLayout = () => {
       onClick: () => navigate('/problems'),
     },
     {
-      key: '/problems/create/v2',
+      key: '/problems/create',
       icon: <Sparkles className="w-5 h-5 text-purple-500" />,
-      label: 'Create Problem (V2)',
-      onClick: () => navigate('/problems/create/v2'),
+      label: 'Create Problem',
+      onClick: () => navigate('/problems/create'),
     },
     {
       key: '/languages',

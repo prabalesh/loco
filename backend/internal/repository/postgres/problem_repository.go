@@ -90,16 +90,59 @@ func (r *problemRepository) Delete(id int) error {
 	ctx, cancel := database.WithMediumTimeout()
 	defer cancel()
 
-	result := r.db.DB.WithContext(ctx).Delete(&domain.Problem{}, id)
-	if result.Error != nil {
-		return fmt.Errorf("failed to delete problem: %w", result.Error)
-	}
+	return r.db.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1. Clear many-to-many associations (problem_tags, problem_categories)
+		var problem domain.Problem
+		if err := tx.First(&problem, id).Error; err == nil {
+			if err := tx.Model(&problem).Association("Tags").Clear(); err != nil {
+				return fmt.Errorf("failed to clear tags: %w", err)
+			}
+			if err := tx.Model(&problem).Association("Categories").Clear(); err != nil {
+				return fmt.Errorf("failed to clear categories: %w", err)
+			}
+		} else if err != gorm.ErrRecordNotFound {
+			return fmt.Errorf("failed to find problem before deletion: %w", err)
+		} else {
+			return fmt.Errorf("problem not found")
+		}
 
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("problem not found")
-	}
+		// 2. Delete all dependent records that refer to this problem
+		// List of tables that have a foreign key to problems
+		if err := tx.Where("problem_id = ?", id).Delete(&domain.TestCase{}).Error; err != nil {
+			return fmt.Errorf("failed to delete test cases: %w", err)
+		}
+		if err := tx.Where("problem_id = ?", id).Delete(&domain.ProblemBoilerplate{}).Error; err != nil {
+			return fmt.Errorf("failed to delete boilerplates: %w", err)
+		}
+		if err := tx.Where("problem_id = ?", id).Delete(&domain.ProblemReferenceSolution{}).Error; err != nil {
+			return fmt.Errorf("failed to delete reference solutions: %w", err)
+		}
+		if err := tx.Where("problem_id = ?", id).Delete(&domain.ProblemLanguage{}).Error; err != nil {
+			return fmt.Errorf("failed to delete problem languages: %w", err)
+		}
+		if err := tx.Where("problem_id = ?", id).Delete(&domain.Submission{}).Error; err != nil {
+			return fmt.Errorf("failed to delete submissions: %w", err)
+		}
+		if err := tx.Where("problem_id = ?", id).Delete(&domain.UserProblemStats{}).Error; err != nil {
+			return fmt.Errorf("failed to delete user problem stats: %w", err)
+		}
+		if err := tx.Where("problem_id = ?", id).Delete(&domain.ProblemExample{}).Error; err != nil {
+			// ignore error if table doesn't exist or other issues with examples
+			// since it uses db tags it might be legacy
+		}
 
-	return nil
+		// 3. Finally delete the problem itself
+		result := tx.Delete(&domain.Problem{}, id)
+		if result.Error != nil {
+			return fmt.Errorf("failed to delete problem: %w", result.Error)
+		}
+
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("problem not found")
+		}
+
+		return nil
+	})
 }
 
 func (r *problemRepository) GetByID(id int) (*domain.Problem, error) {
