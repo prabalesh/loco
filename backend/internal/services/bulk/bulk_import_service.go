@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
-	"github.com/prabalesh/loco/backend/internal/services/codegen"
 	"github.com/prabalesh/loco/backend/internal/services/problem"
 	"github.com/prabalesh/loco/backend/internal/services/validation"
 	"gorm.io/gorm"
@@ -32,19 +31,19 @@ type BulkImportRequest struct {
 }
 
 type ProblemImportData struct {
-	Title                   string                  `json:"title"`
-	Description             string                  `json:"description"`
-	Difficulty              string                  `json:"difficulty"`
-	CategoryIDs             []int                   `json:"category_ids"`
-	TagIDs                  []int                   `json:"tag_ids"`
-	FunctionName            string                  `json:"function_name"`
-	ReturnType              string                  `json:"return_type"`
-	Parameters              []codegen.Parameter     `json:"parameters"`
-	ValidationType          string                  `json:"validation_type"`
-	ExpectedTimeComplexity  string                  `json:"expected_time_complexity"`
-	ExpectedSpaceComplexity string                  `json:"expected_space_complexity"`
-	TestCases               []problem.TestCaseInput `json:"test_cases"`
-	ReferenceSolution       *ReferenceSolutionData  `json:"reference_solution,omitempty"`
+	Title                   string                   `json:"title"`
+	Description             string                   `json:"description"`
+	Difficulty              string                   `json:"difficulty"`
+	CategoryIDs             []int                    `json:"category_ids"`
+	TagIDs                  []int                    `json:"tag_ids"`
+	FunctionName            string                   `json:"function_name"`
+	ReturnType              domain.GenericType       `json:"return_type"`
+	Parameters              []domain.SchemaParameter `json:"parameters"`
+	ValidationType          string                   `json:"validation_type"`
+	ExpectedTimeComplexity  string                   `json:"expected_time_complexity"`
+	ExpectedSpaceComplexity string                   `json:"expected_space_complexity"`
+	TestCases               []problem.TestCaseInput  `json:"test_cases"`
+	ReferenceSolution       *ReferenceSolutionData   `json:"reference_solution,omitempty"`
 }
 
 type ReferenceSolutionData struct {
@@ -148,7 +147,7 @@ func (s *BulkImportService) BulkImport(req BulkImportRequest, createdBy int) (*B
 		// Validate reference solution if provided
 		validationStatus := "draft"
 		if problemData.ReferenceSolution != nil && req.Options.ValidateReferences {
-			validationStatus = s.validateReferenceSolution(createdProblem.ID, *problemData.ReferenceSolution)
+			validationStatus = s.validateReferenceSolution(createdProblem.ID, *problemData.ReferenceSolution, createdBy)
 		}
 
 		result.CreatedProblems = append(result.CreatedProblems, ProblemImportSuccess{
@@ -235,7 +234,7 @@ func (s *BulkImportService) convertToCreateRequest(data ProblemImportData) probl
 }
 
 // validateReferenceSolution validates reference solution if provided
-func (s *BulkImportService) validateReferenceSolution(problemID int, refSol ReferenceSolutionData) string {
+func (s *BulkImportService) validateReferenceSolution(problemID int, refSol ReferenceSolutionData, adminID int) string {
 	// Get language ID
 	var language domain.Language
 	if err := s.db.Where("slug = ?", refSol.LanguageSlug).First(&language).Error; err != nil {
@@ -249,16 +248,13 @@ func (s *BulkImportService) validateReferenceSolution(problemID int, refSol Refe
 		Code:         refSol.Code,
 	}
 
-	_, validationResult, err := s.validationService.SaveReferenceSolution(validateReq, language.ID)
+	_, _, err := s.validationService.SaveReferenceSolution(validateReq, language.ID, adminID)
 	if err != nil {
 		return "draft"
 	}
 
-	if validationResult.IsValid {
-		return "validated"
-	}
-
-	return "failed_validation"
+	// Return "pending" since validation is asynchronous
+	return "pending"
 }
 
 // BulkImportAsync processes import asynchronously (for large batches)

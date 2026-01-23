@@ -67,6 +67,7 @@ func main() {
 	userRepo := postgres.NewUserRepository(db)
 	boilerplateRepo := postgres.NewBoilerplateRepository(db)
 	typeImplementationRepo := postgres.NewTypeImplementationRepository(db.DB)
+	referenceSolutionRepo := postgres.NewReferenceSolutionRepository(db)
 
 	// 6. Initialize Services
 	pistonService := piston.NewPistonService(cfg, loggers)
@@ -91,6 +92,7 @@ func main() {
 		testCaseRepo,
 		languageRepo,
 		problemLanguageRepo,
+		referenceSolutionRepo,
 		pistonService,
 		boilerplateService,
 		userProblemStatsRepo,

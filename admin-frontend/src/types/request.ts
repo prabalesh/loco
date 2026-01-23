@@ -19,8 +19,16 @@ export interface CreateOrUpdateProblemRequest {
   constraints: string;
   status: "draft" | "published";
   is_active: boolean;
-  tag_ids: number[];
-  category_ids: number[];
+  // V2 Fields
+  function_name?: string;
+  return_type?: string;
+  parameters?: any[];
+  test_cases?: any[];
+  validation_type?: string;
+  selected_languages?: string[];
+
+  tag_ids?: number[];
+  category_ids?: number[];
 }
 
 export interface CreateTestCaseRequest {

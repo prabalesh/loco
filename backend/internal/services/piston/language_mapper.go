@@ -38,7 +38,7 @@ func NewLanguageMapper() *LanguageMapper {
 				FileExt:  ".java",
 				FileName: "Solution.java",
 			},
-			"cpp": {
+			"c++": {
 				Language: "cpp",
 				Version:  "10.2.0",
 				FileExt:  ".cpp",

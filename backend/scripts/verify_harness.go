@@ -57,11 +57,11 @@ func main() {
 
 	for _, lang := range languages {
 		fmt.Printf("\n--- Testing %s ---\n", lang.slug)
-		sig := codegen.ProblemSignature{
+		sig := domain.ProblemSchema{
 			FunctionName: "solution",
-			ReturnType:   "int",
-			Parameters: []codegen.Parameter{
-				{Name: "n", Type: "int"},
+			ReturnType:   domain.TypeInteger,
+			Parameters: []domain.SchemaParameter{
+				{Name: "n", Type: domain.TypeInteger},
 			},
 		}
 

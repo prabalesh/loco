@@ -13,7 +13,8 @@ func SeedLanguages(db *gorm.DB) error {
 		{Name: "Python", Slug: "python"},
 		{Name: "JavaScript", Slug: "javascript"},
 		{Name: "Java", Slug: "java"},
-		{Name: "C++", Slug: "cpp"},
+		{Name: "C++", Slug: "c++"},
+		{Name: "C", Slug: "c"},
 		{Name: "Go", Slug: "go"},
 	}
 

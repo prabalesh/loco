@@ -63,7 +63,8 @@ const ProblemsList: React.FC = () => {
             if (difficultyFilter) filters.difficulty = difficultyFilter;
 
             const response = await adminProblemApi.v2List(page + 1, rowsPerPage, filters);
-            setProblems(response.data.data.data);
+            console.log(response.data.data);
+            setProblems(response.data.data ?? []);
             setTotal(response.data.total);
         } catch (error) {
             toast.error('Failed to load problems');

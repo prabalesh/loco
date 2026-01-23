@@ -34,7 +34,63 @@ import { useNavigate } from "react-router-dom";
 import { adminProblemApi } from "../../../lib/api/admin";
 import { PROBLEM_STEPS, ROUTES } from "../../../config/constant";
 import { Play } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+
+const DIFFICULTY_COLORS = {
+  easy: "success",
+  medium: "warning",
+  hard: "error",
+} as const;
+
+const STATUS_COLORS = {
+  published: "info",
+  draft: "default",
+} as const;
+
+const getResumeLink = (step: number, problemId: number) => {
+  const stepRoutes = {
+    1: ROUTES.PROBLEMS.TESTCASES,
+    2: ROUTES.PROBLEMS.LANGUAGES,
+    3: ROUTES.PROBLEMS.VALIDATE,
+    4: ROUTES.PROBLEMS.VALIDATE,
+  };
+  return stepRoutes[step as keyof typeof stepRoutes]?.(problemId) || "";
+};
+
+const TableSkeleton = () => (
+  <>
+    {Array.from({ length: 5 }).map((_, index) => (
+      <TableRow key={`skeleton-${index}`}>
+        <TableCell>
+          <Skeleton variant="text" width="60%" height={24} />
+          <Skeleton variant="text" width="40%" height={16} />
+        </TableCell>
+        <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
+        <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
+        <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
+        <TableCell><Skeleton variant="rounded" width={40} height={24} /></TableCell>
+        <TableCell><Skeleton variant="text" width={100} /></TableCell>
+        <TableCell>
+          <Stack direction="row" spacing={1}>
+            <Skeleton variant="rectangular" width={60} height={32} />
+            <Skeleton variant="rectangular" width={60} height={32} />
+            <Skeleton variant="circular" width={32} height={32} />
+          </Stack>
+        </TableCell>
+      </TableRow>
+    ))}
+  </>
+);
+
+const columns = [
+  { id: "title", label: "Title", minWidth: 150 },
+  { id: "difficulty", label: "Difficulty", minWidth: 120 },
+  { id: "status", label: "Status", minWidth: 120 },
+  { id: "current_step", label: "Current Step", minWidth: 120 },
+  { id: "is_active", label: "Active", minWidth: 100 },
+  { id: "updated_at", label: "Updated", minWidth: 150 },
+  { id: "actions", label: "Actions", minWidth: 150 },
+];
 
 export default function ProblemList() {
   const navigate = useNavigate();
@@ -42,11 +98,7 @@ export default function ProblemList() {
   const theme = useTheme();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id: number | null; title: string }>({
-    open: false,
-    id: null,
-    title: "",
-  });
+  const [deleteId, setDeleteId] = useState<number | null>(null);
 
   const { data, isFetching } = useQuery({
     queryKey: ["admin-problems"],
@@ -56,7 +108,17 @@ export default function ProblemList() {
     },
   });
 
-  const problems = data?.data || [];
+  const problems = data?.data ?? [];
+
+  const paginatedProblems = useMemo(
+    () => problems.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+    [problems, page, rowsPerPage]
+  );
+
+  const problemToDelete = useMemo(
+    () => problems.find((p) => p.id === deleteId),
+    [problems, deleteId]
+  );
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => adminProblemApi.delete(String(id)),
@@ -69,39 +131,19 @@ export default function ProblemList() {
     },
   });
 
-  const handleChangePage = (_: unknown, newPage: number) => {
-    setPage(newPage);
-  };
+  const handleChangePage = (_: unknown, newPage: number) => setPage(newPage);
 
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
 
-  const handleConfirmDelete = (id: number, title: string) => {
-    setConfirmDelete({ open: true, id, title });
-  };
-
-  const handleCloseConfirm = () => {
-    setConfirmDelete({ open: false, id: null, title: "" });
-  };
-
   const handleDelete = () => {
-    if (confirmDelete.id !== null) {
-      deleteMutation.mutate(confirmDelete.id);
+    if (deleteId !== null) {
+      deleteMutation.mutate(deleteId);
     }
-    handleCloseConfirm();
+    setDeleteId(null);
   };
-
-  const columns = [
-    { id: "title", label: "Title", minWidth: 150 },
-    { id: "difficulty", label: "Difficulty", minWidth: 120 },
-    { id: "status", label: "Status", minWidth: 120 },
-    { id: "current_step", label: "Current Step", minWidth: 120 },
-    { id: "is_active", label: "Active", minWidth: 100 },
-    { id: "updated_at", label: "Updated", minWidth: 150 },
-    { id: "actions", label: "Actions", minWidth: 150 },
-  ];
 
   return (
     <Box sx={{ p: 3, bgcolor: "background.default" }}>
@@ -122,23 +164,14 @@ export default function ProblemList() {
           sx={{
             borderRadius: 2,
             boxShadow: 1,
-            "&:hover": {
-              boxShadow: 2,
-            },
+            "&:hover": { boxShadow: 2 },
           }}
         >
           Create Problem
         </Button>
       </Stack>
 
-      <Paper
-        sx={{
-          borderRadius: 3,
-          boxShadow: 2,
-          overflow: "hidden",
-          bgcolor: "background.paper",
-        }}
-      >
+      <Paper sx={{ borderRadius: 3, boxShadow: 2, overflow: "hidden", bgcolor: "background.paper" }}>
         <TableContainer>
           <Table stickyHeader>
             <TableHead>
@@ -160,163 +193,115 @@ export default function ProblemList() {
             </TableHead>
             <TableBody>
               {isFetching && problems.length === 0 ? (
-                Array.from({ length: 5 }).map((_, index) => (
-                  <TableRow key={`skeleton-${index}`}>
+                <TableSkeleton />
+              ) : (
+                paginatedProblems.map((record) => (
+                  <TableRow
+                    key={record.id}
+                    hover
+                    sx={{
+                      "&:nth-of-type(odd)": { bgcolor: alpha(theme.palette.primary.main, 0.02) },
+                      "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.08) },
+                    }}
+                  >
                     <TableCell>
-                      <Skeleton variant="text" width="60%" height={24} />
-                      <Skeleton variant="text" width="40%" height={16} />
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        {record.title}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        {record.slug}
+                      </Typography>
                     </TableCell>
-                    <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
-                    <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
-                    <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
-                    <TableCell><Skeleton variant="rounded" width={40} height={24} /></TableCell>
-                    <TableCell><Skeleton variant="text" width={100} /></TableCell>
+                    <TableCell>
+                      <Chip
+                        label={record.difficulty.toUpperCase()}
+                        color={DIFFICULTY_COLORS[record.difficulty as keyof typeof DIFFICULTY_COLORS]}
+                        size="small"
+                        sx={{ borderRadius: 1 }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={record.status.toUpperCase()}
+                        color={STATUS_COLORS[record.status as keyof typeof STATUS_COLORS] || "default"}
+                        size="small"
+                        sx={{ borderRadius: 1 }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={PROBLEM_STEPS[record.current_step - 1]?.label || ""}
+                        size="small"
+                        sx={{ borderRadius: 1 }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={record.is_active ? "YES" : "NO"}
+                        color={record.is_active ? "success" : "error"}
+                        size="small"
+                        sx={{ borderRadius: 1 }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="caption" color="textSecondary">
+                        {dayjs(record.updated_at).format("MMM DD, YYYY")}
+                      </Typography>
+                    </TableCell>
                     <TableCell>
                       <Stack direction="row" spacing={1}>
-                        <Skeleton variant="rectangular" width={60} height={32} />
-                        <Skeleton variant="rectangular" width={60} height={32} />
-                        <Skeleton variant="circular" width={32} height={32} />
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<EditOutlined />}
+                          onClick={() => navigate(`/problems/edit/${record.id}`)}
+                          sx={{
+                            borderRadius: 1,
+                            borderColor: "primary.main",
+                            color: "primary.main",
+                            "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.1) },
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<Play style={{ width: 16, height: 16 }} />}
+                          onClick={() => navigate(getResumeLink(record.current_step, record.id))}
+                          sx={{
+                            borderRadius: 1,
+                            borderColor: "secondary.main",
+                            color: "secondary.main",
+                            "&:hover": { bgcolor: alpha(theme.palette.secondary.main, 0.1) },
+                          }}
+                        >
+                          Resume
+                        </Button>
+                        <IconButton
+                          color="error"
+                          size="small"
+                          onClick={() => setDeleteId(record.id)}
+                          disabled={deleteMutation.isPending}
+                          sx={{
+                            borderRadius: 1,
+                            "&:hover": { bgcolor: alpha(theme.palette.error.main, 0.1) },
+                          }}
+                        >
+                          <DeleteOutlined />
+                        </IconButton>
                       </Stack>
                     </TableCell>
                   </TableRow>
                 ))
-              ) : problems.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((record, _) => (
-                <TableRow
-                  key={record.id}
-                  hover
-                  sx={{
-                    "&:nth-of-type(odd)": {
-                      bgcolor: alpha(theme.palette.primary.main, 0.02),
-                    },
-                    "&:hover": {
-                      bgcolor: alpha(theme.palette.primary.main, 0.08),
-                    },
-                  }}
-                >
-                  <TableCell>
-                    <Typography variant="subtitle1" fontWeight="bold">
-                      {record.title}
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary">
-                      {record.slug}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={record.difficulty.toUpperCase()}
-                      color={
-                        record.difficulty === "easy"
-                          ? "success"
-                          : record.difficulty === "medium"
-                            ? "warning"
-                            : "error"
-                      }
-                      size="small"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={record.status.toUpperCase()}
-                      color={record.status === "published" ? "info" : "default"}
-                      size="small"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={PROBLEM_STEPS[record.current_step - 1]?.label || ""}
-                      size="small"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={record.is_active ? "YES" : "NO"}
-                      color={record.is_active ? "success" : "error"}
-                      size="small"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="caption" color="textSecondary">
-                      {dayjs(record.updated_at).format("MMM DD, YYYY")}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={1}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<EditOutlined />}
-                        onClick={() => navigate(`/problems/edit/${record.id}`)}
-                        sx={{
-                          borderRadius: 1,
-                          borderColor: "primary.main",
-                          color: "primary.main",
-                          "&:hover": {
-                            bgcolor: alpha(theme.palette.primary.main, 0.1),
-                          },
-                        }}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<Play style={{ width: 16, height: 16 }} />}
-                        onClick={() => {
-                          let link = "";
-                          switch (record.current_step) {
-                            case 1:
-                              link = ROUTES.PROBLEMS.TESTCASES(record.id);
-                              break;
-                            case 2:
-                              link = ROUTES.PROBLEMS.LANGUAGES(record.id);
-                              break;
-                            case 3:
-                            case 4:
-                              link = ROUTES.PROBLEMS.VALIDATE(record.id);
-                              break;
-                          }
-                          navigate(link);
-                        }}
-                        sx={{
-                          borderRadius: 1,
-                          borderColor: "secondary.main",
-                          color: "secondary.main",
-                          "&:hover": {
-                            bgcolor: alpha(theme.palette.secondary.main, 0.1),
-                          },
-                        }}
-                      >
-                        Resume
-                      </Button>
-                      <IconButton
-                        color="error"
-                        size="small"
-                        onClick={() => handleConfirmDelete(record.id, record.title)}
-                        disabled={deleteMutation.isPending}
-                        sx={{
-                          borderRadius: 1,
-                          "&:hover": {
-                            bgcolor: alpha(theme.palette.error.main, 0.1),
-                          },
-                        }}
-                      >
-                        <DeleteOutlined />
-                      </IconButton>
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </TableContainer>
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={problems.length}
+          count={problems?.length ?? 0}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
@@ -330,15 +315,15 @@ export default function ProblemList() {
         />
       </Paper>
 
-      <Dialog open={confirmDelete.open} onClose={handleCloseConfirm}>
+      <Dialog open={deleteId !== null} onClose={() => setDeleteId(null)}>
         <DialogTitle sx={{ fontWeight: "bold" }}>Delete Problem</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete <strong>"{confirmDelete.title}"</strong>?
+            Are you sure you want to delete <strong>"{problemToDelete?.title}"</strong>?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseConfirm} color="inherit">
+          <Button onClick={() => setDeleteId(null)} color="inherit">
             Cancel
           </Button>
           <Button onClick={handleDelete} color="error" variant="contained">
@@ -346,6 +331,6 @@ export default function ProblemList() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box >
+    </Box>
   );
 }

@@ -37,18 +37,18 @@ func NewProblemService(
 }
 
 type CreateProblemRequest struct {
-	Title                   string              `json:"title"`
-	Description             string              `json:"description"`
-	Difficulty              string              `json:"difficulty"`
-	CategoryIDs             []int               `json:"category_ids"`
-	TagIDs                  []int               `json:"tag_ids"`
-	FunctionName            string              `json:"function_name"`
-	ReturnType              string              `json:"return_type"`
-	Parameters              []codegen.Parameter `json:"parameters"`
-	ValidationType          string              `json:"validation_type"`
-	ExpectedTimeComplexity  string              `json:"expected_time_complexity"`
-	ExpectedSpaceComplexity string              `json:"expected_space_complexity"`
-	TestCases               []TestCaseInput     `json:"test_cases"`
+	Title                   string                   `json:"title"`
+	Description             string                   `json:"description"`
+	Difficulty              string                   `json:"difficulty"`
+	CategoryIDs             []int                    `json:"category_ids"`
+	TagIDs                  []int                    `json:"tag_ids"`
+	FunctionName            string                   `json:"function_name"`
+	ReturnType              domain.GenericType       `json:"return_type"`
+	Parameters              []domain.SchemaParameter `json:"parameters"`
+	ValidationType          string                   `json:"validation_type"`
+	ExpectedTimeComplexity  string                   `json:"expected_time_complexity"`
+	ExpectedSpaceComplexity string                   `json:"expected_space_complexity"`
+	TestCases               []TestCaseInput          `json:"test_cases"`
 }
 
 type TestCaseInput struct {
@@ -90,7 +90,7 @@ func (s *ProblemService) CreateProblem(req CreateProblemRequest, createdBy int) 
 		Description:             req.Description,
 		Difficulty:              req.Difficulty,
 		FunctionName:            &req.FunctionName,
-		ReturnType:              &req.ReturnType,
+		ReturnType:              (*string)(&req.ReturnType),
 		Parameters:              &paramsData,
 		ValidationType:          req.ValidationType,
 		ValidationStatus:        "draft",
@@ -189,7 +189,7 @@ func (s *ProblemService) validateCreateRequest(req CreateProblemRequest) error {
 		}
 		if param.IsCustom {
 			// Validate custom type exists
-			if _, err := s.customTypeRepo.GetByName(param.Type); err != nil {
+			if _, err := s.customTypeRepo.GetByName(string(param.Type)); err != nil {
 				return fmt.Errorf("invalid custom type: %s", param.Type)
 			}
 		}

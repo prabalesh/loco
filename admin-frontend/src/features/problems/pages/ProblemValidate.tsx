@@ -79,7 +79,9 @@ export default function ProblemValidate() {
         mutationFn: (languageId: number) => adminProblemLanguagesApi.validate(String(problemId), languageId),
         onSuccess: (res, languageId) => {
             toast.success('Validation started')
-            const submissionId = res.data.data.id
+            // The response structure might be different now, let's check
+            // Based on backend change: { reference_solution_id, submission_id, status, ... }
+            const submissionId = res.data.data.submission_id
             setPollingStatus(prev => ({ ...prev, [languageId]: submissionId }))
         },
         onError: () => {
@@ -131,7 +133,7 @@ export default function ProblemValidate() {
                     console.error('Polling error:', error)
                 }
             }
-        }, 2000)
+        }, 3000)
 
         return () => clearInterval(pollInterval)
     }, [pollingStatus, problemId, queryClient])

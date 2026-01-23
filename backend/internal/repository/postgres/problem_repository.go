@@ -65,9 +65,15 @@ func (r *problemRepository) Update(problem *domain.Problem) error {
 		// Omit associations here to avoid conflicts or partial updates via Updates
 		if err := tx.Model(&domain.Problem{}).
 			Where("id = ?", problem.ID).
-			Omit("Tags", "Categories", "Creator"). // Avoid updating associations via Updates
+			Omit("Tags", "Categories", "Creator", "TestCases", "Boilerplates"). // Avoid updating associations via Updates
 			Updates(problem).Error; err != nil {
 			return fmt.Errorf("failed to update problem fields: %w", err)
+		}
+
+		if problem.TestCases != nil {
+			if err := tx.Model(problem).Association("TestCases").Replace(problem.TestCases); err != nil {
+				return fmt.Errorf("failed to update test cases: %w", err)
+			}
 		}
 
 		if problem.Tags != nil {
@@ -150,7 +156,14 @@ func (r *problemRepository) GetByID(id int) (*domain.Problem, error) {
 	defer cancel()
 
 	problem := &domain.Problem{}
-	err := r.db.DB.WithContext(ctx).Preload("Creator").Preload("Tags").Preload("Categories").First(problem, id).Error
+	err := r.db.DB.WithContext(ctx).
+		Preload("Creator").
+		Preload("Tags").
+		Preload("Categories").
+		Preload("TestCases").
+		Preload("Boilerplates").
+		Preload("Boilerplates.Language").
+		First(problem, id).Error
 
 	if err == gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("problem not found")
@@ -168,7 +181,15 @@ func (r *problemRepository) GetBySlug(slug string) (*domain.Problem, error) {
 	defer cancel()
 
 	problem := &domain.Problem{}
-	err := r.db.DB.WithContext(ctx).Preload("Creator").Preload("Tags").Preload("Categories").Where("slug = ?", slug).First(problem).Error
+	err := r.db.DB.WithContext(ctx).
+		Preload("Creator").
+		Preload("Tags").
+		Preload("Categories").
+		Preload("TestCases").
+		Preload("Boilerplates").
+		Preload("Boilerplates.Language").
+		Where("slug = ?", slug).
+		First(problem).Error
 
 	if err == gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("problem not found")
@@ -247,7 +268,16 @@ func (r *problemRepository) List(filters domain.ProblemFilters) ([]*domain.Probl
 	}
 
 	// Fetch
-	if err := query.Preload("Creator").Preload("Tags").Preload("Categories").Order("created_at DESC").Limit(limit).Offset(offset).Find(&problems).Error; err != nil {
+	if err := query.Preload("Creator").
+		Preload("Tags").
+		Preload("Categories").
+		Preload("TestCases").
+		Preload("Boilerplates").
+		Preload("Boilerplates.Language").
+		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&problems).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to list problems: %w", err)
 	}
 

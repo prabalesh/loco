@@ -17,20 +17,21 @@ import (
 )
 
 type Worker struct {
-	queue                queue.JobQueue
-	submissionRepo       domain.SubmissionRepository
-	problemRepo          domain.ProblemRepository
-	testCaseRepo         domain.TestCaseRepository
-	languageRepo         domain.LanguageRepository
-	problemLanguageRepo  domain.ProblemLanguageRepository
-	pistonService        piston.PistonService
-	boilerplateService   *codegen.BoilerplateService
-	userProblemStatsRepo domain.UserProblemStatsRepository
-	logger               *zap.Logger
-	stopChan             chan struct{}
-	redisClient          *redis.Client
-	workerID             string
-	config               *config.Config
+	queue                 queue.JobQueue
+	submissionRepo        domain.SubmissionRepository
+	problemRepo           domain.ProblemRepository
+	testCaseRepo          domain.TestCaseRepository
+	languageRepo          domain.LanguageRepository
+	problemLanguageRepo   domain.ProblemLanguageRepository
+	referenceSolutionRepo domain.ReferenceSolutionRepository
+	pistonService         piston.PistonService
+	boilerplateService    *codegen.BoilerplateService
+	userProblemStatsRepo  domain.UserProblemStatsRepository
+	logger                *zap.Logger
+	stopChan              chan struct{}
+	redisClient           *redis.Client
+	workerID              string
+	config                *config.Config
 }
 
 func NewWorker(
@@ -40,6 +41,7 @@ func NewWorker(
 	testCaseRepo domain.TestCaseRepository,
 	languageRepo domain.LanguageRepository,
 	problemLanguageRepo domain.ProblemLanguageRepository,
+	referenceSolutionRepo domain.ReferenceSolutionRepository,
 	pistonService piston.PistonService,
 	boilerplateService *codegen.BoilerplateService,
 	userProblemStatsRepo domain.UserProblemStatsRepository,
@@ -48,20 +50,21 @@ func NewWorker(
 	cfg *config.Config,
 ) *Worker {
 	return &Worker{
-		queue:                queue,
-		submissionRepo:       submissionRepo,
-		problemRepo:          problemRepo,
-		testCaseRepo:         testCaseRepo,
-		languageRepo:         languageRepo,
-		problemLanguageRepo:  problemLanguageRepo,
-		pistonService:        pistonService,
-		boilerplateService:   boilerplateService,
-		userProblemStatsRepo: userProblemStatsRepo,
-		logger:               logger,
-		stopChan:             make(chan struct{}),
-		redisClient:          redisClient,
-		workerID:             generateWorkerID(),
-		config:               cfg,
+		queue:                 queue,
+		submissionRepo:        submissionRepo,
+		problemRepo:           problemRepo,
+		testCaseRepo:          testCaseRepo,
+		languageRepo:          languageRepo,
+		problemLanguageRepo:   problemLanguageRepo,
+		referenceSolutionRepo: referenceSolutionRepo,
+		pistonService:         pistonService,
+		boilerplateService:    boilerplateService,
+		userProblemStatsRepo:  userProblemStatsRepo,
+		logger:                logger,
+		stopChan:              make(chan struct{}),
+		redisClient:           redisClient,
+		workerID:              generateWorkerID(),
+		config:                cfg,
 	}
 }
 
@@ -257,11 +260,68 @@ func (w *Worker) evaluateSubmission(submission *domain.Submission, problem *doma
 	}
 
 	// 6. Parse detailed results
+	// 6. Parse detailed results
 	var testResults []domain.TestCaseResult
-	if err := json.Unmarshal([]byte(res.Output), &testResults); err != nil {
-		// If parsing fails, it might be a runtime error of the harness itself
-		w.updateSubmissionError(submission, domain.SubmissionStatusRuntimeError, res.Error+"\n"+res.Output)
-		return
+
+	// Define a struct that matches the harness output specifically, including the 'passed' boolean
+	type HarnessTestResult struct {
+		domain.TestCaseResult
+		Passed *bool  `json:"passed"` // Pointer to distinguish between false and missing
+		Actual string `json:"actual"` // Harness uses "actual", domain uses "actual_output"
+	}
+
+	var resultObj struct {
+		TestResults []HarnessTestResult `json:"test_results"`
+		Verdict     string              `json:"verdict"`
+		Memory      int                 `json:"memory"`
+		Runtime     int                 `json:"runtime"`
+	}
+
+	// Try unmarshaling as object first (new format)
+	if err := json.Unmarshal([]byte(res.Output), &resultObj); err == nil && len(resultObj.TestResults) > 0 {
+		testResults = make([]domain.TestCaseResult, len(resultObj.TestResults))
+		for i, tr := range resultObj.TestResults {
+			res := tr.TestCaseResult
+			// Map Passed bool to Status string if Status is empty
+			if res.Status == "" && tr.Passed != nil {
+				if *tr.Passed {
+					res.Status = "passed"
+				} else {
+					res.Status = "failed"
+				}
+			}
+			// Map Actual to ActualOutput
+			if res.ActualOutput == "" && tr.Actual != "" {
+				res.ActualOutput = tr.Actual
+			}
+			testResults[i] = res
+		}
+		// We can also use resultObj.Memory, resultObj.Runtime if we want to trust the harness
+	} else {
+		// Fallback to array (old format)
+		var arrayResults []HarnessTestResult
+		if err := json.Unmarshal([]byte(res.Output), &arrayResults); err == nil && len(arrayResults) > 0 {
+			testResults = make([]domain.TestCaseResult, len(arrayResults))
+			for i, tr := range arrayResults {
+				res := tr.TestCaseResult
+				if res.Status == "" && tr.Passed != nil {
+					if *tr.Passed {
+						res.Status = "passed"
+					} else {
+						res.Status = "failed"
+					}
+				}
+				// Map Actual to ActualOutput
+				if res.ActualOutput == "" && tr.Actual != "" {
+					res.ActualOutput = tr.Actual
+				}
+				testResults[i] = res
+			}
+		} else {
+			// If parsing fails completely, it might be a runtime error of the harness itself
+			w.updateSubmissionError(submission, domain.SubmissionStatusRuntimeError, res.Error+"\n"+res.Output)
+			return
+		}
 	}
 
 	// 7. Process results and determine final status
@@ -273,6 +333,11 @@ func (w *Worker) evaluateSubmission(submission *domain.Submission, problem *doma
 
 	for i := range testResults {
 		tr := &testResults[i]
+		// Ensure TestID is populated
+		if tr.TestID == 0 {
+			tr.TestID = i + 1
+		}
+
 		if i < len(testCases) {
 			tr.IsSample = testCases[i].IsSample
 			// If not provided by harness, fill from DB for completeness
@@ -332,18 +397,43 @@ func (w *Worker) evaluateSubmission(submission *domain.Submission, problem *doma
 }
 
 func (w *Worker) updateValidationStatus(submission *domain.Submission, status domain.SubmissionStatus, errorMsg string, passCount, totalCount int) {
-	now := time.Now()
-	pl, err := w.problemLanguageRepo.GetByProblemAndLanguage(submission.ProblemID, submission.LanguageID)
-	if err != nil {
-		return
+	// Update ReferenceSolution
+	refSol, err := w.referenceSolutionRepo.GetByProblemAndLanguage(submission.ProblemID, submission.LanguageID)
+	if err == nil {
+		refSol.IsValidated = (status == domain.SubmissionStatusAccepted)
+
+		validationResult := map[string]interface{}{
+			"is_valid":      refSol.IsValidated,
+			"passed_tests":  passCount,
+			"total_tests":   totalCount,
+			"error_message": errorMsg,
+			"test_results":  submission.TestCaseResults,
+		}
+
+		resultJSON, _ := json.Marshal(validationResult)
+		refSol.ValidationResults = resultJSON
+
+		if err := w.referenceSolutionRepo.Update(refSol); err != nil {
+			w.logger.Error("Failed to update reference solution", zap.Error(err))
+		}
+	} else {
+		w.logger.Error("Reference solution not found for validation update", zap.Error(err))
 	}
-	pl.LastValidationStatus = string(status)
-	pl.LastValidationError = errorMsg
-	pl.LastPassCount = passCount
-	pl.LastTotalCount = totalCount
-	pl.IsValidated = (status == domain.SubmissionStatusAccepted)
-	pl.ValidatedAt = &now
-	w.problemLanguageRepo.Update(pl)
+
+	// Update Problem Validation Status if valid
+	if status == domain.SubmissionStatusAccepted {
+		problem, err := w.problemRepo.GetByID(submission.ProblemID)
+		if err == nil {
+			problem.ValidationStatus = "validated"
+			problem.HasReferenceSolution = true
+			w.problemRepo.Update(problem)
+		}
+	}
+
+	// Legacy support: Update ProblemLanguage as well (remvoed as per user request to stop using it)
+	// The table might still exist but we don't want to fail or log errors if records are missing,
+	// and we are moving away from it.
+
 }
 
 func (w *Worker) updateProblemAndUserStats(submission *domain.Submission, finalStatus domain.SubmissionStatus) {

@@ -33,14 +33,14 @@ type ExecutionResponse struct {
 }
 
 type Stage struct {
-	Stdout   string `json:"stdout"`
-	Stderr   string `json:"stderr"`
-	Code     int    `json:"code"`
-	Signal   string `json:"signal"`
-	Output   string `json:"output"`
-	WallTime int    `json:"wall_time"` // in milliseconds (some versions use time)
-	CpuTime  int    `json:"cpu_time"`  // in milliseconds
-	Memory   int    `json:"memory"`    // in bytes
+	Stdout   string  `json:"stdout"`
+	Stderr   string  `json:"stderr"`
+	Code     int     `json:"code"`
+	Signal   string  `json:"signal"`
+	Output   string  `json:"output"`
+	WallTime float64 `json:"wall_time"` // in milliseconds (some versions use time)
+	CpuTime  float64 `json:"cpu_time"`  // in milliseconds
+	Memory   float64 `json:"memory"`    // in bytes
 }
 
 type PistonService interface {
@@ -123,8 +123,8 @@ func (s *pistonService) Execute(language, version, code, input string) (*Executi
 			Output:   pistonResp.Compile.Stdout,
 			Error:    pistonResp.Compile.Stderr + "\n" + pistonResp.Compile.Output,
 			ExitCode: pistonResp.Compile.Code,
-			Runtime:  pistonResp.Compile.CpuTime,
-			Memory:   pistonResp.Compile.Memory / 1024,
+			Runtime:  int(pistonResp.Compile.CpuTime),
+			Memory:   int(pistonResp.Compile.Memory) / 1024,
 		}, nil
 	}
 
@@ -132,7 +132,7 @@ func (s *pistonService) Execute(language, version, code, input string) (*Executi
 		Output:   pistonResp.Run.Stdout,
 		Error:    pistonResp.Run.Stderr,
 		ExitCode: pistonResp.Run.Code,
-		Runtime:  pistonResp.Run.CpuTime,
-		Memory:   pistonResp.Run.Memory / 1024,
+		Runtime:  int(pistonResp.Run.CpuTime),
+		Memory:   int(pistonResp.Run.Memory) / 1024,
 	}, nil
 }

@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -151,6 +152,11 @@ func (u *ProblemUsecase) CreateProblem(req *dto.CreateProblemRequest, adminID in
 		}
 	}
 
+	// Map TestCases
+	if len(req.TestCases) > 0 {
+		problem.TestCases = u.mapTestCaseInputs(req.TestCases)
+	}
+
 	if err := u.problemRepo.Create(problem); err != nil {
 		u.logger.Error("Failed to create problem in database",
 			zap.Error(err),
@@ -271,6 +277,11 @@ func (u *ProblemUsecase) UpdateProblem(problemID int, req *dto.UpdateProblemRequ
 		for _, id := range req.CategoryIDs {
 			problem.Categories = append(problem.Categories, domain.Category{ID: id})
 		}
+	}
+
+	// Map TestCases for Update
+	if req.TestCases != nil {
+		problem.TestCases = u.mapTestCaseInputs(req.TestCases)
 	}
 
 	if err := u.problemRepo.Update(problem); err != nil {
@@ -660,4 +671,23 @@ func generateSlug(title string) string {
 	slug = fmt.Sprintf("%s-%d", slug, time.Now().Unix())
 
 	return slug
+}
+
+func (u *ProblemUsecase) mapTestCaseInputs(inputs []dto.TestCaseInput) []domain.TestCase {
+	var testCases []domain.TestCase
+	for _, input := range inputs {
+		inputJSON, _ := json.Marshal(input.Input)
+		outputJSON, _ := json.Marshal(input.ExpectedOutput)
+
+		tc := domain.TestCase{
+			Input:          string(inputJSON),
+			ExpectedOutput: string(outputJSON),
+			IsSample:       input.IsSample,
+			InputSize:      input.InputSize,
+			TimeLimitMs:    input.TimeLimitMs,
+			MemoryLimitMb:  input.MemoryLimitMb,
+		}
+		testCases = append(testCases, tc)
+	}
+	return testCases
 }

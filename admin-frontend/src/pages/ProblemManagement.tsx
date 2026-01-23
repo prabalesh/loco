@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     Box,
-    Card,
-    CardContent,
     Typography,
     Button,
     Stack,
@@ -11,33 +9,32 @@ import {
     IconButton,
     Divider,
     Alert,
-    AlertTitle,
     Chip,
     Paper,
     Stepper,
     Step,
     StepLabel,
-    Grid,
-    List,
-    ListItem,
-    ListItemText,
 } from '@mui/material';
 import {
     ArrowBack as ArrowBackIcon,
     Publish as PublishIcon,
-    Code as CodeIcon,
-    Assignment as AssignmentIcon,
-    Refresh as RefreshIcon,
+    NavigateNext as NextIcon,
+    NavigateBefore as BeforeIcon,
 } from '@mui/icons-material';
 import { adminProblemApi } from '../lib/api/admin';
 import { ReferenceSolutionValidator } from '../components/v2/ReferenceSolutionValidator';
+import { SignatureStep } from '../features/problems/components/wizard/SignatureStep';
+import { BoilerplateStep } from '../features/problems/components/wizard/BoilerplateStep';
+import { GeneralInfoStep } from '../features/problems/components/wizard/GeneralInfoStep';
+import { TestCasesStep } from '../features/problems/components/wizard/TestCasesStep';
 import toast from 'react-hot-toast';
 
 const STEPS = [
-    'Problem Created',
-    'Boilerplates Generated',
-    'Solution Validated',
-    'Published',
+    'Problem Details',
+    'Function Signature',
+    'Boilerplates',
+    'Test Cases',
+    'Verification',
 ];
 
 const ProblemManagement: React.FC = () => {
@@ -46,7 +43,9 @@ const ProblemManagement: React.FC = () => {
     const [problem, setProblem] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [publishing, setPublishing] = useState(false);
-    const [generatingBoilerplates, setGeneratingBoilerplates] = useState(false);
+    const [activeStep, setActiveStep] = useState(0);
+    const [isDirty, setIsDirty] = useState(false);
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         if (id) {
@@ -57,7 +56,28 @@ const ProblemManagement: React.FC = () => {
     const fetchProblem = async () => {
         try {
             const response = await adminProblemApi.v2GetById(id!);
-            setProblem(response.data.data);
+            const p = response.data.data as any;
+            // Normalize data for steps
+            const normalizedProblem = {
+                ...p,
+                selected_languages: p.boilerplates?.map((b: any) => b.language?.language_id || b.language_id) || p.selected_languages || [],
+                return_type: p.return_type === 'int' ? 'integer' :
+                    p.return_type === 'int[]' ? 'integer_array' :
+                        p.return_type === 'bool' ? 'boolean' : p.return_type,
+                parameters: p.parameters?.map((param: any) => ({
+                    ...param,
+                    type: param.type === 'int' ? 'integer' :
+                        param.type === 'int[]' ? 'integer_array' :
+                            param.type === 'bool' ? 'boolean' : param.type
+                })) || [],
+                test_cases: p.test_cases?.map((tc: any) => ({
+                    ...tc,
+                    input: typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input),
+                    expected_output: typeof tc.expected_output === 'string' ? tc.expected_output : JSON.stringify(tc.expected_output)
+                })) || []
+            };
+            setProblem(normalizedProblem);
+            setIsDirty(false);
         } catch (error) {
             toast.error('Failed to load problem');
             console.error(error);
@@ -66,25 +86,12 @@ const ProblemManagement: React.FC = () => {
         }
     };
 
-    const handleRegenerateBoilerplates = async () => {
-        setGeneratingBoilerplates(true);
-        try {
-            await adminProblemApi.v2RegenerateBoilerplates(id!);
-            toast.success('Boilerplates regenerated successfully!');
-            fetchProblem(); // Refresh stats
-        } catch (error: any) {
-            toast.error('Failed to regenerate boilerplates');
-        } finally {
-            setGeneratingBoilerplates(false);
-        }
-    };
-
     const handlePublish = async () => {
         setPublishing(true);
         try {
             await adminProblemApi.v2Publish(id!);
             toast.success('Problem published successfully!');
-            fetchProblem(); // Refresh
+            fetchProblem();
         } catch (error: any) {
             const message = error.response?.data?.data?.message || 'Failed to publish problem';
             toast.error(message);
@@ -93,23 +100,56 @@ const ProblemManagement: React.FC = () => {
         }
     };
 
-    const getActiveStep = () => {
-        if (!problem) return 0;
-        if (problem.status === 'published') return 3;
-        if (problem.validation_status === 'validated') return 2;
-        if (problem.boilerplates && problem.boilerplates.length > 0) return 1;
-        return 0;
+    const handleProblemChange = (newData: Partial<any>) => {
+        setProblem((prev: any) => ({ ...prev, ...newData }));
+        setIsDirty(true);
     };
 
-    const getNextAction = () => {
-        const step = getActiveStep();
-        switch (step) {
-            case 0: return "Generate boilerplates to proceed.";
-            case 1: return "Validate reference solution to ensure correctness.";
-            case 2: return "Ready to publish! Click the publish button.";
-            case 3: return "Problem is live.";
-            default: return "";
+    const handleSaveChanges = async () => {
+        setSaving(true);
+        try {
+            // Re-format test cases back to JSON for API
+            const formattedTestCases = problem.test_cases.map((tc: any) => ({
+                ...tc,
+                input: JSON.parse(tc.input),
+                expected_output: JSON.parse(tc.expected_output)
+            }));
+
+            await adminProblemApi.update(id!, {
+                title: problem.title,
+                slug: problem.slug,
+                description: problem.description,
+                difficulty: problem.difficulty,
+                function_name: problem.function_name,
+                return_type: problem.return_type,
+                parameters: problem.parameters,
+                validation_type: problem.validation_type,
+                selected_languages: problem.selected_languages,
+                status: problem.status,
+                is_active: problem.is_active,
+                constraints: problem.constraints,
+                input_format: problem.input_format,
+                output_format: problem.output_format,
+                time_limit: problem.time_limit,
+                memory_limit: problem.memory_limit,
+                validator_type: problem.validator_type || 'exact_match',
+                test_cases: formattedTestCases,
+            });
+            toast.success('Problem updated successfully!');
+            setIsDirty(false);
+        } catch (error) {
+            toast.error('Failed to update problem');
+        } finally {
+            setSaving(false);
         }
+    };
+
+    const handleNext = () => {
+        setActiveStep((prev) => prev + 1);
+    };
+
+    const handleBack = () => {
+        setActiveStep((prev) => prev - 1);
     };
 
     if (loading) {
@@ -131,41 +171,107 @@ const ProblemManagement: React.FC = () => {
         );
     }
 
-    const activeStep = getActiveStep();
+    const renderStepContent = (step: number) => {
+        switch (step) {
+            case 0:
+                return (
+                    <Box sx={{ mt: 2 }}>
+                        <GeneralInfoStep data={problem} onChange={handleProblemChange} />
+                    </Box>
+                );
+            case 1:
+                return (
+                    <Box sx={{ mt: 2 }}>
+                        <SignatureStep data={problem} onChange={handleProblemChange} />
+                    </Box>
+                );
+            case 2:
+                return (
+                    <Box sx={{ mt: 2 }}>
+                        <BoilerplateStep
+                            data={problem}
+                            onChange={handleProblemChange}
+                            onRefresh={() => fetchProblem()}
+                        />
+                    </Box>
+                );
+            case 3:
+                return (
+                    <Box sx={{ mt: 2 }}>
+                        <TestCasesStep
+                            data={problem}
+                            onChange={handleProblemChange}
+                            onSave={handleSaveChanges}
+                            saving={saving}
+                        />
+                    </Box>
+                );
+            case 4:
+                return (
+                    <Box sx={{ mt: 2 }}>
+                        <ReferenceSolutionValidator
+                            problemId={problem.id}
+                            supportedLanguages={problem.selected_languages}
+                            onValidationSuccess={() => fetchProblem()}
+                        />
+                        {problem.status !== 'published' && problem.validation_status === 'validated' && (
+                            <Alert severity="success" sx={{ mt: 3, borderRadius: 2 }}>
+                                This problem is validated and ready for publication.
+                            </Alert>
+                        )}
+                    </Box>
+                );
+            default:
+                return null;
+        }
+    };
 
     return (
         <Box sx={{ p: 4, maxWidth: 1200, mx: 'auto' }}>
             {/* Header */}
             <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Stack direction="row" spacing={2} alignItems="center">
-                    <IconButton onClick={() => navigate('/problems')} size="small">
+                    <IconButton onClick={() => navigate('/problems')} size="small" sx={{ bgcolor: '#f5f5f5' }}>
                         <ArrowBackIcon />
                     </IconButton>
                     <Box>
                         <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
-                            {problem.title}
+                            Update Problem
                         </Typography>
                         <Stack direction="row" spacing={1} alignItems="center">
                             <Typography variant="body2" color="textSecondary">
-                                ID: {problem.id} • Slug: {problem.slug}
+                                {problem.title} (ID: {problem.id})
                             </Typography>
                             <Chip
                                 label={problem.status.toUpperCase()}
                                 size="small"
                                 color={problem.status === 'published' ? 'success' : 'default'}
+                                sx={{ borderRadius: '4px', fontWeight: 'bold' }}
                             />
                         </Stack>
                     </Box>
                 </Stack>
 
                 <Stack direction="row" spacing={2}>
-                    {problem.validation_status === 'validated' && problem.status !== 'published' && (
+                    {isDirty && (
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={handleSaveChanges}
+                            disabled={saving}
+                            sx={{ borderRadius: 2, px: 3 }}
+                        >
+                            {saving ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                    )}
+                    {problem.status !== 'published' && (
                         <Button
                             variant="contained"
                             color="success"
                             startIcon={<PublishIcon />}
                             onClick={handlePublish}
-                            disabled={publishing}
+                            disabled={publishing || problem.validation_status !== 'validated'}
+                            sx={{ borderRadius: 2, px: 3 }}
                         >
                             {publishing ? 'Publishing...' : 'Publish Problem'}
                         </Button>
@@ -173,141 +279,42 @@ const ProblemManagement: React.FC = () => {
                 </Stack>
             </Box>
 
-            {/* Workflow Steps */}
-            <Paper sx={{ p: 4, mb: 4 }}>
-                <Stepper activeStep={activeStep}>
+            <Paper sx={{ p: 4, mb: 4, borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+                <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 5 }}>
                     {STEPS.map((label) => (
                         <Step key={label}>
                             <StepLabel>{label}</StepLabel>
                         </Step>
                     ))}
                 </Stepper>
-                <Alert severity={activeStep === 3 ? "success" : "info"} sx={{ mt: 3 }}>
-                    <AlertTitle>Next Action</AlertTitle>
-                    {getNextAction()}
-                </Alert>
+
+                <Box sx={{ minHeight: 400, mb: 4 }}>
+                    {renderStepContent(activeStep)}
+                </Box>
+
+                <Divider sx={{ mb: 3 }} />
+
+                <Stack direction="row" justifyContent="space-between">
+                    <Button
+                        disabled={activeStep === 0 || saving}
+                        onClick={handleBack}
+                        startIcon={<BeforeIcon />}
+                        variant="outlined"
+                        sx={{ borderRadius: 2 }}
+                    >
+                        Back
+                    </Button>
+                    <Button
+                        disabled={activeStep === STEPS.length - 1 || saving}
+                        onClick={handleNext}
+                        endIcon={<NextIcon />}
+                        variant="contained"
+                        sx={{ borderRadius: 2, px: 4 }}
+                    >
+                        Next
+                    </Button>
+                </Stack>
             </Paper>
-
-            <Grid container spacing={4}>
-                {/* Left Column: Details */}
-                <Grid size={{ xs: 12, md: 4 }}>
-                    <Card variant="outlined" sx={{ mb: 3 }}>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom>
-                                Details
-                            </Typography>
-                            <Divider sx={{ mb: 2 }} />
-                            <Stack spacing={2}>
-                                <Box>
-                                    <Typography variant="caption" color="textSecondary">Difficulty</Typography>
-                                    <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>{problem.difficulty}</Typography>
-                                </Box>
-                                <Box>
-                                    <Typography variant="caption" color="textSecondary">Function Name</Typography>
-                                    <Typography variant="body1" sx={{ fontFamily: 'monospace' }}>{problem.function_name}()</Typography>
-                                </Box>
-                                <Box>
-                                    <Typography variant="caption" color="textSecondary">Return Type</Typography>
-                                    <Typography variant="body1" sx={{ fontFamily: 'monospace' }}>{problem.return_type}</Typography>
-                                </Box>
-                                <Box>
-                                    <Typography variant="caption" color="textSecondary">Expected Complexity</Typography>
-                                    <Typography variant="body1">Time: {problem.expected_time_complexity || 'N/A'}</Typography>
-                                    <Typography variant="body1">Space: {problem.expected_space_complexity || 'N/A'}</Typography>
-                                </Box>
-                                <Divider />
-                                <Box>
-                                    <Typography variant="caption" color="textSecondary">Stats</Typography>
-                                    <Typography variant="body1">Submissions: {problem.total_submissions}</Typography>
-                                    <Typography variant="body1">Acceptance Rate: {problem.acceptance_rate.toFixed(1)}%</Typography>
-                                </Box>
-                            </Stack>
-                        </CardContent>
-                    </Card>
-
-                    <Card variant="outlined">
-                        <CardContent sx={{ p: 0 }}>
-                            <Box sx={{ p: 2 }}>
-                                <Typography variant="h6">Test Cases</Typography>
-                            </Box>
-                            <Divider />
-                            <List dense>
-                                {problem.test_cases?.map((tc: any, index: number) => (
-                                    <ListItem key={tc.id}>
-                                        <ListItemText
-                                            primary={`Test Case ${index + 1}`}
-                                            secondary={tc.is_sample ? "Sample (Public)" : "Hidden"}
-                                        />
-                                        {tc.is_sample ? (
-                                            <Chip label="Public" size="small" color="primary" />
-                                        ) : (
-                                            <Chip label="Private" size="small" variant="outlined" />
-                                        )}
-                                    </ListItem>
-                                ))}
-                            </List>
-                        </CardContent>
-                    </Card>
-                </Grid>
-
-                {/* Right Column: Validation */}
-                <Grid size={{ xs: 12, md: 8 }}>
-                    <ReferenceSolutionValidator
-                        problemId={problem.id}
-                        onValidationSuccess={() => fetchProblem()}
-                    />
-
-                    {/* Boilerplates Status */}
-                    <Card variant="outlined" sx={{ mt: 3 }}>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                <Typography variant="h6" display="flex" alignItems="center" gap={1}>
-                                    <CodeIcon fontSize="small" /> Boilerplates
-                                </Typography>
-                                <Button
-                                    size="small"
-                                    startIcon={generatingBoilerplates ? <CircularProgress size={16} /> : <RefreshIcon />}
-                                    onClick={handleRegenerateBoilerplates}
-                                    disabled={generatingBoilerplates}
-                                >
-                                    {generatingBoilerplates ? 'Generating...' : 'Regenerate All'}
-                                </Button>
-                            </Box>
-                            <Divider sx={{ mb: 2 }} />
-                            {problem.boilerplates?.length > 0 ? (
-                                <Stack direction="row" spacing={1} flexWrap="wrap">
-                                    {problem.boilerplates.map((bp: any) => (
-                                        <Chip
-                                            key={bp.id}
-                                            label={bp.language?.name || `ID: ${bp.language_id}`}
-                                            size="small"
-                                            variant="outlined"
-                                            sx={{ mb: 1 }}
-                                        />
-                                    ))}
-                                </Stack>
-                            ) : (
-                                <Typography color="textSecondary">No boilerplates generated yet.</Typography>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Description Card */}
-                    <Card variant="outlined" sx={{ mt: 3 }}>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom display="flex" alignItems="center" gap={1}>
-                                <AssignmentIcon fontSize="small" /> Description
-                            </Typography>
-                            <Divider sx={{ mb: 2 }} />
-                            <Paper variant="outlined" sx={{ p: 2, bgcolor: '#fcfcfc', maxHeight: 300, overflow: 'auto' }}>
-                                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                                    {problem.description}
-                                </Typography>
-                            </Paper>
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
         </Box>
     );
 };

@@ -41,14 +41,14 @@ func (s *BoilerplateService) GenerateAllBoilerplatesForProblem(problem *domain.P
 		return fmt.Errorf("problem has no parameters")
 	}
 
-	var parameters []Parameter
+	var parameters []domain.SchemaParameter
 	if err := json.Unmarshal([]byte(*problem.Parameters), &parameters); err != nil {
 		return fmt.Errorf("failed to parse parameters: %w", err)
 	}
 
-	signature := ProblemSignature{
+	signature := domain.ProblemSchema{
 		FunctionName: *problem.FunctionName,
-		ReturnType:   *problem.ReturnType,
+		ReturnType:   domain.GenericType(*problem.ReturnType),
 		Parameters:   parameters,
 	}
 
@@ -62,19 +62,22 @@ func (s *BoilerplateService) GenerateAllBoilerplatesForProblem(problem *domain.P
 		return fmt.Errorf("failed to fetch test cases: %w", err)
 	}
 
+	var errors []string
 	for _, lang := range languages {
 		err := s.GenerateBoilerplateForLanguage(problem.ID, lang.ID, signature, lang.Slug, testCases, problem.ValidationType)
 		if err != nil {
-			// Log error but continue with other languages
-			fmt.Printf("Warning: failed to generate boilerplate for language %s (ID: %d): %v\n", lang.Name, lang.ID, err)
-			continue
+			errors = append(errors, fmt.Sprintf("%s: %v", lang.Name, err))
 		}
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("failed to generate boilerplates for some languages: %s", strings.Join(errors, "; "))
 	}
 
 	return nil
 }
 
-func (s *BoilerplateService) GenerateBoilerplateForLanguage(problemID, languageID int, signature ProblemSignature, languageSlug string, testCases []domain.TestCase, validationType string) error {
+func (s *BoilerplateService) GenerateBoilerplateForLanguage(problemID, languageID int, signature domain.ProblemSchema, languageSlug string, testCases []domain.TestCase, validationType string) error {
 	stubCode, err := s.codeGenService.GenerateStubCode(signature, languageSlug)
 	if err != nil {
 		return fmt.Errorf("failed to generate stub code: %w", err)

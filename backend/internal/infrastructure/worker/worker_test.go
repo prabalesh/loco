@@ -61,6 +61,7 @@ func TestWorkerHeartbeat(t *testing.T) {
 		nil,          // testCaseRepo
 		nil,          // languageRepo
 		nil,          // problemLanguageRepo
+		nil,          // referenceSolutionRepo
 		nil,          // pistonService
 		nil,          // boilerplateService
 		nil,          // userStatsRepo

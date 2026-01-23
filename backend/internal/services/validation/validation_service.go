@@ -1,11 +1,12 @@
 package validation
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
 	"fmt"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/infrastructure/queue"
 	"github.com/prabalesh/loco/backend/internal/services/execution"
 )
 
@@ -13,6 +14,8 @@ type ValidationService struct {
 	referenceSolutionRepo domain.ReferenceSolutionRepository
 	problemRepo           domain.ProblemRepository
 	testCaseRepo          domain.TestCaseRepository
+	submissionRepo        domain.SubmissionRepository
+	jobQueue              queue.JobQueue
 	executionService      *execution.ExecutionService
 }
 
@@ -20,12 +23,16 @@ func NewValidationService(
 	referenceSolutionRepo domain.ReferenceSolutionRepository,
 	problemRepo domain.ProblemRepository,
 	testCaseRepo domain.TestCaseRepository,
+	submissionRepo domain.SubmissionRepository,
+	jobQueue queue.JobQueue,
 	executionService *execution.ExecutionService,
 ) *ValidationService {
 	return &ValidationService{
 		referenceSolutionRepo: referenceSolutionRepo,
 		problemRepo:           problemRepo,
 		testCaseRepo:          testCaseRepo,
+		submissionRepo:        submissionRepo,
+		jobQueue:              jobQueue,
 		executionService:      executionService,
 	}
 }
@@ -92,21 +99,15 @@ func (s *ValidationService) ValidateReferenceSolution(req ValidateRequest, langu
 	return result, nil
 }
 
-// SaveReferenceSolution saves and validates a reference solution
-func (s *ValidationService) SaveReferenceSolution(req ValidateRequest, languageID int) (*domain.ProblemReferenceSolution, *ValidationResult, error) {
-	// Validate the solution
-	validationResult, err := s.ValidateReferenceSolution(req, languageID)
+// SaveReferenceSolution saves and validates a reference solution asynchronously
+func (s *ValidationService) SaveReferenceSolution(req ValidateRequest, languageID int, adminID int) (*domain.ProblemReferenceSolution, *domain.Submission, error) {
+	// 1. Check if problem exists
+	_, err := s.problemRepo.GetByID(req.ProblemID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("problem not found: %w", err)
 	}
 
-	// Convert validation results to JSON
-	resultsJSON, err := json.Marshal(validationResult)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to marshal validation results: %w", err)
-	}
-
-	// Check if reference solution already exists
+	// 2. Create or Update ReferenceSolution (Pending state)
 	exists, err := s.referenceSolutionRepo.Exists(req.ProblemID, languageID)
 	if err != nil {
 		return nil, nil, err
@@ -121,8 +122,9 @@ func (s *ValidationService) SaveReferenceSolution(req ValidateRequest, languageI
 			return nil, nil, err
 		}
 		referenceSolution.Code = req.Code
-		referenceSolution.IsValidated = validationResult.IsValid
-		referenceSolution.ValidationResults = resultsJSON
+		referenceSolution.IsValidated = false // Mark as not validated until worker finishes
+		// We don't clear validation results yet, or maybe we should?
+		// Let's keep old results until new ones arrive, but IsValidated=false indicates it's stale/pending.
 
 		if err := s.referenceSolutionRepo.Update(referenceSolution); err != nil {
 			return nil, nil, err
@@ -130,11 +132,10 @@ func (s *ValidationService) SaveReferenceSolution(req ValidateRequest, languageI
 	} else {
 		// Create new
 		referenceSolution = &domain.ProblemReferenceSolution{
-			ProblemID:         req.ProblemID,
-			LanguageID:        languageID,
-			Code:              req.Code,
-			IsValidated:       validationResult.IsValid,
-			ValidationResults: resultsJSON,
+			ProblemID:   req.ProblemID,
+			LanguageID:  languageID,
+			Code:        req.Code,
+			IsValidated: false,
 		}
 
 		if err := s.referenceSolutionRepo.Create(referenceSolution); err != nil {
@@ -142,17 +143,33 @@ func (s *ValidationService) SaveReferenceSolution(req ValidateRequest, languageI
 		}
 	}
 
-	// Update problem validation status if this solution is valid
-	if validationResult.IsValid {
-		problem, err := s.problemRepo.GetByID(req.ProblemID)
-		if err == nil {
-			problem.ValidationStatus = "validated"
-			problem.HasReferenceSolution = true
-			s.problemRepo.Update(problem)
-		}
+	// 3. Create Validation Submission
+	submission := &domain.Submission{
+		UserID:                 adminID,
+		ProblemID:              req.ProblemID,
+		LanguageID:             languageID,
+		Code:                   req.Code,
+		Status:                 domain.SubmissionStatusPending,
+		IsAdminSubmission:      true,
+		IsValidationSubmission: true,
+		SubmittedBy:            &adminID,
 	}
 
-	return referenceSolution, validationResult, nil
+	if err := s.submissionRepo.Create(submission); err != nil {
+		return nil, nil, fmt.Errorf("failed to create submission: %w", err)
+	}
+
+	// 4. Enqueue Submission
+	ctx := context.Background()
+	if err := s.jobQueue.EnqueueSubmission(ctx, submission.ID); err != nil {
+		// If queue fails, mark submission as error
+		submission.Status = domain.SubmissionStatusInternalError
+		submission.ErrorMessage = "Failed to enqueue validation job"
+		s.submissionRepo.Update(submission)
+		return nil, nil, fmt.Errorf("failed to enqueue submission: %w", err)
+	}
+
+	return referenceSolution, submission, nil
 }
 
 // GetValidationStatus returns validation status for a problem

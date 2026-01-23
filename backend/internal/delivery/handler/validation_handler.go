@@ -66,14 +66,21 @@ func (h *ValidationHandler) ValidateReferenceSolution(w http.ResponseWriter, r *
 		return
 	}
 
-	// Validate and save reference solution
+	// Get admin ID
+	adminID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		RespondError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	// Validate and save reference solution (async)
 	validateReq := validation.ValidateRequest{
 		ProblemID:    problemID,
 		LanguageSlug: req.LanguageSlug,
 		Code:         req.Code,
 	}
 
-	referenceSolution, validationResult, err := h.validationService.SaveReferenceSolution(validateReq, language.ID)
+	referenceSolution, submission, err := h.validationService.SaveReferenceSolution(validateReq, language.ID, adminID)
 	if err != nil {
 		RespondError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -81,8 +88,10 @@ func (h *ValidationHandler) ValidateReferenceSolution(w http.ResponseWriter, r *
 
 	response := map[string]interface{}{
 		"reference_solution_id": referenceSolution.ID,
-		"is_validated":          referenceSolution.IsValidated,
-		"validation_result":     validationResult,
+		"submission_id":         submission.ID,
+		"status":                "Pending",
+		"message":               "Validation started asynchronously",
+		"is_validated":          false, // Initially false until processed
 	}
 
 	RespondJSON(w, http.StatusOK, response)

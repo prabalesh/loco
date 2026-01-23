@@ -34,10 +34,10 @@ func NewCodeGenHandler(
 }
 
 type GenerateStubRequest struct {
-	FunctionName string              `json:"function_name"`
-	ReturnType   string              `json:"return_type"`
-	Parameters   []codegen.Parameter `json:"parameters"`
-	LanguageSlug string              `json:"language_slug"`
+	FunctionName string                   `json:"function_name"`
+	ReturnType   domain.GenericType       `json:"return_type"`
+	Parameters   []domain.SchemaParameter `json:"parameters"`
+	LanguageSlug string                   `json:"language_slug"`
 }
 
 type GenerateStubResponse struct {
@@ -52,7 +52,7 @@ func (h *CodeGenHandler) GenerateStub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	signature := codegen.ProblemSignature{
+	signature := domain.ProblemSchema{
 		FunctionName: req.FunctionName,
 		ReturnType:   req.ReturnType,
 		Parameters:   req.Parameters,
@@ -107,15 +107,15 @@ func (h *CodeGenHandler) GetProblemStub(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		var params []codegen.Parameter
+		var params []domain.SchemaParameter
 		if err := json.Unmarshal([]byte(*problem.Parameters), &params); err != nil {
 			RespondError(w, http.StatusInternalServerError, "Failed to parse problem parameters")
 			return
 		}
 
-		signature := codegen.ProblemSignature{
+		signature := domain.ProblemSchema{
 			FunctionName: *problem.FunctionName,
-			ReturnType:   *problem.ReturnType,
+			ReturnType:   domain.GenericType(*problem.ReturnType),
 			Parameters:   params,
 		}
 

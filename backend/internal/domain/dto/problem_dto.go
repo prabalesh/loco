@@ -47,6 +47,8 @@ type UpdateProblemRequest struct {
 	ValidationType          *string         `json:"validation_type"`
 	ExpectedTimeComplexity  *string         `json:"expected_time_complexity"`
 	ExpectedSpaceComplexity *string         `json:"expected_space_complexity"`
+
+	TestCases []TestCaseInput `json:"test_cases"`
 }
 
 type TestCaseInput struct {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Card,
     CardHeader,
@@ -24,40 +24,118 @@ import {
     CheckCircle as CheckCircleIcon,
     Cancel as CancelIcon,
     PlayArrow as PlayIcon,
+    Sync as SyncIcon,
 } from '@mui/icons-material';
 import Editor from '@monaco-editor/react';
-import { adminProblemApi, adminCodeGenApi } from '../../lib/api/admin';
+import { adminProblemApi, adminCodeGenApi, adminSubmissionsApi } from '../../lib/api/admin';
 import toast from 'react-hot-toast';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
+import { filterEditorLanguage } from '../../utils/utils';
 
 interface ReferenceSolutionValidatorProps {
     problemId: number;
+    supportedLanguages: string[];
     onValidationSuccess?: () => void;
 }
 
-const LANGUAGES = [
+const ALL_LANGUAGES = [
     { value: 'python', label: 'Python' },
     { value: 'javascript', label: 'JavaScript' },
     { value: 'java', label: 'Java' },
     { value: 'cpp', label: 'C++' },
+    { value: 'c++', label: 'C++' },
+    { value: 'c', label: 'C' },
     { value: 'go', label: 'Go' },
 ];
 
-export const ReferenceSolutionValidator: React.FC<ReferenceSolutionValidatorProps> = ({ problemId, onValidationSuccess }) => {
+export const ReferenceSolutionValidator: React.FC<ReferenceSolutionValidatorProps> = ({ problemId, supportedLanguages, onValidationSuccess }) => {
     const [code, setCode] = useState('');
-    const [language, setLanguage] = useState('python');
+    const [language, setLanguage] = useState(supportedLanguages[0] || 'python');
     const [validating, setValidating] = useState(false);
     const [fetchingStub, setFetchingStub] = useState(false);
     const [validationResult, setValidationResult] = useState<any>(null);
     const [validationStatus, setValidationStatus] = useState<any>(null);
 
+    const [submissionId, setSubmissionId] = useState<number | null>(null);
+    const pollingIntervalRef = useRef<any>(null);
+
     useEffect(() => {
         fetchValidationStatus();
+        return () => {
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+            }
+        };
     }, [problemId]);
+
+    useEffect(() => {
+        if (supportedLanguages.length > 0 && !supportedLanguages.includes(language)) {
+            setLanguage(supportedLanguages[0]);
+        }
+    }, [supportedLanguages]);
 
     useEffect(() => {
         handleFetchStub();
     }, [language, problemId]);
+
+    // Polling effect
+    useEffect(() => {
+        if (submissionId) {
+            setValidating(true);
+            pollingIntervalRef.current = setInterval(checkSubmissionStatus, 3000);
+        } else {
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+            }
+            setValidating(false);
+        }
+
+        return () => {
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+            }
+        };
+    }, [submissionId]);
+
+    const checkSubmissionStatus = async () => {
+        if (!submissionId) return;
+
+        try {
+            const response = await adminSubmissionsApi.getById(problemId, submissionId);
+            const data = response.data.data;
+            const status = data.status;
+
+            if (status !== 'Pending' && status !== 'Processing') {
+                // Completed
+                setSubmissionId(null);
+
+                // Construct validation result from submission data
+                const result = {
+                    is_valid: status === 'Accepted',
+                    passed_tests: data.passed_test_cases,
+                    total_tests: data.total_test_cases,
+                    test_results: data.test_case_results,
+                    error_message: data.error_message
+                };
+
+                setValidationResult(result);
+
+                if (status === 'Accepted') {
+                    toast.success('Reference solution validated! All test cases passed.');
+                    if (onValidationSuccess) {
+                        onValidationSuccess();
+                    }
+                } else {
+                    toast.error(`Validation failed: ${status}`);
+                }
+
+                fetchValidationStatus();
+            }
+        } catch (error) {
+            console.error('Polling error:', error);
+        }
+    };
 
     const handleFetchStub = async () => {
         setFetchingStub(true);
@@ -88,6 +166,7 @@ export const ReferenceSolutionValidator: React.FC<ReferenceSolutionValidatorProp
         }
 
         setValidating(true);
+        setValidationResult(null);
         try {
             const response = await adminProblemApi.v2Validate(problemId, {
                 language_slug: language,
@@ -95,24 +174,17 @@ export const ReferenceSolutionValidator: React.FC<ReferenceSolutionValidatorProp
             });
 
             const data = response.data.data;
-            setValidationResult(data.validation_result);
-
-            if (data.is_validated) {
-                toast.success('Reference solution validated! All test cases passed.');
-                if (onValidationSuccess) {
-                    onValidationSuccess();
-                }
+            if (data.submission_id) {
+                setSubmissionId(data.submission_id);
+                toast.success('Validation started...');
             } else {
-                toast.error('Validation failed. Check test results below.');
+                toast.error('Failed to start validation process');
+                setValidating(false);
             }
-
-            // Refresh validation status
-            fetchValidationStatus();
         } catch (error: any) {
             const message = error.response?.data?.data?.message || 'Failed to validate reference solution';
             toast.error(message);
             console.error(error);
-        } finally {
             setValidating(false);
         }
     };
@@ -161,12 +233,13 @@ export const ReferenceSolutionValidator: React.FC<ReferenceSolutionValidatorProp
                         <TextField
                             select
                             label="Select Language"
-                            value={language}
+                            value={supportedLanguages.includes(language) ? language : (supportedLanguages[0] || '')}
                             onChange={(e) => setLanguage(e.target.value)}
                             sx={{ width: 200 }}
                             size="small"
+                            disabled={supportedLanguages.length === 0}
                         >
-                            {LANGUAGES.map((option) => (
+                            {ALL_LANGUAGES.filter(lang => supportedLanguages.includes(lang.value)).map((option) => (
                                 <MenuItem key={option.value} value={option.value}>
                                     {option.label}
                                 </MenuItem>
@@ -187,7 +260,7 @@ export const ReferenceSolutionValidator: React.FC<ReferenceSolutionValidatorProp
                     <Box sx={{ border: '1px solid #ccc', borderRadius: 1, overflow: 'hidden', mb: 2 }}>
                         <Editor
                             height="400px"
-                            language={language === 'cpp' ? 'cpp' : language}
+                            language={filterEditorLanguage(language)}
                             theme="vs-dark"
                             value={code}
                             onChange={(value) => setCode(value || '')}

@@ -171,7 +171,7 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	mux.Handle("GET /problems/{problem_id}/boilerplates", adminAuthMiddleware(http.HandlerFunc(deps.CodeGenHandler.GetProblemBoilerplates)))
 
 	// ========== VALIDATION ROUTES ==========
-	mux.Handle("POST /admin/problems/{id}/validate-solution", adminAuthMiddleware(http.HandlerFunc(deps.ValidationHandler.ValidateReferenceSolution)))
+	mux.Handle("POST /admin/problems/{id}/validate", adminAuthMiddleware(http.HandlerFunc(deps.ValidationHandler.ValidateReferenceSolution)))
 	mux.Handle("GET /admin/problems/{id}/validation-status", adminAuthMiddleware(http.HandlerFunc(deps.ValidationHandler.GetValidationStatus)))
 
 	// ========== CUSTOM TYPES ROUTES ==========

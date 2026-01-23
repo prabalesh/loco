@@ -29,11 +29,11 @@ interface Parameter {
 }
 
 const PRIMITIVE_TYPES = [
-  { value: 'int', label: 'int', is_custom: false },
-  { value: 'int[]', label: 'int[]', is_custom: false },
+  { value: 'integer', label: 'int', is_custom: false },
+  { value: 'integer_array', label: 'int[]', is_custom: false },
   { value: 'string', label: 'string', is_custom: false },
-  { value: 'string[]', label: 'string[]', is_custom: false },
-  { value: 'bool', label: 'bool', is_custom: false },
+  { value: 'string_array', label: 'string[]', is_custom: false },
+  { value: 'boolean', label: 'bool', is_custom: false },
   { value: 'double', label: 'double', is_custom: false },
 ];
 
@@ -55,6 +55,7 @@ const LANGUAGES = [
   { value: 'javascript', label: 'JavaScript' },
   { value: 'java', label: 'Java' },
   { value: 'cpp', label: 'C++' },
+  { value: 'c', label: 'C' },
   { value: 'go', label: 'Go' },
 ];
 
@@ -65,8 +66,8 @@ export const ProblemCreationForm: React.FC = () => {
   const [description, setDescription] = useState('');
   const [difficulty, setDifficulty] = useState('medium');
   const [functionName, setFunctionName] = useState('');
-  const [returnType, setReturnType] = useState('int');
-  const [parameters, setParameters] = useState<Parameter[]>([{ name: '', type: 'int', is_custom: false }]);
+  const [returnType, setReturnType] = useState('integer');
+  const [parameters, setParameters] = useState<Parameter[]>([{ name: '', type: 'integer', is_custom: false }]);
   const [generatedStub, setGeneratedStub] = useState<string>('');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('python');
 
@@ -107,7 +108,7 @@ export const ProblemCreationForm: React.FC = () => {
   }, [customTypes]);
 
   const addParameter = () => {
-    setParameters([...parameters, { name: '', type: 'int', is_custom: false }]);
+    setParameters([...parameters, { name: '', type: 'integer', is_custom: false }]);
   };
 
   const removeParameter = (index: number) => {
@@ -128,8 +129,35 @@ export const ProblemCreationForm: React.FC = () => {
     setParameters(newParams);
   };
 
+  const getDefaultValueForType = (type: string) => {
+    switch (type) {
+      case 'integer':
+      case 'double':
+        return 0;
+      case 'integer_array':
+      case 'string_array':
+        return [];
+      case 'string':
+        return "string";
+      case 'boolean':
+        return false;
+      default:
+        return null;
+    }
+  };
+
   const addTestCase = () => {
-    setTestCases([...testCases, { input: '', expected_output: '', is_sample: false }]);
+    const defaultInputs = parameters.map(p => getDefaultValueForType(p.type));
+    const defaultOutput = getDefaultValueForType(returnType);
+
+    setTestCases([
+      ...testCases,
+      {
+        input: JSON.stringify(defaultInputs),
+        expected_output: JSON.stringify(defaultOutput),
+        is_sample: false
+      }
+    ]);
   };
 
   const removeTestCase = (index: number) => {
@@ -485,8 +513,24 @@ export const ProblemCreationForm: React.FC = () => {
                   <Button startIcon={<PlusIcon />} onClick={addTestCase}>Add Test Case</Button>
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Provide inputs and expected outputs in JSON format.
+                  Provide inputs (as a JSON array of arguments) and expected outputs (as a JSON value) for your test cases.
                 </Typography>
+
+                <Alert severity="info" sx={{ mb: 3 }}>
+                  <Box>
+                    <Typography variant="subtitle2">
+                      <strong>JSON Format Example:</strong>
+                    </Typography>
+                    <Box sx={{ mt: 0.5, fontFamily: 'monospace', bgcolor: 'rgba(0,0,0,0.05)', p: 1, borderRadius: 1 }}>
+                      Input: <code>{JSON.stringify(parameters.map(p => getDefaultValueForType(p.type)))}</code>
+                      <br />
+                      Output: <code>{JSON.stringify(getDefaultValueForType(returnType))}</code>
+                    </Box>
+                    <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
+                      The input must be a JSON array where each element corresponds to a function parameter in order.
+                    </Typography>
+                  </Box>
+                </Alert>
 
                 <Stack spacing={3}>
                   {testCases.map((tc, index) => (

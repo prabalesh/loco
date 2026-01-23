@@ -19,6 +19,7 @@ import {
 } from '@mui/material'
 import { Send as SendIcon, Refresh as RefreshIcon } from '@mui/icons-material'
 import toast from 'react-hot-toast'
+import { filterEditorLanguage } from '../../../utils/utils'
 
 interface Language {
     id: number
@@ -201,7 +202,7 @@ export const ProblemCodeTester = ({ problemId, languages, onSubmit }: ProblemCod
                         <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
                             <Editor
                                 height="400px"
-                                language={selectedLang?.language_id || 'python'}
+                                language={filterEditorLanguage(selectedLang?.language_id || 'python')}
                                 value={code}
                                 onChange={(value) => setCode(value || '')}
                                 theme="vs-dark"

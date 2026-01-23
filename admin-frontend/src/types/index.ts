@@ -44,6 +44,12 @@ export interface Category {
   updated_at: string
 }
 
+export interface Parameter {
+  name: string
+  type: string
+  is_custom: boolean
+}
+
 export interface Problem {
   id: number
   title: string
@@ -63,6 +69,14 @@ export interface Problem {
   acceptance_rate: number
   total_submissions: number
   total_accepted: number
+
+  // V2 Fields
+  function_name?: string
+  return_type?: string
+  parameters?: Parameter[]
+  test_cases?: TestCase[]
+  validation_type?: string
+
   tags?: Tag[]
   categories?: Category[]
   created_at: Date

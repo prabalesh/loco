@@ -14,6 +14,8 @@ type ExecutionService struct {
 	pistonClient       *piston.PistonClient
 	languageMapper     *piston.LanguageMapper
 	boilerplateService *codegen.BoilerplateService
+	codegenService     *codegen.CodeGenService
+	problemRepo        domain.ProblemRepository
 }
 
 type ExecutionRequest struct {
@@ -33,11 +35,13 @@ type ExecutionResult struct {
 	ErrorMessage string                  `json:"error_message,omitempty"`
 }
 
-func NewExecutionService(pistonURL string, boilerplateService *codegen.BoilerplateService) *ExecutionService {
+func NewExecutionService(pistonURL string, boilerplateService *codegen.BoilerplateService, codegenService *codegen.CodeGenService, problemRepo domain.ProblemRepository) *ExecutionService {
 	return &ExecutionService{
 		pistonClient:       piston.NewPistonClient(pistonURL),
 		languageMapper:     piston.NewLanguageMapper(),
 		boilerplateService: boilerplateService,
+		codegenService:     codegenService,
+		problemRepo:        problemRepo,
 	}
 }
 
@@ -51,14 +55,41 @@ func (s *ExecutionService) ExecuteSubmission(req ExecutionRequest, languageSlug 
 		return nil, errors.New("at least one test case is required")
 	}
 
-	// Get test harness template
-	harnessTemplate, err := s.boilerplateService.GetTestHarnessTemplate(req.ProblemID, req.LanguageID)
+	// Get problem schema for harness generation
+	problem, err := s.problemRepo.GetByID(req.ProblemID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get harness template: %w", err)
+		return nil, fmt.Errorf("failed to get problem: %w", err)
 	}
 
-	// Inject user code into harness
-	fullCode := s.boilerplateService.InjectUserCodeIntoHarness(harnessTemplate, req.UserCode)
+	// Parse parameters from JSON
+	var params []domain.SchemaParameter
+	if problem.Parameters != nil {
+		if err := json.Unmarshal(*problem.Parameters, &params); err != nil {
+			return nil, fmt.Errorf("failed to parse parameters: %w", err)
+		}
+	}
+
+	// Build problem schema
+	functionName := ""
+	if problem.FunctionName != nil {
+		functionName = *problem.FunctionName
+	}
+	returnType := domain.TypeInteger
+	if problem.ReturnType != nil {
+		returnType = domain.GenericType(*problem.ReturnType)
+	}
+
+	schema := domain.ProblemSchema{
+		FunctionName: functionName,
+		ReturnType:   returnType,
+		Parameters:   params,
+	}
+
+	// Generate fresh harness with user code (this applies all our fixes)
+	fullCode, err := s.codegenService.GenerateTestHarness(schema, req.UserCode, languageSlug, req.TestCases, problem.ValidationType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate harness: %w", err)
+	}
 
 	// Get Piston runtime info
 	runtime, err := s.languageMapper.GetPistonRuntime(languageSlug)
@@ -113,58 +144,63 @@ func (s *ExecutionService) ExecuteSubmission(req ExecutionRequest, languageSlug 
 	return s.validateOutput(pistonResp.Run.Stdout, req.TestCases)
 }
 
+type harnessVerdict struct {
+	Verdict     string `json:"verdict"`
+	Runtime     int    `json:"runtime"`
+	Memory      int    `json:"memory"`
+	TestResults []struct {
+		Passed bool   `json:"passed"`
+		Input  string `json:"input"`
+		Actual string `json:"actual"`
+		Error  string `json:"error"`
+	} `json:"test_results"`
+}
+
 // validateOutput parses stdout from the harness and aggregates results
 func (s *ExecutionService) validateOutput(stdout string, testCases []domain.TestCase) (*ExecutionResult, error) {
-	var results []domain.TestCaseResult
-	if err := json.Unmarshal([]byte(stdout), &results); err != nil {
+	var verdict harnessVerdict
+	if err := json.Unmarshal([]byte(stdout), &verdict); err != nil {
 		return &ExecutionResult{
 			Status:       domain.SubmissionStatusInternalError,
 			ErrorMessage: fmt.Sprintf("Failed to parse output: %v\nRaw output: %s", err, stdout),
 		}, nil
 	}
 
-	passedCount := 0
-	maxTime := 0
-	maxMemory := 0
 	overallStatus := domain.SubmissionStatusAccepted
+	switch verdict.Verdict {
+	case "ACCEPTED":
+		overallStatus = domain.SubmissionStatusAccepted
+	case "WRONG_ANSWER":
+		overallStatus = domain.SubmissionStatusWrongAnswer
+	case "TLE":
+		overallStatus = domain.SubmissionStatusTimeLimitExceeded
+	case "RUNTIME_ERROR":
+		overallStatus = domain.SubmissionStatusRuntimeError
+	default:
+		overallStatus = domain.SubmissionStatusRuntimeError
+	}
 
-	for i := range results {
-		res := &results[i]
-		if i < len(testCases) {
-			res.IsSample = testCases[i].IsSample
-			if res.Input == "" {
-				res.Input = testCases[i].Input
-			}
-			if res.ExpectedOutput == "" {
-				res.ExpectedOutput = testCases[i].ExpectedOutput
-			}
-		}
-
-		if res.Status == "passed" {
+	results := make([]domain.TestCaseResult, len(verdict.TestResults))
+	passedCount := 0
+	for i, tr := range verdict.TestResults {
+		status := "Passed"
+		if !tr.Passed {
+			status = "Failed"
+		} else {
 			passedCount++
-			res.Status = "Passed"
-		} else if res.Status == "failed" {
-			res.Status = "Wrong Answer"
-			if overallStatus == domain.SubmissionStatusAccepted {
-				overallStatus = domain.SubmissionStatusWrongAnswer
-			}
-		} else if res.Status == "timeout" {
-			res.Status = "Time Limit Exceeded"
-			if overallStatus == domain.SubmissionStatusAccepted || overallStatus == domain.SubmissionStatusWrongAnswer {
-				overallStatus = domain.SubmissionStatusTimeLimitExceeded
-			}
-		} else if res.Status == "runtime_error" {
-			res.Status = "Runtime Error"
-			if overallStatus == domain.SubmissionStatusAccepted || overallStatus == domain.SubmissionStatusWrongAnswer || overallStatus == domain.SubmissionStatusTimeLimitExceeded {
-				overallStatus = domain.SubmissionStatusRuntimeError
-			}
 		}
 
-		if res.TimeMS > maxTime {
-			maxTime = res.TimeMS
+		results[i] = domain.TestCaseResult{
+			TestID:       i + 1,
+			Status:       status,
+			Input:        tr.Input,
+			ActualOutput: tr.Actual,
+			Error:        tr.Error,
 		}
-		if res.MemoryKB > maxMemory {
-			maxMemory = res.MemoryKB
+
+		if i < len(testCases) {
+			results[i].IsSample = testCases[i].IsSample
+			results[i].ExpectedOutput = testCases[i].ExpectedOutput
 		}
 	}
 
@@ -173,7 +209,7 @@ func (s *ExecutionService) validateOutput(stdout string, testCases []domain.Test
 		TestResults: results,
 		TotalTests:  len(results),
 		PassedTests: passedCount,
-		Runtime:     maxTime,
-		Memory:      maxMemory,
+		Runtime:     verdict.Runtime,
+		Memory:      verdict.Memory,
 	}, nil
 }

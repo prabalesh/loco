@@ -59,7 +59,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	typeImplementationRepo := postgres.NewTypeImplementationRepository(db.DB)
 	codeGenService := codegen.NewCodeGenService(typeImplementationRepo)
 	boilerplateService := codegen.NewBoilerplateService(boilerplateRepo, languageRepo, testCaseRepo, codeGenService)
-	executionService := execution.NewExecutionService(cfg.Server.PistonURL, boilerplateService)
+	executionService := execution.NewExecutionService(cfg.Server.PistonURL, boilerplateService, codeGenService, problemRepo)
 
 	cookieManager := cookies.NewCookieManager(cfg)
 
@@ -76,7 +76,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	notificationUsecase := usecase.NewNotificationUsecase(redisClient, logger)
 
 	// Worker
-	submissionWorker := worker.NewWorker(jobQueue, submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, pistonService, boilerplateService, userProblemStatsRepo, logger, redisClient.Client, cfg)
+	submissionWorker := worker.NewWorker(jobQueue, submissionRepo, problemRepo, testCaseRepo, languageRepo, problemLanguageRepo, referenceSolutionRepo, pistonService, boilerplateService, userProblemStatsRepo, logger, redisClient.Client, cfg)
 
 	// Handlers
 	authHanlder := handler.NewAuthHandler(authUsecase, logger, cfg, cookieManager)
@@ -97,7 +97,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 
 	// v2ProblemService and v2ProblemHandler removed
 
-	validationService := validation.NewValidationService(referenceSolutionRepo, problemRepo, testCaseRepo, executionService)
+	validationService := validation.NewValidationService(referenceSolutionRepo, problemRepo, testCaseRepo, submissionRepo, jobQueue, executionService)
 	validationHandler := handler.NewValidationHandler(validationService, languageRepo)
 
 	// Note: v2ProblemService is used by BulkImport so we might need to keep it or refactor BulkImport to use ProblemUsecase?
