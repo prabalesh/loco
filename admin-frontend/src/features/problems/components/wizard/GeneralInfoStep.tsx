@@ -5,9 +5,9 @@ import {
     Stack,
     Typography,
     Box,
-    Divider,
-    Paper
+    Divider
 } from '@mui/material';
+import TiptapEditor from '../../../../components/editor/TiptapEditor';
 
 interface GeneralInfoStepProps {
     data: any;
@@ -79,30 +79,29 @@ export const GeneralInfoStep: React.FC<GeneralInfoStepProps> = ({ data, onChange
                 </Typography>
 
                 <Stack spacing={3}>
-                    <TextField
-                        fullWidth
-                        label="Problem Description"
-                        value={data.description}
-                        onChange={(e) => onChange({ description: e.target.value })}
-                        required
-                        multiline
-                        rows={10}
-                        placeholder="### Problem Statement\n\nGiven an array of integers `nums`, return..."
-                        sx={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
-                        helperText="Markdown is supported"
-                    />
+                    <Box>
+                        <Typography variant="body2" fontWeight="bold" gutterBottom>
+                            Problem Description <span style={{ color: '#ef4444' }}>*</span>
+                        </Typography>
+                        <TiptapEditor
+                            content={data.description}
+                            onChange={(content) => onChange({ description: content })}
+                        />
+                        <Typography variant="caption" color="text.secondary">
+                            Markdown and HTML are supported
+                        </Typography>
+                    </Box>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <TextField
-                            fullWidth
-                            label="Constraints"
-                            value={data.constraints || ''}
-                            onChange={(e) => onChange({ constraints: e.target.value })}
-                            multiline
-                            rows={4}
-                            placeholder="- 1 <= nums.length <= 10^4\n- -10^9 <= nums[i] <= 10^9"
-                            sx={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
-                        />
+                        <Box>
+                            <Typography variant="body2" fontWeight="bold" gutterBottom>
+                                Constraints
+                            </Typography>
+                            <TiptapEditor
+                                content={data.constraints || ''}
+                                onChange={(content) => onChange({ constraints: content })}
+                            />
+                        </Box>
                         <TextField
                             fullWidth
                             label="Hints (One per line)"

@@ -27,6 +27,7 @@ type Config struct {
 type WorkerConfig struct {
 	MaxConcurrentSubmissions int
 	MaxConcurrentTestCases   int
+	BatchSize                int
 }
 
 type CORSConfig struct {
@@ -179,6 +180,7 @@ func InitConfig() {
 			Worker: WorkerConfig{
 				MaxConcurrentSubmissions: parseInt("WORKER_MAX_CONCURRENT_SUBMISSIONS", 4),
 				MaxConcurrentTestCases:   parseInt("WORKER_MAX_CONCURRENT_TEST__CASES", 5),
+				BatchSize:                parseInt("WORKER_BATCH_SIZE", 4),
 			},
 		}
 

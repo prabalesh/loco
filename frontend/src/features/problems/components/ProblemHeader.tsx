@@ -9,9 +9,10 @@ interface ProblemHeaderProps {
     onRun: () => void
     onSubmit: () => void
     isSubmitting: boolean
+    pollingType: 'run' | 'submit' | null
 }
 
-export const ProblemHeader = ({ problem, onBack, onRun, onSubmit, isSubmitting }: ProblemHeaderProps) => {
+export const ProblemHeader = ({ problem, onBack, onRun, onSubmit, isSubmitting, pollingType }: ProblemHeaderProps) => {
     return (
         <header className="bg-white/95 backdrop-blur-md border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-lg z-20">
             <div className="flex items-center gap-4">
@@ -56,9 +57,9 @@ export const ProblemHeader = ({ problem, onBack, onRun, onSubmit, isSubmitting }
             </div>
 
             {isSubmitting ? (
-                <div className="flex items-center gap-3 text-center">
+                <div className="flex items-center gap-3 text-center text-blue-600 font-bold">
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Submitting...
+                    {pollingType === 'run' ? 'Running...' : 'Submitting...'}
                 </div>
             ) : (
                 <div className="flex items-center gap-3">

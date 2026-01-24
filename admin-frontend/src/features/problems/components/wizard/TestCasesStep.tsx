@@ -23,6 +23,7 @@ interface TestCasesStepProps {
     onChange: (newData: Partial<any>) => void;
     onSave?: () => void;
     saving?: boolean;
+    problemId?: number | string;
 }
 
 const getDefaultValueForType = (type: string) => {
@@ -42,40 +43,99 @@ const getDefaultValueForType = (type: string) => {
     }
 };
 
-export const TestCasesStep: React.FC<TestCasesStepProps> = ({ data, onChange, onSave, saving }) => {
-    const [isBulkModalOpen, setIsBulkModalOpen] = React.useState(false);
+import { adminTestcaseApi } from '../../../../lib/api/admin';
+import toast from 'react-hot-toast';
 
-    const handleAddTestCase = () => {
+export const TestCasesStep: React.FC<TestCasesStepProps> = ({ data, onChange, onSave, saving, problemId }) => {
+    const [isBulkModalOpen, setIsBulkModalOpen] = React.useState(false);
+    const [isImporting, setIsImporting] = React.useState(false);
+
+    const handleAddTestCase = async () => {
         const defaultInputs = data.parameters.map((p: any) => getDefaultValueForType(p.type));
         const defaultOutput = getDefaultValueForType(data.return_type);
 
-        const newCases = [
-            ...data.test_cases,
-            {
-                input: JSON.stringify(defaultInputs),
-                expected_output: JSON.stringify(defaultOutput),
-                is_sample: false
+        const newCase = {
+            input: JSON.stringify(defaultInputs),
+            expected_output: JSON.stringify(defaultOutput),
+            is_sample: false,
+            problem_id: Number(problemId)
+        };
+
+        if (problemId) {
+            try {
+                const res = await adminTestcaseApi.create(String(problemId), newCase);
+                // Refetch or update local list to include new ID
+                // Ideally backend returns the created object. Assuming res.data.data is the object
+                const createdCase = res.data.data;
+                onChange({ test_cases: [...data.test_cases, { ...newCase, id: createdCase.id }] });
+                toast.success('Test case added');
+            } catch (error) {
+                console.error("Failed to add test case", error);
+                toast.error("Failed to add test case");
             }
-        ];
-        onChange({ test_cases: newCases });
+        } else {
+            onChange({ test_cases: [...data.test_cases, newCase] });
+        }
     };
 
-    const handleRemoveTestCase = (index: number) => {
+    const handleRemoveTestCase = async (index: number) => {
+        const tcToDelete = data.test_cases[index];
+        if (problemId && tcToDelete.id) {
+            try {
+                await adminTestcaseApi.delete(String(tcToDelete.id));
+                toast.success('Test case deleted');
+            } catch (error) {
+                console.error("Failed to delete test case", error);
+                toast.error("Failed to delete test case");
+                return; // Don't remove from UI if API failed
+            }
+        }
+
         const newCases = [...data.test_cases];
         newCases.splice(index, 1);
         onChange({ test_cases: newCases });
     };
 
-    const handleTestCaseChange = (index: number, field: string, value: any) => {
+    const handleTestCaseChange = async (index: number, field: string, value: any) => {
         const newCases = [...data.test_cases];
         newCases[index] = { ...newCases[index], [field]: value };
         onChange({ test_cases: newCases });
+
+        // Optional: Add debounce logic here for saving granular updates in edit mode
+        // For now, we rely on the main updated flow or "Save Test Cases" button for edits to keep it simple,
+        // unless strictly requested for per-field save.
     };
 
     const handleBulkImport = async (importedCases: any[]) => {
-        // importedCases are already formatted and stringified by the dialog
-        const newCases = [...data.test_cases, ...importedCases];
-        onChange({ test_cases: newCases });
+        setIsImporting(true);
+        if (problemId) {
+            // Edit Mode: Upload immediately
+            let successCount = 0;
+            let successCases: any[] = [];
+
+            for (const tc of importedCases) {
+                try {
+                    const res = await adminTestcaseApi.create(String(problemId), { ...tc, problem_id: Number(problemId) });
+                    successCount++;
+                    successCases.push({ ...tc, id: res.data.data.id });
+                } catch (error) {
+                    console.error("Failed to import test case", error);
+                }
+            }
+
+            if (successCount > 0) {
+                toast.success(`Imported ${successCount} test cases`);
+                onChange({ test_cases: [...data.test_cases, ...successCases] });
+            } else {
+                toast.error("Failed to import test cases");
+            }
+        } else {
+            // Create Mode: Local only
+            const newCases = [...data.test_cases, ...importedCases];
+            onChange({ test_cases: newCases });
+            toast.success(`Added ${importedCases.length} test cases locally`);
+        }
+        setIsImporting(false);
     };
 
     const paramNames = data.parameters.map((p: any) => p.name || `param${data.parameters.indexOf(p) + 1}`);
@@ -194,7 +254,7 @@ export const TestCasesStep: React.FC<TestCasesStepProps> = ({ data, onChange, on
                 onImport={handleBulkImport}
                 parameters={data.parameters}
                 returnType={data.return_type}
-                isImporting={false} // State is managed locally in wizard
+                isImporting={isImporting}
             />
         </Stack>
     );

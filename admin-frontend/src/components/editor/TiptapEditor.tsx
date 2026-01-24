@@ -10,18 +10,18 @@ import { Markdown } from 'tiptap-markdown'
 import { common, createLowlight } from 'lowlight'
 import styles from './TiptapEditor.module.css'
 
-import { 
-  AlignCenter, 
-  AlignLeft, 
-  AlignRight, 
-  Bold, 
-  Heading1, 
-  Heading2, 
-  Heading3, 
-  Highlighter, 
-  Italic, 
-  ListOrdered, 
-  Strikethrough, 
+import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Bold,
+  Heading1,
+  Heading2,
+  Heading3,
+  Highlighter,
+  Italic,
+  ListOrdered,
+  Strikethrough,
   List,
   Code2,
   FileCode,
@@ -36,10 +36,10 @@ interface TiptapEditorProps {
 
 const lowlight = createLowlight(common)
 
-function MenuBar({ editor, isRawMode, onToggleMode }: { 
+function MenuBar({ editor, isRawMode, onToggleMode }: {
   editor: Editor | null
   isRawMode: boolean
-  onToggleMode: () => void 
+  onToggleMode: () => void
 }) {
   if (!editor) {
     return null
@@ -145,8 +145,8 @@ function MenuBar({ editor, isRawMode, onToggleMode }: {
               className={`
                 rounded-md p-2 transition-colors
                 ${option.disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-200'}
-                ${option.pressed 
-                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                ${option.pressed
+                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                   : 'text-gray-700'
                 }
               `}
@@ -155,15 +155,15 @@ function MenuBar({ editor, isRawMode, onToggleMode }: {
             </button>
           ))}
         </div>
-        
+
         {/* Toggle Raw/Visual Mode */}
         <button
           type="button"
           onClick={onToggleMode}
           className={`
             flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors
-            ${isRawMode 
-              ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' 
+            ${isRawMode
+              ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
               : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
             }
           `}
@@ -176,7 +176,7 @@ function MenuBar({ editor, isRawMode, onToggleMode }: {
           ) : (
             <>
               <FileText className="size-4" />
-              HTML
+              Markdown
             </>
           )}
         </button>
@@ -231,7 +231,8 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
     },
     onUpdate: ({ editor }) => {
       if (!isRawMode) {
-        onChange?.(editor.getHTML())
+        // Return markdown instead of HTML
+        onChange?.((editor.storage as any).markdown?.getMarkdown() || '')
       }
     },
     immediatelyRender: false,
@@ -239,32 +240,35 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
 
   // Update editor content when prop changes externally
   useEffect(() => {
-    if (editor && content !== editor.getHTML() && !isRawMode) {
-      editor.commands.setContent(content)
+    if (editor && !isRawMode) {
+      const currentMarkdown = (editor.storage as any).markdown?.getMarkdown()
+      if (content !== currentMarkdown) {
+        editor.commands.setContent(content)
+      }
     }
   }, [content, editor, isRawMode])
 
   // Initialize raw content when switching to raw mode
   useEffect(() => {
     if (isRawMode && editor) {
-      setRawContent(editor.getHTML())
+      setRawContent((editor.storage as any).markdown?.getMarkdown() || '')
     }
   }, [isRawMode, editor])
 
   const handleToggleMode = () => {
     if (isRawMode && editor) {
-      // Switching from raw to visual - apply raw content to editor
+      // Switching from raw to visual
       try {
         editor.commands.setContent(rawContent)
         onChange?.(rawContent)
       } catch (error) {
-        console.error('Error parsing HTML:', error)
-        alert('Invalid HTML content. Please check your markup.')
+        console.error('Error parsing:', error)
+        alert('Error parsing content. Please check your markup.')
         return
       }
     } else if (editor) {
-      // Switching from visual to raw - get current HTML
-      setRawContent(editor.getHTML())
+      // Switching from visual to raw
+      setRawContent((editor.storage as any).markdown?.getMarkdown() || '')
     }
     setIsRawMode(!isRawMode)
   }
@@ -276,7 +280,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
   return (
     <div className="rounded-lg border border-gray-300 bg-white shadow-sm overflow-hidden">
       <MenuBar editor={editor} isRawMode={isRawMode} onToggleMode={handleToggleMode} />
-      
+
       {isRawMode ? (
         <div className="p-4">
           <textarea

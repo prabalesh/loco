@@ -39,6 +39,9 @@ export interface ProblemResponse {
     memory_limit: number;
     visibility: "public" | "private" | string;
     is_active: boolean;
+    input_format?: string;
+    output_format?: string;
+    constraints?: string;
 
     acceptance_rate: number;
     total_submissions: number;

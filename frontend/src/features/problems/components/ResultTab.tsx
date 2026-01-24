@@ -8,9 +8,10 @@ interface ResultTabProps {
     runResult?: Submission | null
     isRunning?: boolean
     sampleTestCases?: TestCase[]
+    pollingType: 'run' | 'submit' | null
 }
 
-export const ResultTab = ({ submissionResult, pollingId, runResult, isRunning, sampleTestCases }: ResultTabProps) => {
+export const ResultTab = ({ submissionResult, pollingId, runResult, isRunning, sampleTestCases, pollingType }: ResultTabProps) => {
     // Determine what to display
     const isPending = isRunning || !!pollingId || (submissionResult?.status === 'Pending' || submissionResult?.status === 'Processing')
     const hasData = !!runResult || (!!submissionResult && submissionResult.status !== 'Pending' && submissionResult.status !== 'Processing')
@@ -74,7 +75,7 @@ export const ResultTab = ({ submissionResult, pollingId, runResult, isRunning, s
                     </div>
 
                     <h3 className="text-2xl font-black text-gray-900 mb-3 tracking-tight">
-                        {pollingId ? 'Evaluating Submission...' : 'Running Code...'}
+                        {pollingType === 'submit' ? 'Evaluating Submission...' : 'Running Code...'}
                     </h3>
                     <div className="max-w-md space-y-2">
                         <p className="text-gray-500 font-medium">

@@ -299,6 +299,7 @@ export const ProblemDetailPage = () => {
                 onRun={handleRun}
                 onSubmit={handleSubmit}
                 isSubmitting={submitMutation.isPending || runCodeMutation.isPending || !!pollingId || isRunning}
+                pollingType={pollingType}
             />
 
             <main className="flex-1 flex flex-col md:flex-row overflow-visible md:overflow-hidden relative">
@@ -321,6 +322,7 @@ export const ProblemDetailPage = () => {
                                 runResult={runResult}
                                 isRunning={isRunning || runCodeMutation.isPending}
                                 sampleTestCases={sampleTestCases}
+                                pollingType={pollingType}
                             />
                         )}
                         {activeTab === 'submissions' && (

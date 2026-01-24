@@ -30,6 +30,7 @@ type SubmissionResponse struct {
 	PassedTestCases int                     `json:"passed_test_cases"`
 	TotalTestCases  int                     `json:"total_test_cases"`
 	CreatedAt       time.Time               `json:"created_at"`
+	IsRunOnly       bool                    `json:"is_run_only"`
 	TestCaseResults domain.TestCaseResults  `json:"test_case_results,omitempty"`
 	User            *UserResponse           `json:"user,omitempty"`
 	Problem         *ProblemResponse        `json:"problem,omitempty"`
@@ -69,6 +70,7 @@ func ToSubmissionResponse(s *domain.Submission) SubmissionResponse {
 		PassedTestCases: s.PassedTestCases,
 		TotalTestCases:  s.TotalTestCases,
 		CreatedAt:       s.CreatedAt,
+		IsRunOnly:       s.IsRunOnly,
 		TestCaseResults: s.TestCaseResults,
 	}
 

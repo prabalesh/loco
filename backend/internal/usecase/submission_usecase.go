@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
@@ -171,102 +170,52 @@ func (u *SubmissionUsecase) evaluateSubmission(submission *domain.Submission, pr
 		return
 	}
 
-	// 1. Code is already combined in Submit/Validate
-	finalCode := submission.Code
+	submission.TotalTestCases = len(testCases)
 
-	finalStatus := domain.SubmissionStatusAccepted
-	errorMessage := ""
-	passCount := 0
-	totalCount := len(testCases)
-
-	var results []domain.TestCaseResult
-
-	submission.TotalTestCases = totalCount
-
-	for _, tc := range testCases {
-		result, err := u.pistonService.Execute(language.Slug, language.Version, finalCode, tc.Input)
-
-		tcResult := domain.TestCaseResult{
-			Input:          tc.Input,
-			ExpectedOutput: tc.ExpectedOutput,
-			IsSample:       tc.IsSample,
-			TimeMS:         result.Runtime,
-			MemoryKB:       result.Memory,
-		}
-
-		if err != nil {
-			u.logger.Error("Piston execution failed", zap.Error(err))
-			finalStatus = domain.SubmissionStatusInternalError
-			errorMessage = "Execution system error"
-			tcResult.Status = "Failed"
-			tcResult.ActualOutput = "System Error"
-			results = append(results, tcResult)
-			break
-		}
-
-		if result.ExitCode != 0 {
-			if finalStatus == domain.SubmissionStatusAccepted {
-				finalStatus = domain.SubmissionStatusRuntimeError
-				errorMessage = result.Error
-			}
-			tcResult.Status = "Failed"
-			tcResult.ActualOutput = result.Error // Or specific error message
-		} else {
-			// Normalize output (trim whitespace)
-			actual := strings.TrimSpace(result.Output)
-			expected := strings.TrimSpace(tc.ExpectedOutput)
-
-			tcResult.ActualOutput = actual
-
-			if actual != expected {
-				if finalStatus == domain.SubmissionStatusAccepted {
-					finalStatus = domain.SubmissionStatusWrongAnswer
-					if tc.IsSample {
-						errorMessage = fmt.Sprintf("Failed on input: %s\nExpected: %s\nActual: %s", tc.Input, expected, actual)
-					} else {
-						errorMessage = "Failed on a hidden test case"
-					}
-				}
-				tcResult.Status = "Failed"
-			} else {
-				tcResult.Status = "Passed"
-				passCount++
-			}
-		}
-
-		results = append(results, tcResult)
+	// Use ExecutionService for parallel batch execution
+	req := execution.ExecutionRequest{
+		ProblemID:  submission.ProblemID,
+		LanguageID: submission.LanguageID,
+		UserCode:   submission.FunctionCode, // submission.Code is combined, but ExecutionService generates its own harness
+		TestCases:  testCases,
 	}
 
-	submission.PassedTestCases = passCount
-	submission.TestCaseResults = results
+	// Wait, ExecutionService.ExecuteBatchSubmission generates harness again.
+	// But SubmissionUsecase.Submit already combined it into submission.Code.
+	// We want ExecutionService to manage the harness generation for batching.
 
-	// Update submission status
-	u.updateSubmissionResult(submission, finalStatus, errorMessage)
+	result, err := u.executionService.ExecuteBatchSubmission(context.Background(), req, language.Slug)
+	if err != nil {
+		u.logger.Error("Execution failed", zap.Error(err))
+		u.updateSubmissionResult(submission, domain.SubmissionStatusInternalError, "Execution failed: "+err.Error())
+		return
+	}
 
-	// If it's a validation submission, update ProblemLanguage status and last error
+	submission.PassedTestCases = result.PassedTests
+	submission.TestCaseResults = result.TestResults
+
+	// Update submission status based on result
+	u.updateSubmissionResult(submission, result.Status, result.ErrorMessage)
+
+	// If it's a validation submission, update ProblemLanguage status
 	if submission.IsValidationSubmission {
 		now := time.Now()
-		// Re-fetch pl just in case
 		pl, err := u.problemLanguageRepo.GetByProblemAndLanguage(submission.ProblemID, submission.LanguageID)
 		if err == nil {
-			pl.LastValidationStatus = string(finalStatus)
-			pl.LastValidationError = errorMessage
-			pl.LastPassCount = passCount
-			pl.LastTotalCount = totalCount
+			pl.LastValidationStatus = string(result.Status)
+			pl.LastValidationError = result.ErrorMessage
+			pl.LastPassCount = result.PassedTests
+			pl.LastTotalCount = submission.TotalTestCases
 
-			if finalStatus == domain.SubmissionStatusAccepted {
+			if result.Status == domain.SubmissionStatusAccepted {
 				pl.IsValidated = true
-				pl.ValidatedAt = &now
 			} else {
 				pl.IsValidated = false
-				pl.ValidatedAt = &now
 			}
-			u.problemLanguageRepo.Update(pl)
+			pl.ValidatedAt = &now
 			u.problemLanguageRepo.Update(pl)
 		}
 	}
-
-	// Note: Achievements are now handled by AchievementWorker via AchievementQueue
 }
 
 func (u *SubmissionUsecase) updateSubmissionResult(submission *domain.Submission, status domain.SubmissionStatus, errorMsg string) {

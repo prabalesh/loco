@@ -197,6 +197,7 @@ export const ProblemWizard: React.FC = () => {
                     onChange={updateFormData}
                     onSave={handleSaveTestCases}
                     saving={loading}
+                    problemId={problemId || undefined}
                 />;
             case 4:
                 return (
@@ -250,7 +251,18 @@ export const ProblemWizard: React.FC = () => {
                         >
                             Back
                         </Button>
-                        <Box>
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                            {!problemId && (
+                                <Button
+                                    variant="outlined"
+                                    color="info"
+                                    onClick={handleSaveTestCases}
+                                    disabled={loading}
+                                    sx={{ px: 4 }}
+                                >
+                                    Save Draft
+                                </Button>
+                            )}
                             {activeStep === STEPS.length - 1 ? (
                                 <Button
                                     variant="contained"

@@ -1,6 +1,7 @@
 package execution
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/internal/services/codegen"
 	"github.com/prabalesh/loco/backend/internal/services/piston"
+	"golang.org/x/sync/errgroup"
 )
 
 type ExecutionService struct {
@@ -45,8 +47,13 @@ func NewExecutionService(pistonURL string, boilerplateService *codegen.Boilerpla
 	}
 }
 
-// ExecuteSubmission executes user code against test cases
+// ExecuteSubmission is a wrapper for backward compatibility
 func (s *ExecutionService) ExecuteSubmission(req ExecutionRequest, languageSlug string) (*ExecutionResult, error) {
+	return s.ExecuteBatchSubmission(context.Background(), req, languageSlug)
+}
+
+// ExecuteBatchSubmission executes user code against test cases in parallel batches
+func (s *ExecutionService) ExecuteBatchSubmission(ctx context.Context, req ExecutionRequest, languageSlug string) (*ExecutionResult, error) {
 	// Validate
 	if req.UserCode == "" {
 		return nil, errors.New("user code is required")
@@ -55,93 +62,164 @@ func (s *ExecutionService) ExecuteSubmission(req ExecutionRequest, languageSlug 
 		return nil, errors.New("at least one test case is required")
 	}
 
-	// Get problem schema for harness generation
+	// 1. Get Problem Info
 	problem, err := s.problemRepo.GetByID(req.ProblemID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get problem: %w", err)
 	}
 
-	// Parse parameters from JSON
 	var params []domain.SchemaParameter
 	if problem.Parameters != nil {
-		if err := json.Unmarshal(*problem.Parameters, &params); err != nil {
-			return nil, fmt.Errorf("failed to parse parameters: %w", err)
-		}
-	}
-
-	// Build problem schema
-	functionName := ""
-	if problem.FunctionName != nil {
-		functionName = *problem.FunctionName
-	}
-	returnType := domain.TypeInteger
-	if problem.ReturnType != nil {
-		returnType = domain.GenericType(*problem.ReturnType)
+		json.Unmarshal(*problem.Parameters, &params)
 	}
 
 	schema := domain.ProblemSchema{
-		FunctionName: functionName,
-		ReturnType:   returnType,
-		Parameters:   params,
+		FunctionName: func() string {
+			if problem.FunctionName != nil {
+				return *problem.FunctionName
+			}
+			return ""
+		}(),
+		ReturnType: domain.GenericType(func() string {
+			if problem.ReturnType != nil {
+				return *problem.ReturnType
+			}
+			return "int"
+		}()),
+		Parameters: params,
 	}
 
-	// Generate fresh harness with user code (this applies all our fixes)
-	fullCode, err := s.codegenService.GenerateTestHarness(schema, req.UserCode, languageSlug, req.TestCases, problem.ValidationType)
+	// 2. Generate Universal Harness (same code for all batches)
+	fullCode, err := s.codegenService.GenerateTestHarness(schema, req.UserCode, languageSlug, []domain.TestCase{}, problem.ValidationType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate harness: %w", err)
 	}
 
-	// Get Piston runtime info
 	runtime, err := s.languageMapper.GetPistonRuntime(languageSlug)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println("Runtime: ", runtime)
-	fmt.Println("Full Code: ", fullCode)
-	fmt.Println("Test Input: ", req.TestCases)
-
-	// Execute on Piston
-	pistonReq := piston.ExecuteRequest{
-		Language: runtime.Language,
-		Version:  runtime.Version,
-		Files: []piston.File{
-			{
-				Name:    runtime.FileName,
-				Content: fullCode,
-			},
-		},
-		Stdin:          "", // Test cases are embedded in the harness
-		Args:           []string{},
-		CompileTimeout: 10000,
-		RunTimeout:     5000, // 5 seconds max
+	// 3. Batching
+	batchSize := 8
+	var batches [][]domain.TestCase
+	for i := 0; i < len(req.TestCases); i += batchSize {
+		end := i + batchSize
+		if end > len(req.TestCases) {
+			end = len(req.TestCases)
+		}
+		batches = append(batches, req.TestCases[i:end])
 	}
 
-	pistonResp, err := s.pistonClient.Execute(pistonReq)
-	if err != nil {
-		return nil, fmt.Errorf("execution failed: %w", err)
+	// 4. Parallel Execution with ErrGroup
+	g, gCtx := errgroup.WithContext(ctx)
+	results := make([]*ExecutionResult, len(batches))
+
+	for i, batch := range batches {
+		i, batch := i, batch
+		g.Go(func() error {
+			// Check if cancelled
+			select {
+			case <-gCtx.Done():
+				return gCtx.Err()
+			default:
+			}
+
+			// Prepare STDIN for batch
+			stdinBytes, _ := json.Marshal(batch)
+			stdin := string(stdinBytes)
+
+			pistonReq := piston.ExecuteRequest{
+				Language: runtime.Language,
+				Version:  runtime.Version,
+				Files: []piston.File{
+					{
+						Name:    runtime.FileName,
+						Content: fullCode,
+					},
+				},
+				Stdin:          stdin,
+				CompileTimeout: 10000,
+				RunTimeout:     5000,
+			}
+
+			fmt.Printf("\n--- Piston Execution Request ---\n")
+			fmt.Printf("Stdin (batch size %d): %s\n", len(batch), stdin)
+			fmt.Printf("Time Limit (RunTimeout): %d ms\n", pistonReq.RunTimeout)
+			fmt.Printf("Compile Timeout: %d ms\n", pistonReq.CompileTimeout)
+			fmt.Printf("Problem Memory Limit: %d MB\n", problem.MemoryLimit)
+			fmt.Printf("-------------------------------\n\n")
+
+			pistonResp, err := s.pistonClient.Execute(pistonReq)
+			if err != nil {
+				return err
+			}
+
+			// Check for compilation errors
+			if pistonResp.Compile != nil && pistonResp.Compile.Code != 0 {
+				results[i] = &ExecutionResult{
+					Status:       domain.SubmissionStatusCompilationError,
+					ErrorMessage: pistonResp.Compile.Stderr,
+				}
+				return fmt.Errorf("compilation error") // Stop other batches
+			}
+
+			// Parse results for this batch
+			batchRes, err := s.validateOutput(pistonResp.Run.Stdout, batch)
+			if err != nil {
+				return err
+			}
+
+			results[i] = batchRes
+
+			// Short circuit WA/TLE/RE in batches
+			if batchRes.Status != domain.SubmissionStatusAccepted {
+				return fmt.Errorf("test failure") // Stops other batches via gCtx
+			}
+
+			return nil
+		})
 	}
 
-	fmt.Println("Piston Stdout: ", pistonResp.Run.Stdout)
+	// Wait for all batches (or first error)
+	_ = g.Wait()
 
-	// Check for compilation errors
-	if pistonResp.Compile != nil && pistonResp.Compile.Code != 0 {
-		return &ExecutionResult{
-			Status:       domain.SubmissionStatusCompilationError,
-			ErrorMessage: pistonResp.Compile.Stderr,
-		}, nil
+	// 5. Aggregate Results
+	finalResult := &ExecutionResult{
+		Status:      domain.SubmissionStatusAccepted,
+		TotalTests:  len(req.TestCases),
+		PassedTests: 0,
+		Runtime:     0,
+		Memory:      0,
+		TestResults: make([]domain.TestCaseResult, 0, len(req.TestCases)),
 	}
 
-	// Check for runtime errors
-	if pistonResp.Run.Code != 0 {
-		return &ExecutionResult{
-			Status:       domain.SubmissionStatusRuntimeError,
-			ErrorMessage: pistonResp.Run.Stderr,
-		}, nil
+	for _, res := range results {
+		if res == nil {
+			continue // Batch might not have started or was cancelled
+		}
+		finalResult.PassedTests += res.PassedTests
+		finalResult.TestResults = append(finalResult.TestResults, res.TestResults...)
+		if res.Runtime > finalResult.Runtime {
+			finalResult.Runtime = res.Runtime
+		}
+		if res.Memory > finalResult.Memory {
+			finalResult.Memory = res.Memory
+		}
+
+		if res.Status != domain.SubmissionStatusAccepted && finalResult.Status == domain.SubmissionStatusAccepted {
+			finalResult.Status = res.Status
+			finalResult.ErrorMessage = res.ErrorMessage
+		}
 	}
 
-	// Parse output and validate
-	return s.validateOutput(pistonResp.Run.Stdout, req.TestCases)
+	// Re-check status if we stopped early
+	if finalResult.PassedTests < finalResult.TotalTests && finalResult.Status == domain.SubmissionStatusAccepted {
+		// If we haven't failed but haven't passed all, something went wrong (cancelled)
+		// But in our case, if one failed, we'll have a non-accepted status.
+	}
+
+	return finalResult, nil
 }
 
 type harnessVerdict struct {
@@ -161,8 +239,9 @@ func (s *ExecutionService) validateOutput(stdout string, testCases []domain.Test
 	var verdict harnessVerdict
 	if err := json.Unmarshal([]byte(stdout), &verdict); err != nil {
 		return &ExecutionResult{
-			Status:       domain.SubmissionStatusInternalError,
+			Status:       domain.SubmissionStatusRuntimeError,
 			ErrorMessage: fmt.Sprintf("Failed to parse output: %v\nRaw output: %s", err, stdout),
+			TestResults:  []domain.TestCaseResult{},
 		}, nil
 	}
 

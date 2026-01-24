@@ -71,6 +71,10 @@ func (r *problemRepository) Update(problem *domain.Problem) error {
 		}
 
 		if problem.TestCases != nil {
+			// Delete existing test cases first to avoid NOT NULL constraint violation during Replace
+			if err := tx.Where("problem_id = ?", problem.ID).Delete(&domain.TestCase{}).Error; err != nil {
+				return fmt.Errorf("failed to clear existing test cases: %w", err)
+			}
 			if err := tx.Model(problem).Association("TestCases").Replace(problem.TestCases); err != nil {
 				return fmt.Errorf("failed to update test cases: %w", err)
 			}

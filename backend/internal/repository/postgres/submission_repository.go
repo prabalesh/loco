@@ -74,7 +74,7 @@ func (r *submissionRepository) ListByUserProblem(userID int, problemID int, limi
 	fmt.Println("Limit: ", limit)
 	fmt.Println("Offset: ", offset)
 	var submissions []domain.Submission
-	err := r.db.DB.Where("user_id = ? AND problem_id = ? AND is_admin_submission = false", userID, problemID).
+	err := r.db.DB.Where("user_id = ? AND problem_id = ? AND is_admin_submission = false AND is_run_only = false", userID, problemID).
 		Preload("Language").
 		Order("created_at desc").
 		Limit(limit).

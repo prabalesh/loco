@@ -4,17 +4,21 @@ import "gorm.io/datatypes"
 
 // CreateProblemRequest defines the payload for creating a problem
 type CreateProblemRequest struct {
-	Title       string `json:"title"`
-	Slug        string `json:"slug"`
-	Description string `json:"description"`
-	Difficulty  string `json:"difficulty"`
-	TimeLimit   int    `json:"time_limit"`
-	MemoryLimit int    `json:"memory_limit"`
-	Status      string `json:"status"`
-	Visibility  string `json:"visibility"`
-	IsActive    bool   `json:"is_active"`
-	TagIDs      []int  `json:"tag_ids"`
-	CategoryIDs []int  `json:"category_ids"`
+	Title        string `json:"title"`
+	Slug         string `json:"slug"`
+	Description  string `json:"description"`
+	Difficulty   string `json:"difficulty"`
+	TimeLimit    int    `json:"time_limit"`
+	MemoryLimit  int    `json:"memory_limit"`
+	Status       string `json:"status"`
+	Visibility   string `json:"visibility"`
+	IsActive     bool   `json:"is_active"`
+	TagIDs       []int  `json:"tag_ids"`
+	CategoryIDs  []int  `json:"category_ids"`
+	InputFormat  string `json:"input_format"`
+	OutputFormat string `json:"output_format"`
+	Constraints  string `json:"constraints"`
+	Hints        string `json:"hints"`
 
 	// Core V2 Fields
 	FunctionName            string          `json:"function_name"`
@@ -29,17 +33,21 @@ type CreateProblemRequest struct {
 
 // UpdateProblemRequest defines the payload for updating a problem
 type UpdateProblemRequest struct {
-	Title       string `json:"title"`
-	Slug        string `json:"slug"`
-	Description string `json:"description"`
-	Difficulty  string `json:"difficulty"`
-	TimeLimit   int    `json:"time_limit"`
-	MemoryLimit int    `json:"memory_limit"`
-	Status      string `json:"status"`
-	Visibility  string `json:"visibility"`
-	IsActive    *bool  `json:"is_active"`
-	TagIDs      []int  `json:"tag_ids"`
-	CategoryIDs []int  `json:"category_ids"`
+	Title        string  `json:"title"`
+	Slug         string  `json:"slug"`
+	Description  string  `json:"description"`
+	Difficulty   string  `json:"difficulty"`
+	TimeLimit    int     `json:"time_limit"`
+	MemoryLimit  int     `json:"memory_limit"`
+	Status       string  `json:"status"`
+	Visibility   string  `json:"visibility"`
+	IsActive     *bool   `json:"is_active"`
+	TagIDs       []int   `json:"tag_ids"`
+	CategoryIDs  []int   `json:"category_ids"`
+	InputFormat  *string `json:"input_format"`
+	OutputFormat *string `json:"output_format"`
+	Constraints  *string `json:"constraints"`
+	Hints        *string `json:"hints"`
 
 	FunctionName            *string         `json:"function_name"`
 	ReturnType              *string         `json:"return_type"`
@@ -72,10 +80,10 @@ type ListProblemsRequest struct {
 }
 
 type ProblemStats struct {
-Total     int `json:"total"`
-Published int `json:"published"`
-Draft     int `json:"draft"`
-Easy      int `json:"easy"`
-Medium    int `json:"medium"`
-Hard      int `json:"hard"`
+	Total     int `json:"total"`
+	Published int `json:"published"`
+	Draft     int `json:"draft"`
+	Easy      int `json:"easy"`
+	Medium    int `json:"medium"`
+	Hard      int `json:"hard"`
 }

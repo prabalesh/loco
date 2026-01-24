@@ -18,6 +18,10 @@ type Problem struct {
 	Status           string     `json:"status" gorm:"size:50;default:'draft'"`
 	Visibility       string     `json:"visibility" gorm:"size:50;default:'private'"`
 	IsActive         bool       `json:"is_active" gorm:"default:true"`
+	InputFormat      string     `json:"input_format,omitempty" gorm:"type:text"`
+	OutputFormat     string     `json:"output_format,omitempty" gorm:"type:text"`
+	Constraints      string     `json:"constraints,omitempty" gorm:"type:text"`
+	Hints            string     `json:"hints,omitempty" gorm:"type:text"`
 	AcceptanceRate   float64    `json:"acceptance_rate" gorm:"default:0.0"`
 	TotalSubmissions int        `json:"total_submissions" gorm:"column:total_submissions;default:0"`
 	TotalAccepted    int        `json:"total_accepted" gorm:"column:total_accepted;default:0"`

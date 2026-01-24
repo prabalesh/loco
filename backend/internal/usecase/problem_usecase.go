@@ -130,6 +130,10 @@ func (u *ProblemUsecase) CreateProblem(req *dto.CreateProblemRequest, adminID in
 		Visibility:              visibility,
 		IsActive:                req.IsActive,
 		CreatedBy:               &adminID,
+		InputFormat:             req.InputFormat,
+		OutputFormat:            req.OutputFormat,
+		Constraints:             req.Constraints,
+		Hints:                   req.Hints,
 		FunctionName:            &req.FunctionName,
 		ReturnType:              &req.ReturnType,
 		Parameters:              req.Parameters,
@@ -240,6 +244,18 @@ func (u *ProblemUsecase) UpdateProblem(problemID int, req *dto.UpdateProblemRequ
 
 	if req.IsActive != nil {
 		problem.IsActive = *req.IsActive
+	}
+	if req.InputFormat != nil {
+		problem.InputFormat = *req.InputFormat
+	}
+	if req.OutputFormat != nil {
+		problem.OutputFormat = *req.OutputFormat
+	}
+	if req.Constraints != nil {
+		problem.Constraints = *req.Constraints
+	}
+	if req.Hints != nil {
+		problem.Hints = *req.Hints
 	}
 
 	if req.FunctionName != nil {

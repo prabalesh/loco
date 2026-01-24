@@ -1,7 +1,9 @@
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import type { ProblemResponse } from '../types'
-import { calculateAcceptanceRate } from '@/lib/utils'
+import { calculateAcceptanceRate } from '@/shared/lib/utils'
 
 interface DescriptionTabProps {
     problem: ProblemResponse
@@ -30,40 +32,29 @@ export const DescriptionTab = ({ problem }: DescriptionTabProps) => {
                 </div>
             </div>
 
-            {/* <div className="flex flex-wrap gap-2 mb-8">
-                {problem.categories?.map(cat => (
-                    <span key={cat.id} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold uppercase tracking-wider border border-blue-100 shadow-sm">
-                        {cat.name}
-                    </span>
-                ))}
-                {problem.tags?.map(tag => (
-                    <span key={tag.id} className="px-3 py-1 bg-gray-50 text-gray-600 rounded-lg text-xs font-medium border border-gray-100 shadow-sm">
-                        {tag.name}
-                    </span>
-                ))}
-            </div> */}
-
             {problem.description && (
                 <div className="mb-8">
                     <h2 className="text-xl font-bold mb-4 text-gray-900 border-b border-gray-200 pb-2">
                         Description
                     </h2>
-                    <div
-                        className="text-gray-700 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: problem.description }}
-                    />
+                    <div className="text-gray-700 leading-relaxed overflow-x-hidden">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {problem.description}
+                        </ReactMarkdown>
+                    </div>
                 </div>
             )}
 
-            {/* {problem.input_format && (
+            {problem.input_format && (
                 <div className="mb-8">
                     <h2 className="text-xl font-bold mb-4 text-gray-900 border-b border-gray-200 pb-2">
                         Input Format
                     </h2>
-                    <div
-                        className="text-gray-700 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: problem.input_format }}
-                    />
+                    <div className="text-gray-700 leading-relaxed overflow-x-hidden">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {problem.input_format}
+                        </ReactMarkdown>
+                    </div>
                 </div>
             )}
 
@@ -72,10 +63,11 @@ export const DescriptionTab = ({ problem }: DescriptionTabProps) => {
                     <h2 className="text-xl font-bold mb-4 text-gray-900 border-b border-gray-200 pb-2">
                         Output Format
                     </h2>
-                    <div
-                        className="text-gray-700 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: problem.output_format }}
-                    />
+                    <div className="text-gray-700 leading-relaxed overflow-x-hidden">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {problem.output_format}
+                        </ReactMarkdown>
+                    </div>
                 </div>
             )}
 
@@ -84,12 +76,13 @@ export const DescriptionTab = ({ problem }: DescriptionTabProps) => {
                     <h2 className="text-xl font-bold mb-4 text-gray-900 border-b border-gray-200 pb-2">
                         Constraints
                     </h2>
-                    <div
-                        className="text-gray-700 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: problem.constraints }}
-                    />
+                    <div className="text-gray-700 leading-relaxed overflow-x-hidden">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {problem.constraints}
+                        </ReactMarkdown>
+                    </div>
                 </div>
-            )} */}
+            )}
 
             {problem.creator && (
                 <div className="mt-12 pt-8 border-t border-gray-100">

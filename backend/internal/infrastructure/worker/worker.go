@@ -14,6 +14,7 @@ import (
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 type Worker struct {
@@ -201,7 +202,7 @@ func (w *Worker) processSubmission(ctx context.Context, submissionID int) {
 	w.evaluateSubmission(submission, problem, language, false)
 }
 
-// evaluateSubmission executes the submission against test cases
+// evaluateSubmission executes the submission against test cases in parallel batches of 8
 func (w *Worker) evaluateSubmission(submission *domain.Submission, problem *domain.Problem, language *domain.Language, runOnlyPublicTests bool) {
 	var testCases []domain.TestCase
 	var err error
@@ -230,144 +231,218 @@ func (w *Worker) evaluateSubmission(submission *domain.Submission, problem *doma
 	// 2. Inject user code
 	fullCode := w.boilerplateService.InjectUserCodeIntoHarness(harnessTemplate, submission.Code)
 
-	// 3. Prepare test cases input (JSON)
-	type TestInput struct {
-		Input    interface{} `json:"input"`
-		Expected interface{} `json:"expected"`
+	// 3. Chunk test cases into batches
+	batchSize := w.config.Worker.BatchSize
+	if batchSize <= 0 {
+		batchSize = 4 // Safety fallback
 	}
-	inputs := make([]TestInput, len(testCases))
-	for i, tc := range testCases {
-		var inputData interface{}
-		_ = json.Unmarshal([]byte(tc.Input), &inputData)
-		var expectedData interface{}
-		_ = json.Unmarshal([]byte(tc.ExpectedOutput), &expectedData)
-		inputs[i] = TestInput{Input: inputData, Expected: expectedData}
-	}
-	testInputJSON, _ := json.Marshal(inputs)
-
-	// 4. Execute on Piston
-	res, err := w.pistonService.Execute(language.Slug, language.Version, fullCode, string(testInputJSON))
-	if err != nil {
-		w.logger.Error("Piston execution failed", zap.Error(err), zap.Int("submission_id", submission.ID))
-		w.updateSubmissionError(submission, domain.SubmissionStatusInternalError, "Execution system error")
-		return
-	}
-
-	// 5. Check for compilation error
-	if res.ExitCode != 0 && res.Error != "" && !strings.Contains(res.Output, "verdict") {
-		w.updateSubmissionError(submission, domain.SubmissionStatusCompilationError, res.Error)
-		return
-	}
-
-	// 6. Parse detailed results
-	var testResults []domain.TestCaseResult
-
-	type HarnessTestResult struct {
-		domain.TestCaseResult
-		Passed *bool  `json:"passed"`
-		Actual string `json:"actual"`
-	}
-
-	var resultObj struct {
-		TestResults []HarnessTestResult `json:"test_results"`
-		Verdict     string              `json:"verdict"`
-		Memory      int                 `json:"memory"`
-		Runtime     int                 `json:"runtime"`
-	}
-
-	// Try unmarshaling the JSON output from the C++ Harness
-	if err := json.Unmarshal([]byte(res.Output), &resultObj); err == nil && len(resultObj.TestResults) > 0 {
-		testResults = make([]domain.TestCaseResult, len(resultObj.TestResults))
-		for i, tr := range resultObj.TestResults {
-			row := tr.TestCaseResult
-			// Map 'passed' bool to status string
-			if row.Status == "" && tr.Passed != nil {
-				if *tr.Passed {
-					row.Status = "passed"
-				} else {
-					row.Status = "failed"
-				}
-			}
-			// Map 'actual' to 'actual_output'
-			if row.ActualOutput == "" && tr.Actual != "" {
-				row.ActualOutput = tr.Actual
-			}
-			testResults[i] = row
+	var batches [][]domain.TestCase
+	for i := 0; i < len(testCases); i += batchSize {
+		end := i + batchSize
+		if end > len(testCases) {
+			end = len(testCases)
 		}
-	} else {
-		// Fallback for real runtime errors or crashes
-		w.updateSubmissionError(submission, domain.SubmissionStatusRuntimeError, res.Error+"\n"+res.Output)
-		return
+		batches = append(batches, testCases[i:end])
 	}
 
-	// 7. Process results and determine final status
+	// 4. Parallel execution with errgroup
+	g, gCtx := errgroup.WithContext(context.Background())
+	batchResults := make([]struct {
+		TestResults []domain.TestCaseResult
+		Verdict     string
+		Memory      int
+		Runtime     int
+		Error       string
+		ExitCode    int
+		Output      string
+	}, len(batches))
+
+	for i, batch := range batches {
+		i, batch := i, batch
+		g.Go(func() error {
+			// Early exit if another batch already failed
+			select {
+			case <-gCtx.Done():
+				return nil
+			default:
+			}
+
+			// Prepare batch JSON
+			type TestInput struct {
+				Input    interface{} `json:"input"`
+				Expected interface{} `json:"expected"`
+			}
+			inputs := make([]TestInput, len(batch))
+			for j, tc := range batch {
+				var inputData interface{}
+				_ = json.Unmarshal([]byte(tc.Input), &inputData)
+				var expectedData interface{}
+				_ = json.Unmarshal([]byte(tc.ExpectedOutput), &expectedData)
+				inputs[j] = TestInput{Input: inputData, Expected: expectedData}
+			}
+			testInputJSON, _ := json.Marshal(inputs)
+
+			// Execute batch on Piston
+			fmt.Printf("\n--- Piston Execution Request (Worker Batch %d) ---\n", i)
+			fmt.Printf("Stdin (batch size %d): %s\n", len(batch), string(testInputJSON))
+			fmt.Printf("Language: %s, Version: %s\n", language.Slug, language.Version)
+			fmt.Printf("Memory Limit: %d MB\n", problem.MemoryLimit)
+			fmt.Printf("--------------------------------------------------\n\n")
+
+			res, err := w.pistonService.Execute(language.Slug, language.Version, fullCode, string(testInputJSON))
+			if err != nil {
+				return fmt.Errorf("batch %d failed: %w", i, err)
+			}
+
+			// Store raw output for fallback/compilation check
+			batchResults[i].Output = res.Output
+			batchResults[i].Error = res.Error
+			batchResults[i].ExitCode = res.ExitCode
+
+			// Parse detailed results
+			type HarnessTestResult struct {
+				domain.TestCaseResult
+				Passed *bool  `json:"passed"`
+				Actual string `json:"actual"`
+			}
+			var resultObj struct {
+				TestResults []HarnessTestResult `json:"test_results"`
+				Verdict     string              `json:"verdict"`
+				Memory      int                 `json:"memory"`
+				Runtime     int                 `json:"runtime"`
+			}
+
+			if err := json.Unmarshal([]byte(res.Output), &resultObj); err == nil && len(resultObj.TestResults) > 0 {
+				batchResults[i].TestResults = make([]domain.TestCaseResult, len(resultObj.TestResults))
+				for j, tr := range resultObj.TestResults {
+					row := tr.TestCaseResult
+					if row.Status == "" && tr.Passed != nil {
+						if *tr.Passed {
+							row.Status = "passed"
+						} else {
+							row.Status = "failed"
+						}
+					}
+					if row.ActualOutput == "" && tr.Actual != "" {
+						row.ActualOutput = tr.Actual
+					}
+					batchResults[i].TestResults[j] = row
+				}
+				batchResults[i].Verdict = resultObj.Verdict
+				batchResults[i].Memory = resultObj.Memory
+				batchResults[i].Runtime = resultObj.Runtime
+
+				// Short-circuit: if this batch had a failure, signal to stop other batches
+				if batchResults[i].Verdict != "ACCEPTED" && batchResults[i].Verdict != "" {
+					return fmt.Errorf("short-circuit: batch %d failed with %s", i, batchResults[i].Verdict)
+				}
+			} else {
+				// Compilation or terminal runtime error
+				if res.ExitCode != 0 && res.Error != "" && !strings.Contains(res.Output, "verdict") {
+					return fmt.Errorf("compilation error in batch %d", i)
+				}
+				return fmt.Errorf("unexpected output in batch %d", i)
+			}
+
+			return nil
+		})
+	}
+
+	// Wait for all batches or first failure
+	if err := g.Wait(); err != nil {
+		w.logger.Warn("Batch execution finished with error (short-circuit or Piston error)", zap.Error(err))
+	}
+
+	// 5. Aggregate results from all batches
+	var finalTestResults []domain.TestCaseResult
 	finalStatus := domain.SubmissionStatusAccepted
 	passCount := 0
 	errorMessage := ""
+	maxMemory := 0
+	maxRuntime := 0
 
-	// FIX: Assign Aggregate Metrics from Harness directly
-	submission.Memory = resultObj.Memory
-	submission.Runtime = resultObj.Runtime
-
-	for i := range testResults {
-		tr := &testResults[i]
-		if tr.TestID == 0 {
-			tr.TestID = i + 1
+	for i, res := range batchResults {
+		// If a batch didn't run or returned a critical error (compilation)
+		if res.ExitCode != 0 && res.Error != "" && !strings.Contains(res.Output, "verdict") {
+			w.updateSubmissionError(submission, domain.SubmissionStatusCompilationError, res.Error)
+			return
 		}
 
-		if i < len(testCases) {
-			tr.IsSample = testCases[i].IsSample
-			if tr.Input == "" {
-				tr.Input = testCases[i].Input
-			}
-			if tr.ExpectedOutput == "" {
-				tr.ExpectedOutput = testCases[i].ExpectedOutput
-			}
-		}
-
-		if tr.Status == "passed" {
-			passCount++
-		} else if finalStatus == domain.SubmissionStatusAccepted {
-			switch tr.Status {
-			case "timeout":
-				finalStatus = domain.SubmissionStatusTimeLimitExceeded
-			case "runtime_error":
+		if len(res.TestResults) == 0 && res.Output != "" {
+			// Terminal error in batch execution (crashed before emitting JSON)
+			if finalStatus == domain.SubmissionStatusAccepted {
 				finalStatus = domain.SubmissionStatusRuntimeError
-				errorMessage = tr.Error
-			default:
-				finalStatus = domain.SubmissionStatusWrongAnswer
-				errorMessage = fmt.Sprintf("Failed on test %d", tr.TestID)
+				errorMessage = res.Error + "\n" + res.Output
 			}
+		}
+
+		for j := range res.TestResults {
+			tr := res.TestResults[j]
+			// Restore context from global testCases list
+			globalIdx := i*batchSize + j
+			if globalIdx < len(testCases) {
+				tr.TestID = globalIdx + 1
+				tr.IsSample = testCases[globalIdx].IsSample
+				tr.Input = testCases[globalIdx].Input
+				tr.ExpectedOutput = testCases[globalIdx].ExpectedOutput
+			}
+
+			if tr.Status == "passed" {
+				passCount++
+			} else if finalStatus == domain.SubmissionStatusAccepted {
+				switch tr.Status {
+				case "timeout":
+					finalStatus = domain.SubmissionStatusTimeLimitExceeded
+				case "runtime_error":
+					finalStatus = domain.SubmissionStatusRuntimeError
+					errorMessage = tr.Error
+				default:
+					finalStatus = domain.SubmissionStatusWrongAnswer
+					errorMessage = fmt.Sprintf("Failed on test %d", tr.TestID)
+				}
+			}
+			finalTestResults = append(finalTestResults, tr)
+		}
+
+		if res.Memory > maxMemory {
+			maxMemory = res.Memory
+		}
+		if res.Runtime > maxRuntime {
+			maxRuntime = res.Runtime
 		}
 	}
 
-	// Final Fallback and Safety Checks
-	if submission.Memory == 0 && res.Memory > 0 {
-		submission.Memory = res.Memory
-	}
-	// If the algorithm ran so fast it returned 0ms, force 1ms for better UI experience
-	if submission.Runtime == 0 && finalStatus == domain.SubmissionStatusAccepted {
-		submission.Runtime = 1
+	// 6. Handle cases where not all batches executed (short-circuit)
+	if len(finalTestResults) < len(testCases) && finalStatus == domain.SubmissionStatusAccepted {
+		// This should not happen unless g.Wait returned early without setting a failure status
+		finalStatus = domain.SubmissionStatusWrongAnswer
+		errorMessage = "Execution short-circuited unexpectedly"
 	}
 
+	// Metrics fallback
+	if maxRuntime == 0 && finalStatus == domain.SubmissionStatusAccepted {
+		maxRuntime = 1
+	}
+
+	submission.Memory = maxMemory
+	submission.Runtime = maxRuntime
 	submission.PassedTestCases = passCount
-	submission.TestCaseResults = testResults
-	submission.ExecutionMetadata, _ = json.Marshal(testResults)
+	submission.TestCaseResults = finalTestResults
+	submission.ExecutionMetadata, _ = json.Marshal(finalTestResults)
 
-	// 8. Update database record
+	// 7. Update database and stats
 	w.updateSubmissionResult(submission, finalStatus, errorMessage)
 
-	// 9. Update stats/validation status
 	if submission.IsValidationSubmission {
 		w.updateValidationStatus(submission, finalStatus, errorMessage, passCount, len(testCases))
 	} else {
 		w.updateProblemAndUserStats(submission, finalStatus)
 	}
 
-	w.logger.Info("Submission processed successfully",
+	w.logger.Info("Submission processed via parallel batches",
 		zap.Int("submission_id", submission.ID),
-		zap.Int("memory", submission.Memory),
-		zap.Int("runtime", submission.Runtime),
+		zap.Int("batches", len(batches)),
+		zap.Int("passed", passCount),
 		zap.String("status", string(finalStatus)),
 	)
 }
