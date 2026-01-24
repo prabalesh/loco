@@ -55,36 +55,35 @@ export const ProblemHeader = ({ problem, onBack, onRun, onSubmit, isSubmitting }
                 </div>
             </div>
 
-            <div className="flex items-center gap-3">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onRun}
-                    disabled={isSubmitting}
-                    className="shadow-md bg-gradient-to-r from-gray-100 to-gray-50 hover:from-gray-200 hover:to-gray-100 text-gray-700 hover:text-gray-900 px-6 transition-all duration-200 hover:shadow-lg border border-gray-200"
-                >
-                    {isSubmitting ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
+            {isSubmitting ? (
+                <div className="flex items-center gap-3 text-center">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Submitting...
+                </div>
+            ) : (
+                <div className="flex items-center gap-3">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onRun}
+                        disabled={isSubmitting}
+                        className="shadow-md bg-gradient-to-r from-gray-100 to-gray-50 hover:from-gray-200 hover:to-gray-100 text-gray-700 hover:text-gray-900 px-6 transition-all duration-200 hover:shadow-lg border border-gray-200"
+                    >
                         <Play className="h-4 w-4 mr-2" />
-                    )}
-                    Run
-                </Button>
-                <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={onSubmit}
-                    disabled={isSubmitting}
-                    className="shadow-lg bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 px-8 transition-all duration-200 hover:shadow-xl hover:scale-105"
-                >
-                    {isSubmitting ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
+                        Run
+                    </Button>
+                    <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={onSubmit}
+                        disabled={isSubmitting}
+                        className="shadow-lg bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 px-8 transition-all duration-200 hover:shadow-xl hover:scale-105"
+                    >
                         <Send className="h-4 w-4 mr-2" />
-                    )}
-                    Submit
-                </Button>
-            </div>
+                        Submit
+                    </Button>
+                </div>
+            )}
         </header>
     )
 }
