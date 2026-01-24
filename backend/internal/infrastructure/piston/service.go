@@ -117,6 +117,13 @@ func (s *pistonService) Execute(language, version, code, input string) (*Executi
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
+	// fmt.Println("*****************************")
+	// fmt.Println(pistonResp.Run.CpuTime)
+	// fmt.Println(pistonResp.Run.Memory)
+	// fmt.Println(int(pistonResp.Run.CpuTime))
+	// fmt.Println(int(pistonResp.Run.Memory) / 1024)
+	// fmt.Println("*****************************")
+
 	// Check for compile error first
 	if pistonResp.Compile.Code != 0 {
 		return &ExecutionResult{

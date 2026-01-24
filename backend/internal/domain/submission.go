@@ -82,6 +82,7 @@ type Submission struct {
 	// Admin context
 	IsAdminSubmission      bool `json:"is_admin_submission" gorm:"default:false"`      // Distinguishes admin test submissions
 	IsValidationSubmission bool `json:"is_validation_submission" gorm:"default:false"` // Specifically for validating problem-language solution
+	IsRunOnly              bool `json:"is_run_only" gorm:"default:false"`              // Distinguishes temporary "Run" executions
 	SubmittedBy            *int `json:"submitted_by,omitempty" gorm:"index"`           // Admin user ID if admin submission
 
 	// Associations

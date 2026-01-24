@@ -272,6 +272,18 @@ func (u *SubmissionUsecase) evaluateSubmission(submission *domain.Submission, pr
 func (u *SubmissionUsecase) updateSubmissionResult(submission *domain.Submission, status domain.SubmissionStatus, errorMsg string) {
 	submission.Status = status
 	submission.ErrorMessage = errorMsg
+
+	// Print each test case result
+	for i, tcResult := range submission.TestCaseResults {
+		u.logger.Info("Test Case Result",
+			zap.Int("index", i),
+			zap.String("status", tcResult.Status),
+			zap.Int("time_ms", tcResult.TimeMS),
+			zap.Int("memory_kb", tcResult.MemoryKB),
+			zap.Bool("is_sample", tcResult.IsSample),
+		)
+	}
+
 	if err := u.submissionRepo.Update(submission); err != nil {
 		u.logger.Error("Failed to update submission status", zap.Error(err))
 	}
@@ -407,8 +419,8 @@ func (u *SubmissionUsecase) GetProblemSubmissions(problemID int, limit, offset i
 	return u.submissionRepo.ListByProblem(problemID, limit, offset)
 }
 
-// RunCode executes code against public test cases without creating a submission
-func (u *SubmissionUsecase) RunCode(problemID int, req *dto.RunCodeRequest) (*domain.RunCodeResult, error) {
+// RunCode executes code against public test cases without creating a permanent submission
+func (u *SubmissionUsecase) RunCode(userID int, problemID int, req *dto.RunCodeRequest) (*domain.Submission, error) {
 	// 1. Validate Problem and Language
 	_, err := u.problemRepo.GetByID(problemID)
 	if err != nil {
@@ -420,37 +432,49 @@ func (u *SubmissionUsecase) RunCode(problemID int, req *dto.RunCodeRequest) (*do
 		return nil, fmt.Errorf("language not found")
 	}
 
-	// 2. Get only public (sample) test cases
-	testCases, err := u.testCaseRepo.GetSamples(problemID)
-	if err != nil {
-		u.logger.Error("Failed to fetch test cases", zap.Error(err))
-		return nil, fmt.Errorf("failed to fetch test cases: %w", err)
+	// 2. Get ProblemLanguage to combine code (optional, use default if missing)
+	pl, err := u.problemLanguageRepo.GetByProblemAndLanguage(problemID, req.LanguageID)
+	finalCode := req.Code
+	if err == nil && pl != nil {
+		finalCode = pl.GetCombinedCode(language.DefaultTemplate, req.Code)
 	}
 
-	if len(testCases) == 0 {
-		return nil, fmt.Errorf("no sample test cases found for this problem")
+	// 3. Create "RunOnly" Pending Submission
+	now := time.Now()
+	submission := &domain.Submission{
+		UserID:       userID,
+		ProblemID:    problemID,
+		LanguageID:   req.LanguageID,
+		Code:         finalCode,
+		FunctionCode: req.Code,
+		Status:       domain.SubmissionStatusPending,
+		QueuedAt:     &now,
+		IsRunOnly:    true,
 	}
 
-	// 3. Execute using ExecutionService
-	execReq := execution.ExecutionRequest{
-		ProblemID:  problemID,
-		LanguageID: req.LanguageID,
-		UserCode:   req.Code,
-		TestCases:  testCases,
+	if err := u.submissionRepo.Create(submission); err != nil {
+		return nil, fmt.Errorf("failed to create run request: %w", err)
 	}
 
-	result, err := u.executionService.ExecuteSubmission(execReq, language.Slug)
-	if err != nil {
-		u.logger.Error("Execution failed", zap.Error(err))
-		return nil, fmt.Errorf("execution failed: %w", err)
+	// 4. Enqueue submission job to Redis queue
+	ctx := context.Background()
+	if err := u.jobQueue.EnqueueSubmission(ctx, submission.ID); err != nil {
+		u.logger.Error("Failed to enqueue run request",
+			zap.Error(err),
+			zap.Int("submission_id", submission.ID),
+		)
+		// Update submission status to indicate queue failure
+		submission.Status = domain.SubmissionStatusInternalError
+		submission.ErrorMessage = "Failed to enqueue run request for processing"
+		u.submissionRepo.Update(submission)
+		return nil, fmt.Errorf("failed to enqueue run request: %w", err)
 	}
 
-	// 4. Map result
-	return &domain.RunCodeResult{
-		Status:          result.Status,
-		ErrorMessage:    result.ErrorMessage,
-		PassedTestCases: result.PassedTests,
-		TotalTestCases:  result.TotalTests,
-		Results:         result.TestResults,
-	}, nil
+	u.logger.Info("Run request enqueued successfully",
+		zap.Int("submission_id", submission.ID),
+		zap.Int("user_id", userID),
+		zap.Int("problem_id", problemID),
+	)
+
+	return submission, nil
 }

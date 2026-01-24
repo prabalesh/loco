@@ -340,12 +340,12 @@ func (h *SubmissionHandler) RunCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.submissionUsecase.RunCode(problemID, &req)
+	submission, err := h.submissionUsecase.RunCode(userID, problemID, &req)
 	if err != nil {
 		h.logger.Error("Run code failed", zap.Error(err), zap.Int("user_id", userID))
 		RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	RespondJSON(w, http.StatusOK, result)
+	RespondJSON(w, http.StatusAccepted, dto.ToSubmissionResponse(submission))
 }

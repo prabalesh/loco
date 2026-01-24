@@ -12,7 +12,7 @@ export interface RunCodeResult {
 
 export const submissionsApi = {
     runCode: (problemId: number, languageId: number, code: string) =>
-        apiClient.post<ApiResponse<RunCodeResult>>(`/problems/${problemId}/run`, {
+        apiClient.post<ApiResponse<Submission>>(`/problems/${problemId}/run`, {
             language_id: languageId,
             code,
         }),

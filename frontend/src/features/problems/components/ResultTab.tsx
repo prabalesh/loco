@@ -1,12 +1,11 @@
 import { motion } from 'framer-motion'
 import { Play, CheckCircle2, XCircle, Clock, Loader2, Zap, Database, Cpu } from 'lucide-react'
 import type { Submission, TestCase } from '../types'
-import type { RunCodeResult } from '../api/submissions'
 
 interface ResultTabProps {
     submissionResult?: Submission
     pollingId: number | null
-    runResult?: RunCodeResult | null
+    runResult?: Submission | null
     isRunning?: boolean
     sampleTestCases?: TestCase[]
 }
@@ -112,10 +111,10 @@ export const ResultTab = ({ submissionResult, pollingId, runResult, isRunning, s
     // 2. Result State
     if (hasData) {
         const displayResult = runResult || submissionResult!
-        const isRunResult = !!runResult && !submissionResult
+        const isRunResult = displayResult.is_run_only
         const submissionData = displayResult as Submission
         const status = displayResult.status
-        const isAccepted = status === 'Accepted'
+        const isAccepted = status === 'Accepted' // Handle both casing versions
 
         return (
             <motion.div
@@ -223,11 +222,11 @@ export const ResultTab = ({ submissionResult, pollingId, runResult, isRunning, s
 
                     <div className="grid gap-4">
                         {(
-                            (isRunResult ? (displayResult as RunCodeResult).results : (displayResult as Submission).test_case_results) || []
+                            displayResult.test_case_results || []
                         )
                             .sort((a, b) => (b.is_sample ? 1 : 0) - (a.is_sample ? 1 : 0))
                             .map((result, index) => {
-                                const passed = result.status === 'Passed'
+                                const passed = result.status === 'passed' || result.status === 'Passed'
                                 return (
                                     <motion.div
                                         key={index}

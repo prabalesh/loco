@@ -206,7 +206,7 @@ func (w *Worker) evaluateSubmission(submission *domain.Submission, problem *doma
 	var testCases []domain.TestCase
 	var err error
 
-	if runOnlyPublicTests {
+	if runOnlyPublicTests || submission.IsRunOnly {
 		testCases, err = w.testCaseRepo.GetSamples(submission.ProblemID)
 	} else {
 		testCases, err = w.testCaseRepo.GetByProblemID(submission.ProblemID)
@@ -254,20 +254,18 @@ func (w *Worker) evaluateSubmission(submission *domain.Submission, problem *doma
 	}
 
 	// 5. Check for compilation error
-	if res.ExitCode != 0 && res.Error != "" && !strings.Contains(res.Output, "[{\"test_id\"") {
+	if res.ExitCode != 0 && res.Error != "" && !strings.Contains(res.Output, "verdict") {
 		w.updateSubmissionError(submission, domain.SubmissionStatusCompilationError, res.Error)
 		return
 	}
 
 	// 6. Parse detailed results
-	// 6. Parse detailed results
 	var testResults []domain.TestCaseResult
 
-	// Define a struct that matches the harness output specifically, including the 'passed' boolean
 	type HarnessTestResult struct {
 		domain.TestCaseResult
-		Passed *bool  `json:"passed"` // Pointer to distinguish between false and missing
-		Actual string `json:"actual"` // Harness uses "actual", domain uses "actual_output"
+		Passed *bool  `json:"passed"`
+		Actual string `json:"actual"`
 	}
 
 	var resultObj struct {
@@ -277,70 +275,48 @@ func (w *Worker) evaluateSubmission(submission *domain.Submission, problem *doma
 		Runtime     int                 `json:"runtime"`
 	}
 
-	// Try unmarshaling as object first (new format)
+	// Try unmarshaling the JSON output from the C++ Harness
 	if err := json.Unmarshal([]byte(res.Output), &resultObj); err == nil && len(resultObj.TestResults) > 0 {
 		testResults = make([]domain.TestCaseResult, len(resultObj.TestResults))
 		for i, tr := range resultObj.TestResults {
-			res := tr.TestCaseResult
-			// Map Passed bool to Status string if Status is empty
-			if res.Status == "" && tr.Passed != nil {
+			row := tr.TestCaseResult
+			// Map 'passed' bool to status string
+			if row.Status == "" && tr.Passed != nil {
 				if *tr.Passed {
-					res.Status = "passed"
+					row.Status = "passed"
 				} else {
-					res.Status = "failed"
+					row.Status = "failed"
 				}
 			}
-			// Map Actual to ActualOutput
-			if res.ActualOutput == "" && tr.Actual != "" {
-				res.ActualOutput = tr.Actual
+			// Map 'actual' to 'actual_output'
+			if row.ActualOutput == "" && tr.Actual != "" {
+				row.ActualOutput = tr.Actual
 			}
-			testResults[i] = res
+			testResults[i] = row
 		}
-		// We can also use resultObj.Memory, resultObj.Runtime if we want to trust the harness
 	} else {
-		// Fallback to array (old format)
-		var arrayResults []HarnessTestResult
-		if err := json.Unmarshal([]byte(res.Output), &arrayResults); err == nil && len(arrayResults) > 0 {
-			testResults = make([]domain.TestCaseResult, len(arrayResults))
-			for i, tr := range arrayResults {
-				res := tr.TestCaseResult
-				if res.Status == "" && tr.Passed != nil {
-					if *tr.Passed {
-						res.Status = "passed"
-					} else {
-						res.Status = "failed"
-					}
-				}
-				// Map Actual to ActualOutput
-				if res.ActualOutput == "" && tr.Actual != "" {
-					res.ActualOutput = tr.Actual
-				}
-				testResults[i] = res
-			}
-		} else {
-			// If parsing fails completely, it might be a runtime error of the harness itself
-			w.updateSubmissionError(submission, domain.SubmissionStatusRuntimeError, res.Error+"\n"+res.Output)
-			return
-		}
+		// Fallback for real runtime errors or crashes
+		w.updateSubmissionError(submission, domain.SubmissionStatusRuntimeError, res.Error+"\n"+res.Output)
+		return
 	}
 
 	// 7. Process results and determine final status
 	finalStatus := domain.SubmissionStatusAccepted
 	passCount := 0
-	maxTime := 0
-	maxMemory := 0
 	errorMessage := ""
+
+	// FIX: Assign Aggregate Metrics from Harness directly
+	submission.Memory = resultObj.Memory
+	submission.Runtime = resultObj.Runtime
 
 	for i := range testResults {
 		tr := &testResults[i]
-		// Ensure TestID is populated
 		if tr.TestID == 0 {
 			tr.TestID = i + 1
 		}
 
 		if i < len(testCases) {
 			tr.IsSample = testCases[i].IsSample
-			// If not provided by harness, fill from DB for completeness
 			if tr.Input == "" {
 				tr.Input = testCases[i].Input
 			}
@@ -363,36 +339,36 @@ func (w *Worker) evaluateSubmission(submission *domain.Submission, problem *doma
 				errorMessage = fmt.Sprintf("Failed on test %d", tr.TestID)
 			}
 		}
+	}
 
-		if tr.TimeMS > maxTime {
-			maxTime = tr.TimeMS
-		}
-		if tr.MemoryKB > maxMemory {
-			maxMemory = tr.MemoryKB
-		}
+	// Final Fallback and Safety Checks
+	if submission.Memory == 0 && res.Memory > 0 {
+		submission.Memory = res.Memory
+	}
+	// If the algorithm ran so fast it returned 0ms, force 1ms for better UI experience
+	if submission.Runtime == 0 && finalStatus == domain.SubmissionStatusAccepted {
+		submission.Runtime = 1
 	}
 
 	submission.PassedTestCases = passCount
-	submission.Runtime = maxTime
-	submission.Memory = maxMemory
 	submission.TestCaseResults = testResults
 	submission.ExecutionMetadata, _ = json.Marshal(testResults)
 
-	// Update submission status
+	// 8. Update database record
 	w.updateSubmissionResult(submission, finalStatus, errorMessage)
 
-	// Update ProblemLanguage status if validation
+	// 9. Update stats/validation status
 	if submission.IsValidationSubmission {
 		w.updateValidationStatus(submission, finalStatus, errorMessage, passCount, len(testCases))
 	} else {
 		w.updateProblemAndUserStats(submission, finalStatus)
 	}
 
-	w.logger.Info("Submission processed",
+	w.logger.Info("Submission processed successfully",
 		zap.Int("submission_id", submission.ID),
+		zap.Int("memory", submission.Memory),
+		zap.Int("runtime", submission.Runtime),
 		zap.String("status", string(finalStatus)),
-		zap.Int("passed", passCount),
-		zap.Int("total", len(testCases)),
 	)
 }
 
@@ -437,6 +413,10 @@ func (w *Worker) updateValidationStatus(submission *domain.Submission, status do
 }
 
 func (w *Worker) updateProblemAndUserStats(submission *domain.Submission, finalStatus domain.SubmissionStatus) {
+	if submission.IsRunOnly {
+		return
+	}
+
 	isAccepted := finalStatus == domain.SubmissionStatusAccepted
 
 	// 1. Update Problem Stats (Global)
@@ -506,6 +486,33 @@ func (w *Worker) updateProblemAndUserStats(submission *domain.Submission, finalS
 func (w *Worker) updateSubmissionResult(submission *domain.Submission, status domain.SubmissionStatus, errorMsg string) {
 	submission.Status = status
 	submission.ErrorMessage = errorMsg
+
+	// Debug: Print submission data before saving
+	fmt.Println("========================================")
+	fmt.Println("=== SUBMISSION RESULT ===")
+	fmt.Printf("Submission ID: %d\n", submission.ID)
+	fmt.Printf("User ID: %d\n", submission.UserID)
+	fmt.Printf("Problem ID: %d\n", submission.ProblemID)
+	fmt.Printf("Status: %s\n", status)
+	fmt.Printf("Error Message: %s\n", errorMsg)
+	fmt.Printf("Passed Test Cases: %d\n", submission.PassedTestCases)
+	fmt.Printf("Total Test Cases: %d\n", submission.TotalTestCases)
+	fmt.Printf("Runtime (ms): %d\n", submission.Runtime)
+	fmt.Printf("Memory (kb): %d\n", submission.Memory)
+	fmt.Printf("Number of Results: %d\n", len(submission.TestCaseResults))
+	fmt.Println("========================================")
+
+	// Print each test case result
+	for i, tcResult := range submission.TestCaseResults {
+		fmt.Printf("Test Case %d:\n", i)
+		fmt.Printf("  Status: %s\n", tcResult.Status)
+		fmt.Printf("  Time (ms): %d\n", tcResult.TimeMS)
+		fmt.Printf("  Memory (kb): %d\n", tcResult.MemoryKB)
+		fmt.Printf("  Is Sample: %v\n", tcResult.IsSample)
+		fmt.Println("---")
+	}
+	fmt.Println("========================================")
+
 	if err := w.submissionRepo.Update(submission); err != nil {
 		w.logger.Error("Failed to update submission status",
 			zap.Error(err),

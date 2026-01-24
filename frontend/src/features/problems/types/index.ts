@@ -162,6 +162,7 @@ export interface Submission {
     passed_test_cases: number
     total_test_cases: number
     created_at: string
+    is_run_only?: boolean
     test_case_results?: TestCaseResult[]
 }
 

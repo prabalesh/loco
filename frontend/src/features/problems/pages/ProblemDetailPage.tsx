@@ -5,9 +5,9 @@ import toast from 'react-hot-toast'
 import { XCircle, ChevronLeft } from 'lucide-react'
 import { useAuth } from '@/shared/hooks/useAuth'
 import { problemsApi } from '../api/problems'
-import { submissionsApi, type RunCodeResult } from '../api/submissions'
+import { submissionsApi } from '../api/submissions'
 import { Button } from '@/shared/components/ui/Button'
-import type { Boilerplate, ProblemLanguage, ProblemResponse, Submission } from '../types'
+import type { Boilerplate, ProblemResponse, Submission } from '../types'
 import { ProblemHeader } from '../components/ProblemHeader'
 import { ProblemTabs } from '../components/ProblemTabs'
 import { DescriptionTab } from '../components/DescriptionTab'
@@ -75,7 +75,8 @@ export const ProblemDetailPage = () => {
     const [leftWidth, setLeftWidth] = useState(50) // Percentage
     const [isResizing, setIsResizing] = useState(false)
     const [pollingId, setPollingId] = useState<number | null>(null)
-    const [runResult, setRunResult] = useState<RunCodeResult | null>(null)
+    const [pollingType, setPollingType] = useState<'run' | 'submit' | null>(null)
+    const [runResult, setRunResult] = useState<Submission | null>(null)
     const [isRunning, setIsRunning] = useState(false)
     const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -94,7 +95,7 @@ export const ProblemDetailPage = () => {
         enabled: !!problem?.id
     })
 
-    // Set default language and code (from localStorage or first available)
+    // Set default language and code
     useEffect(() => {
         if (problem?.boilerplates && problem.boilerplates.length > 0) {
             if (!selectedLang) {
@@ -109,7 +110,7 @@ export const ProblemDetailPage = () => {
         }
     }, [problem?.boilerplates, selectedLang, problem?.id, user?.id])
 
-    // Save code to localStorage
+    // Save code
     useEffect(() => {
         if (problem?.id && selectedLang && code) {
             const storageKey = user?.id
@@ -153,19 +154,17 @@ export const ProblemDetailPage = () => {
 
     const currentLang = problem?.boilerplates?.find((l: Boilerplate) => l.language_id === selectedLang)
 
-    // Run Code Mutation (doesn't create submission)
+    // Run Code Mutation (now asynchronous)
     const runCodeMutation = useMutation({
         mutationFn: ({ pId, lId, code }: { pId: number, lId: number, code: string }) =>
             submissionsApi.runCode(pId, lId, code).then(res => res.data.data!),
-        onSuccess: (data: RunCodeResult) => {
-            setRunResult(data)
+        onSuccess: (data: Submission) => {
+            setPollingId(data.id)
+            setPollingType('run')
+            setRunResult(null)
             setActiveTab('testcase')
-            setIsRunning(false)
-            if (data.status === 'Accepted') {
-                toast.success('All test cases passed!', { id: 'run-result' })
-            } else {
-                toast.error(`Failed: ${data.status}`, { id: 'run-result' })
-            }
+            setIsRunning(true)
+            toast.loading('Running tests...', { id: 'running' })
         },
         onError: (err: any) => {
             setIsRunning(false)
@@ -179,8 +178,9 @@ export const ProblemDetailPage = () => {
             submissionsApi.submit(pId, lId, code).then(res => res.data.data!),
         onSuccess: (data: Submission) => {
             setPollingId(data.id)
-            setRunResult(null) // Clear run result when submitting
-            setActiveTab('testcase') // Show testcase tab while evaluation is pending or just for progress
+            setPollingType('submit')
+            setRunResult(null)
+            setActiveTab('testcase')
             toast.loading('Evaluating...', { id: 'evaluating' })
         },
         onError: (err: any) => {
@@ -188,28 +188,37 @@ export const ProblemDetailPage = () => {
         }
     })
 
-    // Polling for submission status
+    // Polling for status
     const { data: submissionResult } = useQuery({
         queryKey: ['submission', pollingId],
         queryFn: () => submissionsApi.get(problem!.id, pollingId!).then(res => res.data.data),
         enabled: !!pollingId && !!problem?.id,
         refetchInterval: (query) => {
             const status = query.state.data?.status
-            if (status && status !== 'Pending') {
-                if (status === 'Accepted') {
-                    toast.success('Accepted!', { id: 'evaluating' })
-                } else {
-                    toast.error(`Failed: ${status}`, { id: 'evaluating' })
+            if (status && status !== 'Pending' && status !== 'Processing') {
+                if (pollingType === 'run') {
+                    setRunResult(query.state.data as Submission)
+                    setIsRunning(false)
+                    if (status === 'Accepted') {
+                        toast.success('Tests passed!', { id: 'running' })
+                    } else {
+                        toast.error(`Run Failed: ${status}`, { id: 'running' })
+                    }
+                } else if (pollingType === 'submit') {
+                    if (status === 'Accepted') {
+                        toast.success('Accepted!', { id: 'evaluating' })
+                    } else {
+                        toast.error(`Failed: ${status}`, { id: 'evaluating' })
+                    }
+                    queryClient.invalidateQueries({ queryKey: ['user-submissions'] })
+                    setActiveTab('submissions')
+                    handleViewSubmission(query.state.data as Submission)
                 }
                 setPollingId(null)
-                queryClient.invalidateQueries({ queryKey: ['user-submissions'] })
-                // Switch to submissions tab after successful evaluation
-                setActiveTab('submissions')
-                // Automatically view the submission result
-                handleViewSubmission(query.state.data as Submission)
+                setPollingType(null)
                 return false
             }
-            return 3000
+            return 2000
         }
     })
 
