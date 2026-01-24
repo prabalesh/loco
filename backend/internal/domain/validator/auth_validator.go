@@ -1,10 +1,10 @@
 package validator
 
 import (
-	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 )
 
-func ValidateRegisterRequest(req *domain.RegisterRequest) map[string]string {
+func ValidateRegisterRequest(req *dto.RegisterRequest) map[string]string {
 	errors := make(map[string]string)
 
 	// Normalize inputs
@@ -50,7 +50,7 @@ func ValidateRegisterRequest(req *domain.RegisterRequest) map[string]string {
 }
 
 // ValidateLoginRequest validates login request
-func ValidateLoginRequest(req *domain.LoginRequest) map[string]string {
+func ValidateLoginRequest(req *dto.LoginRequest) map[string]string {
 	errors := make(map[string]string)
 
 	req.Email = NormalizeEmail(req.Email)

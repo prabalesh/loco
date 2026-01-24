@@ -15,8 +15,6 @@ export const LanguageDropdown = ({ boilerplates, selectedLang, onLanguageChange 
 
     const currentLang = boilerplates?.find((b: Boilerplate) => b.language_id === selectedLang)
 
-    console.log(currentLang)
-
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

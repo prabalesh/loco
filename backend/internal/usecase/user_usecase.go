@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"go.uber.org/zap"
 )
 
@@ -24,7 +25,7 @@ func NewUserUsecase(userRepo domain.UserRepository, submissionRepo domain.Submis
 }
 
 // GetUserProfile returns full user profile response for the given user ID
-func (u *UserUsecase) GetUserProfile(userID int) (*domain.UserProfileResponse, error) {
+func (u *UserUsecase) GetUserProfile(userID int) (*dto.UserProfileResponse, error) {
 	user, err := u.userRepo.GetByID(userID)
 	if err != nil {
 		u.logger.Error("Failed to get user by ID",
@@ -74,7 +75,7 @@ func (u *UserUsecase) GetUserProfile(userID int) (*domain.UserProfileResponse, e
 		achievements = []domain.UserAchievement{}
 	}
 
-	resp := user.ToUserProfileResponse(stats, recentProblems, heatmap, distribution, achievements)
+	resp := dto.ToUserProfileResponse(user, stats, recentProblems, heatmap, distribution, achievements)
 	return &resp, nil
 }
 
@@ -90,7 +91,7 @@ func (u *UserUsecase) GetByUsername(username string) (*domain.User, error) {
 	return user, nil
 }
 
-func (u *UserUsecase) GetUserProfileByUsername(username string) (*domain.UserProfileResponse, error) {
+func (u *UserUsecase) GetUserProfileByUsername(username string) (*dto.UserProfileResponse, error) {
 	user, err := u.userRepo.GetByUsername(username)
 	if err != nil {
 		u.logger.Error("Failed to get user by username",
@@ -140,24 +141,24 @@ func (u *UserUsecase) GetUserProfileByUsername(username string) (*domain.UserPro
 		achievements = []domain.UserAchievement{}
 	}
 
-	resp := user.ToUserProfileResponse(stats, recentProblems, heatmap, distribution, achievements)
+	resp := dto.ToUserProfileResponse(user, stats, recentProblems, heatmap, distribution, achievements)
 	return &resp, nil
 }
 
-func (u *UserUsecase) getUserStats(userID int, rank int) (domain.UserStats, error) {
+func (u *UserUsecase) getUserStats(userID int, rank int) (dto.UserStats, error) {
 	totalSubmissions, err := u.submissionRepo.CountByUser(userID)
 	if err != nil {
-		return domain.UserStats{}, err
+		return dto.UserStats{}, err
 	}
 
 	acceptedSubmissions, err := u.submissionRepo.CountAcceptedByUser(userID)
 	if err != nil {
-		return domain.UserStats{}, err
+		return dto.UserStats{}, err
 	}
 
 	problemsSolved, err := u.submissionRepo.CountProblemsSolvedByUser(userID)
 	if err != nil {
-		return domain.UserStats{}, err
+		return dto.UserStats{}, err
 	}
 
 	streak, err := u.submissionRepo.GetCurrentStreak(userID)
@@ -175,7 +176,7 @@ func (u *UserUsecase) getUserStats(userID int, rank int) (domain.UserStats, erro
 		acceptanceRate = float64(acceptedSubmissions) / float64(totalSubmissions) * 100
 	}
 
-	return domain.UserStats{
+	return dto.UserStats{
 		TotalSubmissions:    int(totalSubmissions),
 		AcceptedSubmissions: int(acceptedSubmissions),
 		ProblemsSolved:      int(problemsSolved),

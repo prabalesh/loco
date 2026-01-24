@@ -101,22 +101,11 @@ func (s *Submission) Sanitize() {
 	}
 }
 
-type CreateSubmissionRequest struct {
-	ProblemID  int    `json:"problem_id" validate:"required"`
-	LanguageID int    `json:"language_id" validate:"required"`
-	Code       string `json:"code" validate:"required"`
-}
-
 type SubmissionStats struct {
 	TotalSubmissions int `json:"total_submissions"`
 	Accepted         int `json:"accepted"`
 	WrongAnswer      int `json:"wrong_answer"`
 	RuntimeError     int `json:"runtime_error"`
-}
-
-type DailySubmissionStat struct {
-	Date  string `json:"date"`
-	Count int    `json:"count"`
 }
 
 // RunCodeResult represents the result of running code without creating a submission
@@ -136,9 +125,4 @@ func (r *RunCodeResult) Sanitize() {
 			r.Results[i].ActualOutput = ""
 		}
 	}
-}
-
-type RunCodeRequest struct {
-	LanguageID int    `json:"language_id" validate:"required"`
-	Code       string `json:"code" validate:"required"`
 }

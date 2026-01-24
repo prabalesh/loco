@@ -12,6 +12,11 @@ type CreateSubmissionRequest struct {
 	Code       string `json:"code" validate:"required"`
 }
 
+type RunCodeRequest struct {
+	LanguageID int    `json:"language_id" validate:"required"`
+	Code       string `json:"code" validate:"required"`
+}
+
 type SubmissionResponse struct {
 	ID              int                     `json:"id"`
 	UserID          int                     `json:"user_id"`
@@ -29,11 +34,6 @@ type SubmissionResponse struct {
 	User            *UserResponse           `json:"user,omitempty"`
 	Problem         *ProblemResponse        `json:"problem,omitempty"`
 	Language        *LanguageResponse       `json:"language,omitempty"`
-}
-
-type UserResponse struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
 }
 
 type ProblemResponse struct {

@@ -200,7 +200,7 @@ func (r *problemRepository) GetBySlug(slug string) (*domain.Problem, error) {
 		Preload("Categories").
 		Preload("TestCases", "is_sample = ?", true).
 		Preload("Boilerplates", func(db *gorm.DB) *gorm.DB {
-			return db.Omit("test_harness_template", "created_at", "updated_at", "problem_id")
+			return db.Omit("test_harness_template", "created_at", "updated_at")
 		}).
 		Preload("Boilerplates.Language").
 		Where("slug = ? AND status = 'published'", slug).

@@ -8,6 +8,7 @@ import (
 
 	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/prabalesh/loco/backend/internal/domain/uerror"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"github.com/prabalesh/loco/backend/pkg/config"
@@ -40,7 +41,7 @@ func (h *TestCaseHandler) CreateTestCase(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Parse request
-	var req domain.CreateTestCaseRequest
+	var req dto.CreateTestCaseRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Warn("Invalid JSON in create test case request", zap.Error(err))
 		RespondError(w, http.StatusBadRequest, "invalid request body")
@@ -98,7 +99,7 @@ func (h *TestCaseHandler) UpdateTestCase(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Parse request
-	var req domain.UpdateTestCaseRequest
+	var req dto.UpdateTestCaseRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Warn("Invalid JSON in update test case request", zap.Error(err))
 		RespondError(w, http.StatusBadRequest, "invalid request body")
@@ -225,7 +226,7 @@ func (h *TestCaseHandler) ReorderTestCases(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Parse request
-	var req domain.ReorderTestCasesRequest
+	var req dto.ReorderTestCasesRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Warn("Invalid JSON in reorder test cases request", zap.Error(err))
 		RespondError(w, http.StatusBadRequest, "invalid request body")
@@ -275,7 +276,7 @@ func (h *TestCaseHandler) ListTestCases(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	req := &domain.ListTestCasesRequest{
+	req := &dto.ListTestCasesRequest{
 		ProblemID: problemID,
 		IsSample:  parseBoolQuery(r.URL.Query().Get("is_sample")),
 		Page:      getIntQuery(r, "page", 1),

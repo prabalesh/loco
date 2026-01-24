@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"go.uber.org/zap"
 )
 
@@ -28,7 +29,7 @@ func NewProblemLanguageUsecase(
 	}
 }
 
-func (u *ProblemLanguageUsecase) Create(problemID int, req *domain.CreateProblemLanguageRequest) (*domain.ProblemLanguage, error) {
+func (u *ProblemLanguageUsecase) Create(problemID int, req *dto.CreateProblemLanguageRequest) (*domain.ProblemLanguage, error) {
 	// Check if problem exists
 	_, err := u.problemRepo.GetByID(problemID)
 	if err != nil {
@@ -73,7 +74,7 @@ func (u *ProblemLanguageUsecase) GetByProblemAndLanguage(problemID int, language
 	return u.problemLanguageRepo.GetByProblemAndLanguage(problemID, languageID)
 }
 
-func (u *ProblemLanguageUsecase) Update(problemID int, languageID int, req *domain.UpdateProblemLanguageRequest) (*domain.ProblemLanguage, error) {
+func (u *ProblemLanguageUsecase) Update(problemID int, languageID int, req *dto.UpdateProblemLanguageRequest) (*domain.ProblemLanguage, error) {
 	pl, err := u.problemLanguageRepo.GetByProblemAndLanguage(problemID, languageID)
 	if err != nil {
 		return nil, errors.New("language configuration not found")

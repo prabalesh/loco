@@ -3,11 +3,11 @@ package validator
 import (
 	"fmt"
 
-	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 )
 
 // ValidateCreateTestCaseRequest validates create test case request
-func ValidateCreateTestCaseRequest(req *domain.CreateTestCaseRequest) map[string]string {
+func ValidateCreateTestCaseRequest(req *dto.CreateTestCaseRequest) map[string]string {
 	errors := make(map[string]string)
 
 	if req.ProblemID <= 0 {
@@ -33,7 +33,7 @@ func ValidateCreateTestCaseRequest(req *domain.CreateTestCaseRequest) map[string
 }
 
 // ValidateUpdateTestCaseRequest validates update test case request
-func ValidateUpdateTestCaseRequest(req *domain.UpdateTestCaseRequest) map[string]string {
+func ValidateUpdateTestCaseRequest(req *dto.UpdateTestCaseRequest) map[string]string {
 	errors := make(map[string]string)
 
 	if req.Input != "" && len(req.Input) > 10000 {
@@ -50,7 +50,7 @@ func ValidateUpdateTestCaseRequest(req *domain.UpdateTestCaseRequest) map[string
 }
 
 // ValidateReorderTestCasesRequest validates reorder request
-func ValidateReorderTestCasesRequest(req *domain.ReorderTestCasesRequest) map[string]string {
+func ValidateReorderTestCasesRequest(req *dto.ReorderTestCasesRequest) map[string]string {
 	errors := make(map[string]string)
 
 	if req.ProblemID <= 0 {

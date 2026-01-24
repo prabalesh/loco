@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/prabalesh/loco/backend/pkg/redis"
 	"go.uber.org/zap"
 )
@@ -103,7 +104,7 @@ func (u *AchievementUsecase) CheckAndUnlock(userID int, slug string) error {
 }
 
 // EvaluateSubmissionAchievements checks for achievements related to a submission
-func (u *AchievementUsecase) EvaluateSubmissionAchievements(submission *domain.Submission, stats *domain.UserStats) error {
+func (u *AchievementUsecase) EvaluateSubmissionAchievements(submission *domain.Submission, stats *dto.UserStats) error {
 	userID := submission.UserID
 
 	// 1. Hello World (First Submission)

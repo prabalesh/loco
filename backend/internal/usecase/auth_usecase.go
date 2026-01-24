@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/prabalesh/loco/backend/internal/domain/uerror"
 	"github.com/prabalesh/loco/backend/internal/domain/validator"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/auth"
@@ -34,7 +35,7 @@ func NewAuthUsecase(userRepo domain.UserRepository, jwtService *auth.JWTService,
 	}
 }
 
-func (u *AuthUsecase) Register(req *domain.RegisterRequest) (*domain.User, error) {
+func (u *AuthUsecase) Register(req *dto.RegisterRequest) (*domain.User, error) {
 	// validation
 	if validationErrors := validator.ValidateRegisterRequest(req); len(validationErrors) > 0 {
 		u.logger.Warn("Registration validation failed",
@@ -118,7 +119,7 @@ func (u *AuthUsecase) Register(req *domain.RegisterRequest) (*domain.User, error
 	return user, nil
 }
 
-func (u *AuthUsecase) VerifyEmail(ctx context.Context, req *domain.VerifyEmailRequest) error {
+func (u *AuthUsecase) VerifyEmail(ctx context.Context, req *dto.VerifyEmailRequest) error {
 	user, err := u.userRepo.GetByVerificationToken(req.Token)
 	if err != nil {
 		u.logger.Warn("User not found for token")
@@ -168,7 +169,7 @@ func (u *AuthUsecase) VerifyEmail(ctx context.Context, req *domain.VerifyEmailRe
 }
 
 // resends email verification link with cooldown
-func (u *AuthUsecase) ResendVerificationEmail(ctx context.Context, req *domain.ResendVerificationRequest) error {
+func (u *AuthUsecase) ResendVerificationEmail(ctx context.Context, req *dto.ResendVerificationRequest) error {
 	user, err := u.userRepo.GetByEmail(req.Email)
 	if err != nil {
 		return errors.New("user not found")
@@ -197,7 +198,7 @@ func (u *AuthUsecase) ResendVerificationEmail(ctx context.Context, req *domain.R
 	return u.sendVerificationEmail(ctx, user)
 }
 
-func (u *AuthUsecase) Login(req *domain.LoginRequest) (*domain.User, *domain.TokenPair, error) {
+func (u *AuthUsecase) Login(req *dto.LoginRequest) (*domain.User, *dto.TokenPair, error) {
 	// validation
 	if validationErrors := validator.ValidateLoginRequest(req); len(validationErrors) > 0 {
 		u.logger.Warn("Registration validation failed",
@@ -242,7 +243,7 @@ func (u *AuthUsecase) Login(req *domain.LoginRequest) (*domain.User, *domain.Tok
 		return nil, nil, errors.New("internal server error")
 	}
 
-	tokenPair := domain.TokenPair{
+	tokenPair := dto.TokenPair{
 		AccessToken:      accessToken,
 		RefreshToken:     refreshToken,
 		AccessExpiresAt:  accessTokenExpires,

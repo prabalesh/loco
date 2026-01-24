@@ -70,3 +70,12 @@ type ListProblemsRequest struct {
 	Tags       []string `json:"tags"`
 	Categories []string `json:"categories"`
 }
+
+type ProblemStats struct {
+Total     int `json:"total"`
+Published int `json:"published"`
+Draft     int `json:"draft"`
+Easy      int `json:"easy"`
+Medium    int `json:"medium"`
+Hard      int `json:"hard"`
+}

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/piston"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/queue"
 	"github.com/prabalesh/loco/backend/internal/services/execution"
@@ -56,7 +57,7 @@ func NewSubmissionUsecase(
 	}
 }
 
-func (u *SubmissionUsecase) Submit(userID int, problemID int, req *domain.CreateSubmissionRequest) (*domain.Submission, error) {
+func (u *SubmissionUsecase) Submit(userID int, problemID int, req *dto.CreateSubmissionRequest) (*domain.Submission, error) {
 	// 1. Validate Problem and Language
 	_, err := u.problemRepo.GetByID(problemID)
 	if err != nil {
@@ -315,7 +316,7 @@ func (u *SubmissionUsecase) GetAdminUserSubmissions(userID int, limit, offset in
 }
 
 // AdminSubmit handles admin test submissions with admin context
-func (u *SubmissionUsecase) AdminSubmit(adminID int, req *domain.CreateSubmissionRequest) (*domain.Submission, error) {
+func (u *SubmissionUsecase) AdminSubmit(adminID int, req *dto.CreateSubmissionRequest) (*domain.Submission, error) {
 	// 1. Validate Problem and Language
 	problem, err := u.problemRepo.GetByID(req.ProblemID)
 	if err != nil {
@@ -405,7 +406,7 @@ func (u *SubmissionUsecase) GetProblemSubmissions(problemID int, limit, offset i
 }
 
 // RunCode executes code against public test cases without creating a submission
-func (u *SubmissionUsecase) RunCode(problemID int, req *domain.RunCodeRequest) (*domain.RunCodeResult, error) {
+func (u *SubmissionUsecase) RunCode(problemID int, req *dto.RunCodeRequest) (*domain.RunCodeResult, error) {
 	// 1. Validate Problem and Language
 	_, err := u.problemRepo.GetByID(problemID)
 	if err != nil {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/prabalesh/loco/backend/internal/delivery/cookies"
 	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
-	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/prabalesh/loco/backend/internal/domain/uerror"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"github.com/prabalesh/loco/backend/pkg/config"
@@ -33,7 +33,7 @@ func NewAuthHandler(authUsecase *usecase.AuthUsecase, logger *zap.Logger, cfg *c
 // register handles user registration
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// Parse request body
-	var req domain.RegisterRequest
+	var req dto.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Warn("Invalid JSON in register request", zap.Error(err))
 		RespondError(w, http.StatusBadRequest, "invalid request body")
@@ -76,9 +76,9 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		zap.String("email", user.Email),
 	)
 
-	response := domain.RegisterResponse{
+	response := dto.RegisterResponse{
 		Message: "Registration successful. A verification email has been sent to your email address. Please check your inbox and verify your account.",
-		User:    user.ToResponse(),
+		User:    dto.ToUserResponse(user),
 	}
 
 	RespondJSON(w, http.StatusCreated, response)
@@ -86,7 +86,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// parse request
-	var req domain.LoginRequest
+	var req dto.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Warn("Invalid JSON in login request", zap.Error(err))
 		RespondError(w, http.StatusBadRequest, "invalid request body")
@@ -132,9 +132,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		zap.String("email", user.Email),
 	)
 
-	response := domain.LoginResponse{
+	response := dto.LoginResponse{
 		Message: "Login successful",
-		User:    user.ToResponse(),
+		User:    dto.ToUserResponse(user),
 	}
 
 	h.cookieManager.SetSecure(w, "accessToken", tokenPair.AccessToken, int(tokenPair.AccessExpiresAt.Seconds()))
@@ -216,11 +216,11 @@ func (h *AuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.logger.Info("User retrieved successfully", zap.Int("user_id", userID))
-	RespondJSON(w, http.StatusOK, user.ToResponse())
+	RespondJSON(w, http.StatusOK, dto.ToUserResponse(user))
 }
 
 func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
-	var req domain.VerifyEmailRequest
+	var req dto.VerifyEmailRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Warn("Invalid JSON in verify email request", zap.Error(err))
 		RespondError(w, http.StatusBadRequest, "invalid request body")
@@ -247,7 +247,7 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 // resend verification email
 func (h *AuthHandler) ResendVerificationEmail(w http.ResponseWriter, r *http.Request) {
-	var req domain.ResendVerificationRequest
+	var req dto.ResendVerificationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Warn("Invalid JSON in resend verification request", zap.Error(err))
 		RespondError(w, http.StatusBadRequest, "invalid request body")
@@ -277,7 +277,7 @@ func (h *AuthHandler) ResendVerificationEmail(w http.ResponseWriter, r *http.Req
 
 // for sending forgot password email
 func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
-	var req domain.ForgotPasswordRequest
+	var req dto.ForgotPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" {
 		RespondError(w, http.StatusBadRequest, "invalid request")
 		return
@@ -298,7 +298,7 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 
 // for reseting user password
 func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
-	var req domain.ResetPasswordRequest
+	var req dto.ResetPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Token == "" || req.NewPassword == "" {
 		RespondError(w, http.StatusBadRequest, "invalid request")
 		return

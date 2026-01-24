@@ -3,11 +3,11 @@ package validator
 import (
 	"strings"
 
-	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 )
 
 // ValidateCreateLanguageRequest validates language creation request
-func ValidateCreateLanguageRequest(req *domain.CreateLanguageRequest) map[string]string {
+func ValidateCreateLanguageRequest(req *dto.CreateLanguageRequest) map[string]string {
 	errors := make(map[string]string)
 
 	if req.LanguageID == "" {
@@ -40,7 +40,7 @@ func ValidateCreateLanguageRequest(req *domain.CreateLanguageRequest) map[string
 }
 
 // ValidateUpdateLanguageRequest validates language update request
-func ValidateUpdateLanguageRequest(req *domain.UpdateLanguageRequest) map[string]string {
+func ValidateUpdateLanguageRequest(req *dto.UpdateLanguageRequest) map[string]string {
 	errors := make(map[string]string)
 
 	// At least one field should be provided for update

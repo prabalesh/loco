@@ -1,8 +1,10 @@
 package validator
 
-import "github.com/prabalesh/loco/backend/internal/domain"
+import (
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
+)
 
-func ValidateCreateProblemRequest(req *domain.CreateProblemRequest) map[string]string {
+func ValidateCreateProblemRequest(req *dto.CreateProblemRequest) map[string]string {
 	errors := make(map[string]string)
 
 	if req.Title == "" {
@@ -28,7 +30,7 @@ func ValidateCreateProblemRequest(req *domain.CreateProblemRequest) map[string]s
 	return errors
 }
 
-func ValidateUpdateProblemRequest(req *domain.UpdateProblemRequest) map[string]string {
+func ValidateUpdateProblemRequest(req *dto.UpdateProblemRequest) map[string]string {
 	errors := make(map[string]string)
 
 	if req.Title != "" && len(req.Title) < 3 {

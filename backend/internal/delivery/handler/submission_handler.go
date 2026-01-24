@@ -6,8 +6,7 @@ import (
 	"strconv"
 
 	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
-	"github.com/prabalesh/loco/backend/internal/domain"
-	"github.com/prabalesh/loco/backend/internal/dto"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"go.uber.org/zap"
 )
@@ -38,7 +37,7 @@ func (h *SubmissionHandler) Submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req domain.CreateSubmissionRequest
+	var req dto.CreateSubmissionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -265,7 +264,7 @@ func (h *SubmissionHandler) AdminSubmit(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	submissionReq := &domain.CreateSubmissionRequest{
+	submissionReq := &dto.CreateSubmissionRequest{
 		ProblemID:  problemID,
 		LanguageID: req.LanguageID,
 		Code:       req.Code,
@@ -335,7 +334,7 @@ func (h *SubmissionHandler) RunCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req domain.RunCodeRequest
+	var req dto.RunCodeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid request body")
 		return

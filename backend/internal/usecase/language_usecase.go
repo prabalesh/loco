@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/prabalesh/loco/backend/internal/domain/uerror"
 	"github.com/prabalesh/loco/backend/internal/domain/validator"
 	"github.com/prabalesh/loco/backend/pkg/config"
@@ -28,7 +29,7 @@ func NewLanguageUsecase(languageRepo domain.LanguageRepository, cfg *config.Conf
 // ========== ADMIN OPERATIONS ==========
 
 // CreateLanguage creates a new programming language support
-func (u *LanguageUsecase) CreateLanguage(req *domain.CreateLanguageRequest, adminID int) (*domain.Language, error) {
+func (u *LanguageUsecase) CreateLanguage(req *dto.CreateLanguageRequest, adminID int) (*domain.Language, error) {
 	// Validation
 	if validationErrors := validator.ValidateCreateLanguageRequest(req); len(validationErrors) > 0 {
 		u.logger.Warn("Create language validation failed",
@@ -75,7 +76,7 @@ func (u *LanguageUsecase) CreateLanguage(req *domain.CreateLanguageRequest, admi
 }
 
 // UpdateLanguage updates an existing language
-func (u *LanguageUsecase) UpdateLanguage(languageID int, req *domain.UpdateLanguageRequest, adminID int) (*domain.Language, error) {
+func (u *LanguageUsecase) UpdateLanguage(languageID int, req *dto.UpdateLanguageRequest, adminID int) (*domain.Language, error) {
 	// Validation
 	if validationErrors := validator.ValidateUpdateLanguageRequest(req); len(validationErrors) > 0 {
 		u.logger.Warn("Update language validation failed",

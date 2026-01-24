@@ -216,7 +216,9 @@ export const ProblemDetailPage = () => {
     // Submissions History
     const { data: submissionsHistory } = useQuery({
         queryKey: ['user-submissions', problem?.id],
-        queryFn: () => submissionsApi.list(problem!.id, 1, 10).then(res => (res.data as any).data.data),
+        queryFn: () => submissionsApi.list(problem!.id, 1, 10).then(res => {
+            return res.data.data
+        }),
         enabled: !!problem?.id && activeTab === 'submissions'
     })
 

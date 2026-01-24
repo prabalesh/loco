@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
-	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/prabalesh/loco/backend/internal/domain/uerror"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"github.com/prabalesh/loco/backend/pkg/config"
@@ -83,7 +83,7 @@ func (h *LanguageHandler) CreateLanguage(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Parse request
-	var req domain.CreateLanguageRequest
+	var req dto.CreateLanguageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Warn("Invalid JSON in create language request", zap.Error(err))
 		RespondError(w, http.StatusBadRequest, "invalid request body")
@@ -143,7 +143,7 @@ func (h *LanguageHandler) UpdateLanguage(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Parse request
-	var req domain.UpdateLanguageRequest
+	var req dto.UpdateLanguageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Warn("Invalid JSON in update language request", zap.Error(err))
 		RespondError(w, http.StatusBadRequest, "invalid request body")

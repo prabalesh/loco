@@ -7,7 +7,7 @@ import (
 
 	"github.com/prabalesh/loco/backend/internal/delivery/cookies"
 	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
-	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/prabalesh/loco/backend/internal/domain/uerror"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"github.com/prabalesh/loco/backend/pkg/config"
@@ -32,7 +32,7 @@ func NewAdminAuthHandler(authUsecase *usecase.AuthUsecase, logger *zap.Logger, c
 
 // AdminLogin - Admin login endpoint with role verification
 func (h *AdminAuthHandler) AdminLogin(w http.ResponseWriter, r *http.Request) {
-	var req domain.LoginRequest
+	var req dto.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Warn("Invalid JSON in admin login request", zap.Error(err))
 		RespondError(w, http.StatusBadRequest, "invalid request body")
@@ -88,9 +88,9 @@ func (h *AdminAuthHandler) AdminLogin(w http.ResponseWriter, r *http.Request) {
 		zap.String("email", user.Email),
 	)
 
-	response := domain.LoginResponse{
+	response := dto.LoginResponse{
 		Message: "admin login successful",
-		User:    user.ToResponse(),
+		User:    dto.ToUserResponse(user),
 	}
 
 	RespondJSON(w, http.StatusOK, response)
@@ -164,5 +164,5 @@ func (h *AdminAuthHandler) GetAdminProfile(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	RespondJSON(w, http.StatusOK, user.ToResponse())
+	RespondJSON(w, http.StatusOK, dto.ToUserResponse(user))
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -151,7 +152,7 @@ func (u *AdminUsecase) UpdateUserStatus(adminID, userID int, isActive bool) erro
 }
 
 // GetAnalytics - Dashboard statistics
-func (u *AdminUsecase) GetAnalytics() (*domain.AdminAnalytics, error) {
+func (u *AdminUsecase) GetAnalytics() (*dto.AdminAnalytics, error) {
 	totalUsers, err := u.userRepo.CountUsers()
 	if err != nil {
 		return nil, errors.New("failed to get analytics")
@@ -228,7 +229,7 @@ func (u *AdminUsecase) GetAnalytics() (*domain.AdminAnalytics, error) {
 		languageStats = []domain.LanguageStat{}
 	}
 
-	analytics := &domain.AdminAnalytics{
+	analytics := &dto.AdminAnalytics{
 		TotalUsers:         totalUsers,
 		ActiveUsers:        activeUsers,
 		InactiveUsers:      totalUsers - activeUsers,

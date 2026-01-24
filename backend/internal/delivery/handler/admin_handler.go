@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
-	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"go.uber.org/zap"
 )
@@ -54,7 +54,7 @@ func (h *AdminHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RespondJSON(w, http.StatusOK, user.ToResponse())
+	RespondJSON(w, http.StatusOK, dto.ToUserResponse(user))
 }
 
 // DeleteUser - Delete user
@@ -97,7 +97,7 @@ func (h *AdminHandler) UpdateUserRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req domain.UpdateRoleRequest
+	var req dto.UpdateRoleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -127,7 +127,7 @@ func (h *AdminHandler) UpdateUserStatus(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var req domain.UpdateStatusRequest
+	var req dto.UpdateStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid request body")
 		return

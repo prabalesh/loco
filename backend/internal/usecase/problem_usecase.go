@@ -522,7 +522,7 @@ func (u *ProblemUsecase) ListAllProblems(req *dto.ListProblemsRequest, userID in
 }
 
 // GetProblemStats returns problem statistics
-func (u *ProblemUsecase) GetProblemStats() (*domain.ProblemStats, error) {
+func (u *ProblemUsecase) GetProblemStats() (*dto.ProblemStats, error) {
 	totalProblems, err := u.problemRepo.CountProblems()
 	if err != nil {
 		return nil, err
@@ -553,7 +553,7 @@ func (u *ProblemUsecase) GetProblemStats() (*domain.ProblemStats, error) {
 		return nil, err
 	}
 
-	return &domain.ProblemStats{
+	return &dto.ProblemStats{
 		Total:     totalProblems,
 		Published: publishedCount,
 		Draft:     draftCount,
@@ -575,7 +575,7 @@ func (u *ProblemUsecase) GetTag(id int) (*domain.Tag, error) {
 	return u.tagRepo.GetByID(id)
 }
 
-func (u *ProblemUsecase) CreateTag(req *domain.CreateTagRequest) (*domain.Tag, error) {
+func (u *ProblemUsecase) CreateTag(req *dto.CreateTagRequest) (*domain.Tag, error) {
 	tag := &domain.Tag{
 		Name: req.Name,
 		Slug: req.Slug,
@@ -587,7 +587,7 @@ func (u *ProblemUsecase) CreateTag(req *domain.CreateTagRequest) (*domain.Tag, e
 	return tag, nil
 }
 
-func (u *ProblemUsecase) UpdateTag(id int, req *domain.UpdateTagRequest) (*domain.Tag, error) {
+func (u *ProblemUsecase) UpdateTag(id int, req *dto.UpdateTagRequest) (*domain.Tag, error) {
 	tag, err := u.tagRepo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -615,7 +615,7 @@ func (u *ProblemUsecase) GetCategory(id int) (*domain.Category, error) {
 	return u.categoryRepo.GetByID(id)
 }
 
-func (u *ProblemUsecase) CreateCategory(req *domain.CreateCategoryRequest) (*domain.Category, error) {
+func (u *ProblemUsecase) CreateCategory(req *dto.CreateCategoryRequest) (*domain.Category, error) {
 	category := &domain.Category{
 		Name: req.Name,
 		Slug: req.Slug,
@@ -627,7 +627,7 @@ func (u *ProblemUsecase) CreateCategory(req *domain.CreateCategoryRequest) (*dom
 	return category, nil
 }
 
-func (u *ProblemUsecase) UpdateCategory(id int, req *domain.UpdateCategoryRequest) (*domain.Category, error) {
+func (u *ProblemUsecase) UpdateCategory(id int, req *dto.UpdateCategoryRequest) (*domain.Category, error) {
 	category, err := u.categoryRepo.GetByID(id)
 	if err != nil {
 		return nil, err

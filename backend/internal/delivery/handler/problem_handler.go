@@ -463,7 +463,7 @@ func (h *ProblemHandler) CreateProblemLanguage(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var req domain.CreateProblemLanguageRequest
+	var req dto.CreateProblemLanguageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -492,7 +492,7 @@ func (h *ProblemHandler) UpdateProblemLanguage(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var req domain.UpdateProblemLanguageRequest
+	var req dto.UpdateProblemLanguageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -626,7 +626,7 @@ func (h *ProblemHandler) ListCategories(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *ProblemHandler) CreateTag(w http.ResponseWriter, r *http.Request) {
-	var req domain.CreateTagRequest
+	var req dto.CreateTagRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -648,7 +648,7 @@ func (h *ProblemHandler) UpdateTag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req domain.UpdateTagRequest
+	var req dto.UpdateTagRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -679,7 +679,7 @@ func (h *ProblemHandler) DeleteTag(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProblemHandler) CreateCategory(w http.ResponseWriter, r *http.Request) {
-	var req domain.CreateCategoryRequest
+	var req dto.CreateCategoryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -701,7 +701,7 @@ func (h *ProblemHandler) UpdateCategory(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var req domain.UpdateCategoryRequest
+	var req dto.UpdateCategoryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		RespondError(w, http.StatusBadRequest, "invalid request body")
 		return

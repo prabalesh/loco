@@ -1,4 +1,4 @@
-package domain
+package dto
 
 type CreateTagRequest struct {
 	Name string `json:"name" validate:"required"`

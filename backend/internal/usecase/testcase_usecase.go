@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/prabalesh/loco/backend/internal/domain/uerror"
 	"github.com/prabalesh/loco/backend/internal/domain/validator"
 
@@ -35,7 +36,7 @@ func NewTestCaseUsecase(
 // ========== ADMIN OPERATIONS ==========
 
 // CreateTestCase creates a new test case for a problem
-func (u *TestCaseUsecase) CreateTestCase(req *domain.CreateTestCaseRequest, adminID int) (*domain.TestCase, error) {
+func (u *TestCaseUsecase) CreateTestCase(req *dto.CreateTestCaseRequest, adminID int) (*domain.TestCase, error) {
 	// Validate request (custom validation - no external package)
 	if validationErrors := validator.ValidateCreateTestCaseRequest(req); len(validationErrors) > 0 {
 		u.logger.Warn("Create test case validation failed", zap.Any("errors", validationErrors))
@@ -78,7 +79,7 @@ func (u *TestCaseUsecase) CreateTestCase(req *domain.CreateTestCaseRequest, admi
 }
 
 // UpdateTestCase updates an existing test case
-func (u *TestCaseUsecase) UpdateTestCase(testCaseID int, req *domain.UpdateTestCaseRequest, adminID int) (*domain.TestCase, error) {
+func (u *TestCaseUsecase) UpdateTestCase(testCaseID int, req *dto.UpdateTestCaseRequest, adminID int) (*domain.TestCase, error) {
 	// Validate request
 	if validationErrors := validator.ValidateUpdateTestCaseRequest(req); len(validationErrors) > 0 {
 		u.logger.Warn("Update test case validation failed", zap.Any("errors", validationErrors))
@@ -176,7 +177,7 @@ func (u *TestCaseUsecase) DeleteAllTestCases(problemID int, adminID int) error {
 }
 
 // ReorderTestCases reorders test cases for a problem
-func (u *TestCaseUsecase) ReorderTestCases(req *domain.ReorderTestCasesRequest, adminID int) error {
+func (u *TestCaseUsecase) ReorderTestCases(req *dto.ReorderTestCasesRequest, adminID int) error {
 	// Custom validation
 	if validationErrors := validator.ValidateReorderTestCasesRequest(req); len(validationErrors) > 0 {
 		u.logger.Warn("Reorder test cases validation failed", zap.Any("errors", validationErrors))
@@ -262,7 +263,7 @@ func (u *TestCaseUsecase) GetTestCasesByProblem(problemID int, includeSamplesOnl
 }
 
 // ListTestCases lists test cases with pagination
-func (u *TestCaseUsecase) ListTestCases(req *domain.ListTestCasesRequest) ([]*domain.TestCase, int, error) {
+func (u *TestCaseUsecase) ListTestCases(req *dto.ListTestCasesRequest) ([]*domain.TestCase, int, error) {
 	if req.ProblemID <= 0 {
 		return nil, 0, errors.New("problem_id is required")
 	}

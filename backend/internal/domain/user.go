@@ -28,34 +28,3 @@ type User struct {
 	// V2 addition
 	IsBot bool `json:"is_bot" gorm:"default:false"`
 }
-
-// ToUserResponse converts User entity to UserResponse DTO
-func (u *User) ToResponse() UserResponse {
-	return UserResponse{
-		ID:            u.ID,
-		Email:         u.Email,
-		Username:      u.Username,
-		Role:          u.Role,
-		EmailVerified: u.EmailVerified,
-		CreatedAt:     u.CreatedAt,
-		XP:            u.XP,
-		Level:         u.Level,
-	}
-}
-
-func (u *User) ToUserProfileResponse(stats UserStats, recentProblems []Problem, heatmap []HeatmapEntry, distribution []DifficultyStat, achievements []UserAchievement) UserProfileResponse {
-	return UserProfileResponse{
-		ID:                 u.ID,
-		Username:           u.Username,
-		Email:              u.Email,
-		IsVerified:         u.EmailVerified,
-		CreatedAt:          u.CreatedAt,
-		XP:                 u.XP,
-		Level:              u.Level,
-		Stats:              stats,
-		RecentProblems:     recentProblems,
-		SubmissionHeatmap:  heatmap,
-		SolvedDistribution: distribution,
-		Achievements:       achievements,
-	}
-}

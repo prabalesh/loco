@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/prabalesh/loco/backend/internal/domain"
+	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/queue"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"go.uber.org/zap"
@@ -108,7 +109,7 @@ func (w *AchievementWorker) processAchievementJob(ctx context.Context, submissio
 		w.logger.Error("Failed to get solved distribution", zap.Error(err))
 	}
 
-	stats := &domain.UserStats{
+	stats := &dto.UserStats{
 		AcceptedSubmissions: int(totalAccepted),
 		ProblemsSolved:      int(totalSolved),
 		Streak:              streak,
