@@ -16,6 +16,7 @@ import {
     Add as PlusIcon,
     Delete as DeleteIcon
 } from '@mui/icons-material';
+import BulkTestCaseDialog from '../BulkTestCaseDialog';
 
 interface TestCasesStepProps {
     data: any;
@@ -42,6 +43,8 @@ const getDefaultValueForType = (type: string) => {
 };
 
 export const TestCasesStep: React.FC<TestCasesStepProps> = ({ data, onChange, onSave, saving }) => {
+    const [isBulkModalOpen, setIsBulkModalOpen] = React.useState(false);
+
     const handleAddTestCase = () => {
         const defaultInputs = data.parameters.map((p: any) => getDefaultValueForType(p.type));
         const defaultOutput = getDefaultValueForType(data.return_type);
@@ -66,6 +69,12 @@ export const TestCasesStep: React.FC<TestCasesStepProps> = ({ data, onChange, on
     const handleTestCaseChange = (index: number, field: string, value: any) => {
         const newCases = [...data.test_cases];
         newCases[index] = { ...newCases[index], [field]: value };
+        onChange({ test_cases: newCases });
+    };
+
+    const handleBulkImport = async (importedCases: any[]) => {
+        // importedCases are already formatted and stringified by the dialog
+        const newCases = [...data.test_cases, ...importedCases];
         onChange({ test_cases: newCases });
     };
 
@@ -94,6 +103,9 @@ export const TestCasesStep: React.FC<TestCasesStepProps> = ({ data, onChange, on
                     )}
                     <Button startIcon={<PlusIcon />} variant="outlined" onClick={handleAddTestCase}>
                         Add Test Case
+                    </Button>
+                    <Button variant="outlined" color="secondary" onClick={() => setIsBulkModalOpen(true)}>
+                        Bulk Add
                     </Button>
                 </Stack>
             </Box>
@@ -175,6 +187,15 @@ export const TestCasesStep: React.FC<TestCasesStepProps> = ({ data, onChange, on
                     </Paper>
                 ))}
             </Stack>
+
+            <BulkTestCaseDialog
+                open={isBulkModalOpen}
+                onClose={() => setIsBulkModalOpen(false)}
+                onImport={handleBulkImport}
+                parameters={data.parameters}
+                returnType={data.return_type}
+                isImporting={false} // State is managed locally in wizard
+            />
         </Stack>
     );
 };
