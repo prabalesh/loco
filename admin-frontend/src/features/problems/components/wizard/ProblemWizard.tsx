@@ -57,7 +57,9 @@ export const ProblemWizard: React.FC = () => {
         parameters: [{ name: 'nums', type: 'integer_array', is_custom: false }],
         test_cases: [{ input: '[]', expected_output: 'null', is_sample: true }],
         validation_type: 'EXACT',
-        selected_languages: []
+        selected_languages: [],
+        tag_ids: [],
+        category_ids: []
     });
 
     useEffect(() => {
@@ -94,7 +96,9 @@ export const ProblemWizard: React.FC = () => {
                 })) || [{ input: '[]', expected_output: 'null', is_sample: true }],
                 validation_type: p.validation_type || 'EXACT',
                 selected_languages: p.boilerplates?.map((b: any) => b.language?.language_id || b.language_id) || [],
-                boilerplates: p.boilerplates || []
+                boilerplates: p.boilerplates || [],
+                tag_ids: p.tags?.map((t: any) => t.id) || [],
+                category_ids: p.categories?.map((c: any) => c.id) || []
             });
         } catch (err) {
             console.error('Failed to fetch problem data', err);

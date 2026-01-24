@@ -5,9 +5,15 @@ import {
     Stack,
     Typography,
     Box,
-    Divider
+    Divider,
+    FormControlLabel,
+    Checkbox,
+    Chip
 } from '@mui/material';
 import TiptapEditor from '../../../../components/editor/TiptapEditor';
+import { useQuery } from '@tanstack/react-query';
+import { adminProblemApi } from '../../../../lib/api/admin';
+import type { Tag, Category } from '../../../../types';
 
 interface GeneralInfoStepProps {
     data: any;
@@ -22,6 +28,18 @@ const DIFFICULTIES = [
 ];
 
 export const GeneralInfoStep: React.FC<GeneralInfoStepProps> = ({ data, onChange }) => {
+    const { data: tagsResponse } = useQuery({
+        queryKey: ['tags'],
+        queryFn: () => adminProblemApi.getTags(),
+    });
+
+    const { data: categoriesResponse } = useQuery({
+        queryKey: ['categories'],
+        queryFn: () => adminProblemApi.getCategories(),
+    });
+
+    const tags = tagsResponse?.data?.data || [];
+    const categories = categoriesResponse?.data?.data || [];
     return (
         <Stack spacing={4}>
             <Box>
@@ -114,6 +132,69 @@ export const GeneralInfoStep: React.FC<GeneralInfoStepProps> = ({ data, onChange
                         />
                     </div>
                 </Stack>
+            </Box>
+
+            <Divider />
+
+            <Box>
+                <Typography variant="h6" gutterBottom color="primary" fontWeight="bold">Classification</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    Assign appropriate tags and categories to help users find this problem.
+                </Typography>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Tags</Typography>
+                        <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1, minHeight: 120, maxHeight: 250, overflowY: 'auto', bgcolor: '#fafafa' }}>
+                            <div className="flex flex-wrap gap-2">
+                                {tags.map((tag: Tag) => (
+                                    <Chip
+                                        key={tag.id}
+                                        label={tag.name}
+                                        onClick={() => {
+                                            const currentIds = data.tag_ids || [];
+                                            const nextIds = currentIds.includes(tag.id)
+                                                ? currentIds.filter((id: number) => id !== tag.id)
+                                                : [...currentIds, tag.id];
+                                            onChange({ tag_ids: nextIds });
+                                        }}
+                                        color={(data.tag_ids || []).includes(tag.id) ? "primary" : "default"}
+                                        variant={(data.tag_ids || []).includes(tag.id) ? "filled" : "outlined"}
+                                        size="small"
+                                        sx={{ cursor: 'pointer' }}
+                                    />
+                                ))}
+                            </div>
+                        </Box>
+                    </div>
+
+                    <div>
+                        <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Categories</Typography>
+                        <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1, minHeight: 120, maxHeight: 250, overflowY: 'auto', bgcolor: '#fafafa' }}>
+                            <Stack spacing={0.5}>
+                                {categories.map((cat: Category) => (
+                                    <FormControlLabel
+                                        key={cat.id}
+                                        control={
+                                            <Checkbox
+                                                size="small"
+                                                checked={(data.category_ids || []).includes(cat.id)}
+                                                onChange={(e) => {
+                                                    const currentIds = data.category_ids || [];
+                                                    const nextIds = e.target.checked
+                                                        ? [...currentIds, cat.id]
+                                                        : currentIds.filter((id: number) => id !== cat.id);
+                                                    onChange({ category_ids: nextIds });
+                                                }}
+                                            />
+                                        }
+                                        label={<Typography variant="body2">{cat.name}</Typography>}
+                                    />
+                                ))}
+                            </Stack>
+                        </Box>
+                    </div>
+                </div>
             </Box>
         </Stack>
     );

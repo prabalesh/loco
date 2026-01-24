@@ -12,7 +12,6 @@ import {
   Globe,
   Tag,
   Grid,
-  Sparkles,
   Upload,
 } from 'lucide-react'
 import { useAuthStore } from '../../features/auth/store/authStore'
@@ -54,12 +53,6 @@ export const AdminLayout = () => {
       icon: <Code2 className="w-5 h-5" />,
       label: 'Problems',
       onClick: () => navigate('/problems'),
-    },
-    {
-      key: '/problems/create',
-      icon: <Sparkles className="w-5 h-5 text-purple-500" />,
-      label: 'Create Problem',
-      onClick: () => navigate('/problems/create'),
     },
     {
       key: '/languages',
