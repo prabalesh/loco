@@ -10,7 +10,6 @@ import (
 	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/prabalesh/loco/backend/internal/domain/uerror" // This import is kept because it's used later in the file.
-	"github.com/prabalesh/loco/backend/internal/services/codegen"
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/prabalesh/loco/backend/pkg/utils"
 	"go.uber.org/zap"
@@ -23,7 +22,7 @@ type ProblemUsecase struct {
 	tagRepo            domain.TagRepository
 	categoryRepo       domain.CategoryRepository
 	customTypeRepo     domain.CustomTypeRepository
-	boilerplateService *codegen.BoilerplateService
+	boilerplateService domain.BoilerplateService
 	cfg                *config.Config
 	logger             *zap.Logger
 }
@@ -35,7 +34,7 @@ func NewProblemUsecase(
 	tagRepo domain.TagRepository,
 	categoryRepo domain.CategoryRepository,
 	customTypeRepo domain.CustomTypeRepository,
-	boilerplateService *codegen.BoilerplateService,
+	boilerplateService domain.BoilerplateService,
 	cfg *config.Config,
 	logger *zap.Logger,
 ) *ProblemUsecase {
