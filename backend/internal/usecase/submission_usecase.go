@@ -190,6 +190,8 @@ func (u *SubmissionUsecase) evaluateSubmission(submission *domain.Submission, pr
 			Input:          tc.Input,
 			ExpectedOutput: tc.ExpectedOutput,
 			IsSample:       tc.IsSample,
+			TimeMS:         result.Runtime,
+			MemoryKB:       result.Memory,
 		}
 
 		if err != nil {
