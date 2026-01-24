@@ -1,5 +1,6 @@
 import { apiClient } from '@/shared/lib/axios'
 import type { Submission, TestCaseResult } from '../types'
+import type { ApiResponse } from '@/shared/types/common.types'
 
 export interface RunCodeResult {
     status: string
@@ -11,19 +12,19 @@ export interface RunCodeResult {
 
 export const submissionsApi = {
     runCode: (problemId: number, languageId: number, code: string) =>
-        apiClient.post<RunCodeResult>(`/problems/${problemId}/run`, {
+        apiClient.post<ApiResponse<RunCodeResult>>(`/problems/${problemId}/run`, {
             language_id: languageId,
             code,
         }),
 
     submit: (problemId: number, languageId: number, code: string) =>
-        apiClient.post<Submission>(`/problems/${problemId}/submissions`, {
+        apiClient.post<ApiResponse<Submission>>(`/problems/${problemId}/submissions`, {
             language_id: languageId,
             code,
         }),
 
-    get: (id: number) =>
-        apiClient.get<Submission>(`/problems/${id}/submissions/${id}`),
+    get: (problemId: number, id: number) =>
+        apiClient.get<ApiResponse<Submission>>(`/problems/${problemId}/submissions/${id}`),
 
     list: (problemId: number, page = 1, limit = 10) =>
         apiClient.get<{ data: Submission[]; total: number }>(`/problems/${problemId}/submissions`, {
@@ -31,7 +32,7 @@ export const submissionsApi = {
         }),
 
     listUserSubmissions: (page = 1, limit = 10) =>
-        apiClient.get<{ data: { data: Submission[]; }, total: number, limit: number, page: number }>(`/submissions`, {
+        apiClient.get<{ data: Submission[]; total: number }>(`/submissions`, {
             params: { page, limit },
         }),
 }

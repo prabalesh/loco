@@ -182,6 +182,47 @@ func (r *problemRepository) GetBySlug(slug string) (*domain.Problem, error) {
 
 	problem := &domain.Problem{}
 	err := r.db.DB.WithContext(ctx).
+		Omit(
+			"function_name",
+			"return_type",
+			"parameters",
+			"validation_type",
+			"validation_status",
+			"expected_time_complexity",
+			"expected_space_complexity",
+			"has_reference_solution",
+			"status",
+		).
+		Preload("Creator", func(db *gorm.DB) *gorm.DB {
+			return db.Omit("created_at", "updated_at", "is_bot", "is_active", "email")
+		}).
+		Preload("Tags").
+		Preload("Categories").
+		Preload("TestCases", "is_sample = ?", true).
+		Preload("Boilerplates", func(db *gorm.DB) *gorm.DB {
+			return db.Omit("test_harness_template", "created_at", "updated_at", "problem_id")
+		}).
+		Preload("Boilerplates.Language").
+		Where("slug = ? AND status = 'published'", slug).
+		First(problem).Error
+
+	if err == gorm.ErrRecordNotFound {
+		return nil, fmt.Errorf("problem not found")
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get problem: %w", err)
+	}
+
+	return problem, nil
+}
+
+func (r *problemRepository) AdminGetBySlug(slug string) (*domain.Problem, error) {
+	ctx, cancel := database.WithShortTimeout()
+	defer cancel()
+
+	problem := &domain.Problem{}
+	err := r.db.DB.WithContext(ctx).
 		Preload("Creator").
 		Preload("Tags").
 		Preload("Categories").

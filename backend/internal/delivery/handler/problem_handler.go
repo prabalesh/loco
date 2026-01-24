@@ -65,6 +65,25 @@ func (h *ProblemHandler) GetProblem(w http.ResponseWriter, r *http.Request) {
 	RespondJSON(w, http.StatusOK, problem)
 }
 
+func (h *ProblemHandler) AdminGetProblem(w http.ResponseWriter, r *http.Request) {
+	identifier := r.PathValue("id") // Can be ID or slug
+	userID, _ := middleware.GetUserID(r.Context())
+	problem, err := h.problemUsecase.AdminGetProblem(identifier, userID)
+	if err != nil {
+		h.logger.Warn("Problem not found",
+			zap.String("identifier", identifier),
+		)
+		RespondError(w, http.StatusNotFound, "problem not found")
+		return
+	}
+
+	h.logger.Info("Problem retrieved successfully",
+		zap.Int("problem_id", problem.ID),
+	)
+
+	RespondJSON(w, http.StatusOK, problem)
+}
+
 // ListProblems retrieves problems with filters (public endpoint)
 func (h *ProblemHandler) ListProblems(w http.ResponseWriter, r *http.Request) {
 	req := &dto.ListProblemsRequest{
@@ -401,18 +420,29 @@ func (h *ProblemHandler) GetProblemStats(w http.ResponseWriter, r *http.Request)
 
 // ListProblemLanguages lists all languages supported by a problem
 func (h *ProblemHandler) ListProblemLanguages(w http.ResponseWriter, r *http.Request) {
-	problemID, err := strconv.Atoi(r.PathValue("id"))
+	identifier := r.PathValue("id")
+	userID, _ := middleware.GetUserID(r.Context())
+
+	// Use GetProblem logic to resolve ID from slug if necessary
+	problem, err := h.problemUsecase.GetProblem(identifier, userID)
 	if err != nil {
-		RespondError(w, http.StatusBadRequest, "invalid problem ID")
+		h.logger.Warn("Problem not found for languages", zap.String("identifier", identifier))
+		RespondError(w, http.StatusNotFound, "problem not found")
 		return
 	}
 
-	languages, err := h.problemLanguageUsecase.ListByProblem(problemID)
+	languages, err := h.problemLanguageUsecase.ListByProblem(problem.ID)
 	if err != nil {
-		h.logger.Error("Failed to list problem languages", zap.Error(err), zap.Int("problem_id", problemID))
+		h.logger.Error("Failed to list problem languages", zap.Error(err), zap.Int("problem_id", problem.ID))
 		RespondError(w, http.StatusInternalServerError, "failed to retrieve languages")
 		return
 	}
+
+	h.logger.Info("Problem languages retrieved",
+		zap.String("identifier", identifier),
+		zap.Int("problem_id", problem.ID),
+		zap.Int("count", len(languages)),
+	)
 
 	// Hide solution code for non-admins
 	role, _ := r.Context().Value(middleware.UserRoleKey).(string)

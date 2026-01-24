@@ -3,13 +3,13 @@ import Editor, { loader } from '@monaco-editor/react'
 import { RotateCcw, Maximize2, Minimize2 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/Button'
 import { LanguageDropdown } from './LanguageDropdown'
-import type { ProblemLanguage } from '../types'
+import type { Boilerplate } from '../types'
 import { filterEditorLanguage } from '../../../lib/utils'
 
 interface CodeEditorProps {
-    languages: ProblemLanguage[]
+    boilerplates: Boilerplate[]
     selectedLang: number | null
-    currentLang?: ProblemLanguage
+    currentLang?: Boilerplate
     code: string
     onLanguageChange: (langId: number) => void
     onCodeChange: (code: string) => void
@@ -17,7 +17,7 @@ interface CodeEditorProps {
 }
 
 export const CodeEditor = ({
-    languages,
+    boilerplates,
     selectedLang,
     currentLang,
     code,
@@ -64,7 +64,7 @@ export const CodeEditor = ({
             <div className="bg-gray-900/95 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between z-[60] shadow-2xl relative">
                 <div className="flex items-center gap-3">
                     <LanguageDropdown
-                        languages={languages}
+                        boilerplates={boilerplates}
                         selectedLang={selectedLang}
                         onLanguageChange={onLanguageChange}
                     />

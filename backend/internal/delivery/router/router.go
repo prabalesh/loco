@@ -67,7 +67,7 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	mux.HandleFunc("GET /tags", deps.ProblemHandler.ListTags)
 	mux.HandleFunc("GET /categories", deps.ProblemHandler.ListCategories)
 	mux.HandleFunc("GET /problems/{id}", deps.ProblemHandler.GetProblem)
-	mux.HandleFunc("GET /problems/{id}/languages", deps.ProblemHandler.ListProblemLanguages)
+	mux.HandleFunc("GET /problems/{id}/boilerplates", deps.ProblemHandler.ListProblemLanguages)
 
 	// ========== TEST CASE ROUTES (PUBLIC) ==========
 	// Public route for getting sample test cases
@@ -117,7 +117,7 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	// ========== ADMIN PROBLEM ROUTES ==========
 	mux.Handle("GET /admin/problems", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.ListAllProblems)))
 	mux.Handle("POST /admin/problems", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.CreateProblem)))
-	mux.Handle("GET /admin/problems/{id}", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.GetProblem)))
+	mux.Handle("GET /admin/problems/{id}", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.AdminGetProblem)))
 	mux.Handle("PUT /admin/problems/{id}", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.UpdateProblem)))
 	mux.Handle("DELETE /admin/problems/{id}", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.DeleteProblem)))
 	mux.Handle("POST /admin/problems/{id}/publish", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.PublishProblem)))
@@ -168,7 +168,7 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	// ========== CODEGEN ROUTES ==========
 	mux.Handle("POST /codegen/stub", adminAuthMiddleware(http.HandlerFunc(deps.CodeGenHandler.GenerateStub)))
 	mux.Handle("GET /problems/{problem_id}/stub", http.HandlerFunc(deps.CodeGenHandler.GetProblemStub))
-	mux.Handle("GET /problems/{problem_id}/boilerplates", adminAuthMiddleware(http.HandlerFunc(deps.CodeGenHandler.GetProblemBoilerplates)))
+	// mux.Handle("GET /problems/{problem_id}/boilerplates", adminAuthMiddleware(http.HandlerFunc(deps.CodeGenHandler.GetProblemBoilerplates)))
 
 	// ========== VALIDATION ROUTES ==========
 	mux.Handle("POST /admin/problems/{id}/validate", adminAuthMiddleware(http.HandlerFunc(deps.ValidationHandler.ValidateReferenceSolution)))

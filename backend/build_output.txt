@@ -1,6 +1,0 @@
-github.com/prabalesh/loco/backend/internal/services/bulk
-# github.com/prabalesh/loco/backend/internal/services/bulk
-internal/services/bulk/bulk_import_service.go:251:85: not enough arguments in call to s.validationService.SaveReferenceSolution
-	have (validation.ValidateRequest, int)
-	want (validation.ValidateRequest, int, int)
-internal/services/bulk/bulk_import_service.go:256:22: validationResult.IsValid undefined (type *domain.Submission has no field or method IsValid)

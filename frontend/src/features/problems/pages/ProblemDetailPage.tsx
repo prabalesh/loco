@@ -7,7 +7,7 @@ import { useAuth } from '@/shared/hooks/useAuth'
 import { problemsApi } from '../api/problems'
 import { submissionsApi, type RunCodeResult } from '../api/submissions'
 import { Button } from '@/shared/components/ui/Button'
-import type { Problem, ProblemLanguage, Submission } from '../types'
+import type { Boilerplate, ProblemLanguage, ProblemResponse, Submission } from '../types'
 import { ProblemHeader } from '../components/ProblemHeader'
 import { ProblemTabs } from '../components/ProblemTabs'
 import { DescriptionTab } from '../components/DescriptionTab'
@@ -83,38 +83,31 @@ export const ProblemDetailPage = () => {
     // Fetch Problem
     const { data: problem, isLoading: isProblemLoading } = useQuery({
         queryKey: ['problem', slug],
-        queryFn: () => problemsApi.get(slug!).then(res => (res.data as any).data),
+        queryFn: () => problemsApi.get(slug!).then(res => res.data.data),
         enabled: !!slug
-    })
-
-    // Fetch Languages
-    const { data: languages } = useQuery({
-        queryKey: ['problem-languages', problem?.id],
-        queryFn: () => problemsApi.getLanguages(problem!.id).then(res => (res.data as any).data),
-        enabled: !!problem?.id
     })
 
     // Fetch Sample Test Cases
     const { data: sampleTestCases } = useQuery({
         queryKey: ['sample-test-cases', problem?.id],
-        queryFn: () => problemsApi.getSampleTestCases(problem!.id).then(res => (res.data as any).data),
+        queryFn: () => problemsApi.getSampleTestCases(problem!.id).then(res => res.data.data),
         enabled: !!problem?.id
     })
 
     // Set default language and code (from localStorage or first available)
     useEffect(() => {
-        if (languages && languages.length > 0) {
+        if (problem?.boilerplates && problem.boilerplates.length > 0) {
             if (!selectedLang) {
-                const firstLang = languages[0]
+                const firstLang = problem.boilerplates[0]
                 const storageKey = user?.id
                     ? `loco-code-${user.id}-${problem?.id}-${firstLang.language_id}`
                     : `loco-code-guest-${problem?.id}-${firstLang.language_id}`
                 const savedCode = localStorage.getItem(storageKey)
                 setSelectedLang(firstLang.language_id)
-                setCode(savedCode || firstLang.function_code || '')
+                setCode(savedCode || firstLang.stub_code || '')
             }
         }
-    }, [languages, selectedLang, problem?.id, user?.id])
+    }, [problem?.boilerplates, selectedLang, problem?.id, user?.id])
 
     // Save code to localStorage
     useEffect(() => {
@@ -158,12 +151,12 @@ export const ProblemDetailPage = () => {
         }
     }, [isResizing])
 
-    const currentLang = languages?.find((l: ProblemLanguage) => l.language_id === selectedLang)
+    const currentLang = problem?.boilerplates?.find((l: Boilerplate) => l.language_id === selectedLang)
 
     // Run Code Mutation (doesn't create submission)
     const runCodeMutation = useMutation({
         mutationFn: ({ pId, lId, code }: { pId: number, lId: number, code: string }) =>
-            submissionsApi.runCode(pId, lId, code).then(res => (res.data as any).data),
+            submissionsApi.runCode(pId, lId, code).then(res => res.data.data!),
         onSuccess: (data: RunCodeResult) => {
             setRunResult(data)
             setActiveTab('testcase')
@@ -183,7 +176,7 @@ export const ProblemDetailPage = () => {
     // Submission Mutation
     const submitMutation = useMutation({
         mutationFn: ({ pId, lId, code }: { pId: number, lId: number, code: string }) =>
-            submissionsApi.submit(pId, lId, code).then(res => (res.data as any).data),
+            submissionsApi.submit(pId, lId, code).then(res => res.data.data!),
         onSuccess: (data: Submission) => {
             setPollingId(data.id)
             setRunResult(null) // Clear run result when submitting
@@ -198,8 +191,8 @@ export const ProblemDetailPage = () => {
     // Polling for submission status
     const { data: submissionResult } = useQuery({
         queryKey: ['submission', pollingId],
-        queryFn: () => submissionsApi.get(pollingId!).then(res => (res.data as any).data),
-        enabled: !!pollingId,
+        queryFn: () => submissionsApi.get(problem!.id, pollingId!).then(res => res.data.data),
+        enabled: !!pollingId && !!problem?.id,
         refetchInterval: (query) => {
             const status = query.state.data?.status
             if (status && status !== 'Pending') {
@@ -228,15 +221,15 @@ export const ProblemDetailPage = () => {
     })
 
     const handleLanguageChange = (langId: number) => {
-        const lang = languages?.find((l: ProblemLanguage) => l.language_id === langId)
+        const lang = problem?.boilerplates?.find((b: Boilerplate) => b.language_id === langId)
         if (lang) {
             setSelectedLang(langId)
             const storageKey = user?.id
                 ? `loco-code-${user.id}-${problem?.id}-${langId}`
                 : `loco-code-guest-${problem?.id}-${langId}`
             const savedCode = localStorage.getItem(storageKey)
-            setCode(savedCode || lang.function_code || '')
-            toast.success(`Switched to ${lang.language_name}`, { duration: 2000 })
+            setCode(savedCode || lang.stub_code || '')
+            toast.success(`Switched to ${lang.language.name}`, { duration: 2000 })
         }
     }
 
@@ -244,16 +237,16 @@ export const ProblemDetailPage = () => {
         if (!problem || !selectedLang) return
         setIsRunning(true)
         setRunResult(null)
-        runCodeMutation.mutate({ pId: (problem as Problem).id, lId: selectedLang, code })
+        runCodeMutation.mutate({ pId: (problem as ProblemResponse).id, lId: selectedLang, code })
     }
 
     const handleSubmit = () => {
         if (!problem || !selectedLang) return
-        submitMutation.mutate({ pId: (problem as Problem).id, lId: selectedLang, code })
+        submitMutation.mutate({ pId: (problem as ProblemResponse).id, lId: selectedLang, code })
     }
 
     const handleResetCode = () => {
-        setCode(currentLang?.function_code || '')
+        setCode(currentLang?.stub_code || '')
         toast.success('Code reset to default', { duration: 2000 })
     }
 
@@ -339,7 +332,7 @@ export const ProblemDetailPage = () => {
                 {/* Right Section: Code Editor */}
                 <div className="flex-1 flex flex-col min-w-0 z-10 relative">
                     <CodeEditor
-                        languages={languages}
+                        boilerplates={problem.boilerplates || []}
                         selectedLang={selectedLang}
                         currentLang={currentLang}
                         code={code}

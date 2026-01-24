@@ -54,6 +54,7 @@ type ProblemRepository interface {
 	Create(problem *Problem) error
 	GetByID(id int) (*Problem, error)
 	GetBySlug(slug string) (*Problem, error)
+	AdminGetBySlug(slug string) (*Problem, error)
 	GetAll(limit, offset int, search string) ([]Problem, int64, error)
 	List(filters ProblemFilters) ([]*Problem, int, error)
 	Update(problem *Problem) error

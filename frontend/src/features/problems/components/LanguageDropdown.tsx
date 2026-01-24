@@ -1,19 +1,21 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, Check } from 'lucide-react'
-import type { ProblemLanguage } from '../types'
+import type { Boilerplate } from '../types'
 
 interface LanguageDropdownProps {
-    languages: ProblemLanguage[]
+    boilerplates: Boilerplate[]
     selectedLang: number | null
     onLanguageChange: (langId: number) => void
 }
 
-export const LanguageDropdown = ({ languages, selectedLang, onLanguageChange }: LanguageDropdownProps) => {
+export const LanguageDropdown = ({ boilerplates, selectedLang, onLanguageChange }: LanguageDropdownProps) => {
     const [isOpen, setIsOpen] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
 
-    const currentLang = languages?.find((l: ProblemLanguage) => l.language_id === selectedLang)
+    const currentLang = boilerplates?.find((b: Boilerplate) => b.language_id === selectedLang)
+
+    console.log(currentLang)
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -32,7 +34,7 @@ export const LanguageDropdown = ({ languages, selectedLang, onLanguageChange }: 
         setIsOpen(false)
     }
 
-    if (!languages || languages.length === 0) {
+    if (!boilerplates || boilerplates.length === 0) {
         return (
             <div className="bg-gray-800/80 rounded-xl px-4 py-2.5 border border-white/5">
                 <span className="text-xs text-gray-500 font-bold uppercase tracking-widest italic">
@@ -52,7 +54,7 @@ export const LanguageDropdown = ({ languages, selectedLang, onLanguageChange }: 
             >
                 <div className="flex-1 text-left">
                     <div className="text-white text-sm font-bold">
-                        {currentLang?.language_name || 'Select Language'}
+                        {currentLang?.language.name || 'Select Language'}
                     </div>
                 </div>
                 <motion.div
@@ -73,26 +75,26 @@ export const LanguageDropdown = ({ languages, selectedLang, onLanguageChange }: 
                         className="absolute top-full mt-2 left-0 right-0 bg-gray-800 rounded-xl border border-white/10 shadow-2xl overflow-hidden z-50"
                     >
                         <div className="max-h-[300px] overflow-y-auto custom-scrollbar-dark">
-                            {languages.map((lang: ProblemLanguage, index: number) => (
+                            {boilerplates.map((boilerplate: Boilerplate, index: number) => (
                                 <motion.button
-                                    key={lang.language_id}
+                                    key={boilerplate.language_id}
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: index * 0.03 }}
-                                    onClick={() => handleSelect(lang.language_id)}
-                                    className={`w-full px-4 py-3 flex items-center justify-between hover:bg-gray-700/50 transition-all duration-150 ${selectedLang === lang.language_id ? 'bg-blue-600/20' : ''
+                                    onClick={() => handleSelect(boilerplate.language_id)}
+                                    className={`w-full px-4 py-3 flex items-center justify-between hover:bg-gray-700/50 transition-all duration-150 ${selectedLang === boilerplate.language_id ? 'bg-blue-600/20' : ''
                                         }`}
                                 >
                                     <div className="text-left flex-1">
-                                        <div className={`text-sm font-bold ${selectedLang === lang.language_id ? 'text-blue-400' : 'text-white'
+                                        <div className={`text-sm font-bold ${selectedLang === boilerplate.language_id ? 'text-blue-400' : 'text-white'
                                             }`}>
-                                            {lang.language_name}
+                                            {boilerplate.language.name}
                                         </div>
                                         <div className="text-gray-500 text-[10px] font-medium uppercase tracking-wider mt-0.5">
-                                            {lang.language_version}
+                                            {boilerplate.language.version}
                                         </div>
                                     </div>
-                                    {selectedLang === lang.language_id && (
+                                    {selectedLang === boilerplate.language_id && (
                                         <motion.div
                                             initial={{ scale: 0 }}
                                             animate={{ scale: 1 }}

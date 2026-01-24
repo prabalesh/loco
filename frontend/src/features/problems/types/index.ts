@@ -21,6 +21,85 @@ export interface Problem {
     categories?: Category[]
 }
 
+
+export interface Boilerplate {
+    id: number
+    problem_id: number
+    language_id: number
+    stub_code: string
+}
+
+export interface ProblemResponse {
+    id: number;
+    title: string;
+    slug: string;
+    description: string;
+    difficulty: "easy" | "medium" | "hard" | string;
+    time_limit: number;
+    memory_limit: number;
+    visibility: "public" | "private" | string;
+    is_active: boolean;
+
+    acceptance_rate: number;
+    total_submissions: number;
+    total_accepted: number;
+
+    created_by: number;
+    creator: Creator;
+
+    test_cases: TestCase[];
+    boilerplates: Boilerplate[];
+
+    created_at: string; // ISO date
+    updated_at: string; // ISO date
+}
+
+export interface Creator {
+    id: number;
+    email: string;
+    username: string;
+    role: "admin" | "user" | string;
+
+    is_active: boolean;
+    email_verified: boolean;
+    is_bot: boolean;
+
+    xp: number;
+    level: number;
+
+    created_at: string;
+    updated_at: string;
+}
+
+export interface TestCase {
+    id: number;
+    problem_id: number;
+
+    input: string;
+    expected_output: string;
+
+    is_sample: boolean;
+    validation_config: unknown | null;
+
+    order_index: number;
+    created_at: string;
+}
+
+export interface Boilerplate {
+    id: number;
+    problem_id: number;
+    language_id: number;
+
+    stub_code: string;
+    test_harness_template: string | null;
+
+    created_at: string;
+    updated_at: string;
+
+    language: Language;
+}
+
+
 export interface Tag {
     id: number
     name: string

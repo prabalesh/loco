@@ -129,11 +129,11 @@ func (h *SubmissionHandler) ListUserProblemSubmissions(w http.ResponseWriter, r 
 		submissionResponses[i] = dto.ToSubmissionResponse(&submissions[i])
 	}
 
-	RespondJSON(w, http.StatusOK, map[string]interface{}{
-		"data":  submissionResponses,
-		"total": count,
-		"page":  page,
-		"limit": limit,
+	RespondPaginatedJSON(w, http.StatusOK, PaginatedResponse[[]dto.SubmissionResponse]{
+		Data:  submissionResponses,
+		Total: int(count),
+		Page:  page,
+		Limit: limit,
 	})
 }
 
@@ -178,11 +178,11 @@ func (h *SubmissionHandler) ListUserSubmissions(w http.ResponseWriter, r *http.R
 		submissionResponses[i] = dto.ToSubmissionResponse(&submissions[i])
 	}
 
-	RespondJSON(w, http.StatusOK, map[string]interface{}{
-		"data":  submissionResponses,
-		"total": count,
-		"page":  page,
-		"limit": limit,
+	RespondPaginatedJSON(w, http.StatusOK, PaginatedResponse[[]dto.SubmissionResponse]{
+		Data:  submissionResponses,
+		Total: int(count),
+		Page:  page,
+		Limit: limit,
 	})
 }
 
@@ -233,11 +233,11 @@ func (h *SubmissionHandler) ListAdminUserSubmissions(w http.ResponseWriter, r *h
 		submissionResponses[i] = dto.ToSubmissionResponse(&submissions[i])
 	}
 
-	RespondJSON(w, http.StatusOK, map[string]interface{}{
-		"data":  submissionResponses,
-		"total": count,
-		"page":  page,
-		"limit": limit,
+	RespondPaginatedJSON(w, http.StatusOK, PaginatedResponse[[]dto.SubmissionResponse]{
+		Data:  submissionResponses,
+		Total: int(count),
+		Page:  page,
+		Limit: limit,
 	})
 }
 

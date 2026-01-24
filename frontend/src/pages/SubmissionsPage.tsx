@@ -108,7 +108,7 @@ export const SubmissionsPage = () => {
     }
 
     // Safe extraction with optional chaining and nullish coalescing
-    const submissions = submissionsData?.data?.data?.data ?? []
+    const submissions = submissionsData?.data?.data ?? []
     const total = submissionsData?.data?.total ?? 0
     const totalPages = Math.ceil(total / limit)
 

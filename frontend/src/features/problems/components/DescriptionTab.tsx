@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import type { Problem } from '../types'
+import type { ProblemResponse } from '../types'
 import { calculateAcceptanceRate } from '@/lib/utils'
 
 interface DescriptionTabProps {
-    problem: Problem
+    problem: ProblemResponse
 }
 
 export const DescriptionTab = ({ problem }: DescriptionTabProps) => {
@@ -30,7 +30,7 @@ export const DescriptionTab = ({ problem }: DescriptionTabProps) => {
                 </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-8">
+            {/* <div className="flex flex-wrap gap-2 mb-8">
                 {problem.categories?.map(cat => (
                     <span key={cat.id} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold uppercase tracking-wider border border-blue-100 shadow-sm">
                         {cat.name}
@@ -41,7 +41,7 @@ export const DescriptionTab = ({ problem }: DescriptionTabProps) => {
                         {tag.name}
                     </span>
                 ))}
-            </div>
+            </div> */}
 
             {problem.description && (
                 <div className="mb-8">
@@ -55,7 +55,7 @@ export const DescriptionTab = ({ problem }: DescriptionTabProps) => {
                 </div>
             )}
 
-            {problem.input_format && (
+            {/* {problem.input_format && (
                 <div className="mb-8">
                     <h2 className="text-xl font-bold mb-4 text-gray-900 border-b border-gray-200 pb-2">
                         Input Format
@@ -89,7 +89,7 @@ export const DescriptionTab = ({ problem }: DescriptionTabProps) => {
                         dangerouslySetInnerHTML={{ __html: problem.constraints }}
                     />
                 </div>
-            )}
+            )} */}
 
             {problem.creator && (
                 <div className="mt-12 pt-8 border-t border-gray-100">

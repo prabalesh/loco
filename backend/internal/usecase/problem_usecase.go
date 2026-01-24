@@ -429,6 +429,33 @@ func (u *ProblemUsecase) GetProblem(identifier string, userID int) (*domain.Prob
 	return problem, nil
 }
 
+func (u *ProblemUsecase) AdminGetProblem(identifier string, userID int) (*domain.Problem, error) {
+	var problem *domain.Problem
+	var err error
+
+	// Try to get by ID first, then by slug
+	if id, parseErr := utils.ParseInt(identifier); parseErr == nil {
+		problem, err = u.problemRepo.GetByID(id)
+	} else {
+		problem, err = u.problemRepo.GetBySlug(identifier)
+	}
+
+	if err != nil {
+		u.logger.Warn("Problem not found",
+			zap.String("identifier", identifier),
+		)
+		return nil, errors.New("problem not found")
+	}
+
+	if userID != 0 {
+		if stats, err := u.userStatsRepo.Get(userID, problem.ID); err == nil && stats != nil {
+			problem.UserStatus = stats.Status
+		}
+	}
+
+	return problem, nil
+}
+
 // ListProblems retrieves problems with filters (for users - only published & public)
 func (u *ProblemUsecase) ListProblems(req *dto.ListProblemsRequest, userID int) ([]*domain.Problem, int, error) {
 	filters := domain.ProblemFilters{

@@ -1,10 +1,10 @@
 import { Send, Play, ChevronLeft, Loader2, User as UserIcon } from 'lucide-react'
 import { Button } from '@/shared/components/ui/Button'
 import { Link } from 'react-router-dom'
-import type { Problem } from '../types'
+import type { ProblemResponse } from '../types'
 
 interface ProblemHeaderProps {
-    problem: Problem
+    problem: ProblemResponse
     onBack: () => void
     onRun: () => void
     onSubmit: () => void
@@ -37,12 +37,12 @@ export const ProblemHeader = ({ problem, onBack, onRun, onSubmit, isSubmitting }
                         }`}>
                         {problem.difficulty}
                     </span>
-                    {problem.user_status === 'solved' && (
+                    {/* {problem.user_status === 'solved' && (
                         <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold shadow-sm animate-in fade-in slide-in-from-left duration-300">
                             <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             Solved
                         </span>
-                    )}
+                    )} */}
                     {problem.creator && (
                         <Link
                             to={`/users/${problem.creator.username}`}
