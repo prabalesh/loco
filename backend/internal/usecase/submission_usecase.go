@@ -155,7 +155,7 @@ func (u *SubmissionUsecase) ProcessSubmission(submissionID int) error {
 	return nil
 }
 
-func (u *SubmissionUsecase) evaluateSubmission(submission *domain.Submission, problem *domain.Problem, language *domain.Language, runOnlyPublicTests bool) {
+func (u *SubmissionUsecase) evaluateSubmission(submission *domain.Submission, _ *domain.Problem, language *domain.Language, runOnlyPublicTests bool) {
 	var testCases []domain.TestCase
 	var err error
 

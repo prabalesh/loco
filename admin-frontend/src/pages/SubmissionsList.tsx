@@ -14,7 +14,7 @@ import {
     Chip,
     Button
 } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { adminSubmissionsApi } from '../lib/api/admin';
 import toast from 'react-hot-toast';
 
@@ -24,7 +24,6 @@ const SubmissionsList: React.FC = () => {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const limit = 10;
-    const navigate = useNavigate();
 
     const fetchSubmissions = async () => {
         setLoading(true);
