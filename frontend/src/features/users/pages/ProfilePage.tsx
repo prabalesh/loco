@@ -167,19 +167,6 @@ export const ProfilePage = () => {
                                     totalSolved={profile.stats.problems_solved}
                                 />
                             </Card>
-
-                            <div className="space-y-8">
-                                <Card className="p-8 border-0 shadow-xl shadow-gray-200/30 rounded-[2.5rem] bg-indigo-600 text-white relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-8 opacity-10">
-                                        <Trophy className="h-32 w-32" />
-                                    </div>
-                                    <h3 className="text-lg font-bold mb-2">Badge Progress</h3>
-                                    <p className="text-indigo-100 text-sm mb-6 font-medium">Solve 50 problems to unlock the next achievement!</p>
-                                    <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
-                                        <div className="h-full bg-white transition-all" style={{ width: `${Math.min((profile.stats.problems_solved / 50) * 100, 100)}%` }} />
-                                    </div>
-                                </Card>
-                            </div>
                         </div>
 
                         <Card className="p-8 border-0 shadow-xl shadow-gray-200/30 rounded-[2.5rem] bg-white">
