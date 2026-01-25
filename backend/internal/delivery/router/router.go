@@ -113,6 +113,8 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	mux.Handle("PATCH /admin/users/{id}/role", adminAuthMiddleware(http.HandlerFunc(deps.AdminHandler.UpdateUserRole)))
 	mux.Handle("PATCH /admin/users/{id}/status", adminAuthMiddleware(http.HandlerFunc(deps.AdminHandler.UpdateUserStatus)))
 	mux.Handle("GET /admin/analytics", adminAuthMiddleware(http.HandlerFunc(deps.AdminHandler.GetAnalytics)))
+	mux.Handle("GET /admin/piston/executions", adminAuthMiddleware(http.HandlerFunc(deps.AdminHandler.ListPistonExecutions)))
+	mux.Handle("GET /admin/submissions", adminAuthMiddleware(http.HandlerFunc(deps.AdminHandler.ListSubmissions)))
 
 	// ========== ADMIN PROBLEM ROUTES ==========
 	mux.Handle("GET /admin/problems", adminAuthMiddleware(http.HandlerFunc(deps.ProblemHandler.ListAllProblems)))
@@ -151,7 +153,7 @@ func SetupRouter(deps *Dependencies) http.Handler {
 	mux.Handle("POST /admin/languages/{id}/deactivate", adminAuthMiddleware(http.HandlerFunc(deps.LanguageHandler.DeactivateLanguage)))
 
 	// ========== ADMIN SUBMISSION ROUTES ==========
-	mux.Handle("GET /admin/submissions", adminAuthMiddleware(http.HandlerFunc(deps.SubmissionHandler.ListAdminUserSubmissions)))
+	// mux.Handle("GET /admin/submissions", adminAuthMiddleware(http.HandlerFunc(deps.SubmissionHandler.ListAdminUserSubmissions)))
 	mux.Handle("POST /admin/problems/{id}/submit", adminAuthMiddleware(http.HandlerFunc(deps.SubmissionHandler.AdminSubmit)))
 	mux.Handle("GET /admin/problems/{id}/submissions", adminAuthMiddleware(http.HandlerFunc(deps.SubmissionHandler.ListProblemSubmissions)))
 

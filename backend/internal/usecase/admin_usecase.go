@@ -13,18 +13,20 @@ import (
 )
 
 type AdminUsecase struct {
-	userRepo       domain.UserRepository
-	submissionRepo domain.SubmissionRepository
-	redis          *redis.Client
-	logger         *zap.Logger
+	userRepo            domain.UserRepository
+	submissionRepo      domain.SubmissionRepository
+	pistonExecutionRepo domain.PistonExecutionRepository
+	redis               *redis.Client
+	logger              *zap.Logger
 }
 
-func NewAdminUsecase(userRepo domain.UserRepository, submissionRepo domain.SubmissionRepository, redis *redis.Client, logger *zap.Logger) *AdminUsecase {
+func NewAdminUsecase(userRepo domain.UserRepository, submissionRepo domain.SubmissionRepository, pistonExecutionRepo domain.PistonExecutionRepository, redis *redis.Client, logger *zap.Logger) *AdminUsecase {
 	return &AdminUsecase{
-		userRepo:       userRepo,
-		submissionRepo: submissionRepo,
-		redis:          redis,
-		logger:         logger,
+		userRepo:            userRepo,
+		submissionRepo:      submissionRepo,
+		pistonExecutionRepo: pistonExecutionRepo,
+		redis:               redis,
+		logger:              logger,
 	}
 }
 
@@ -254,4 +256,48 @@ func (u *AdminUsecase) countActiveWorkers(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	return len(keys), nil
+}
+
+// ListPistonExecutions returns a paginated list of Piston executions
+func (u *AdminUsecase) ListPistonExecutions(page, limit int) ([]domain.PistonExecution, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
+
+	executions, total, err := u.pistonExecutionRepo.List(limit, offset)
+	if err != nil {
+		u.logger.Error("Failed to list piston executions", zap.Error(err))
+		return nil, 0, errors.New("failed to fetch executions")
+	}
+
+	return executions, total, nil
+}
+
+// ListSubmissions returns a paginated list of all submissions
+func (u *AdminUsecase) ListSubmissions(page, limit int) ([]domain.Submission, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
+
+	submissions, err := u.submissionRepo.ListAll(limit, offset)
+	if err != nil {
+		u.logger.Error("Failed to list submissions", zap.Error(err))
+		return nil, 0, errors.New("failed to fetch submissions")
+	}
+
+	total, err := u.submissionRepo.CountTotal()
+	if err != nil {
+		u.logger.Error("Failed to count submissions", zap.Error(err))
+		return nil, 0, errors.New("failed to count submissions")
+	}
+
+	return submissions, total, nil
 }

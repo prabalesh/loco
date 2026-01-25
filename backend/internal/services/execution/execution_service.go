@@ -37,9 +37,9 @@ type ExecutionResult struct {
 	ErrorMessage string                  `json:"error_message,omitempty"`
 }
 
-func NewExecutionService(pistonURL string, boilerplateService *codegen.BoilerplateService, codegenService *codegen.CodeGenService, problemRepo domain.ProblemRepository) *ExecutionService {
+func NewExecutionService(pistonURL string, boilerplateService *codegen.BoilerplateService, codegenService *codegen.CodeGenService, problemRepo domain.ProblemRepository, executionRepo domain.PistonExecutionRepository) *ExecutionService {
 	return &ExecutionService{
-		pistonClient:       piston.NewPistonClient(pistonURL),
+		pistonClient:       piston.NewPistonClient(pistonURL, executionRepo),
 		languageMapper:     piston.NewLanguageMapper(),
 		boilerplateService: boilerplateService,
 		codegenService:     codegenService,
@@ -141,6 +141,8 @@ func (s *ExecutionService) ExecuteBatchSubmission(ctx context.Context, req Execu
 				Stdin:          stdin,
 				CompileTimeout: 10000,
 				RunTimeout:     5000,
+				ProblemID:      req.ProblemID,
+				SubmissionID:   nil, // Test runs don't have submission ID here
 			}
 
 			fmt.Printf("\n--- Piston Execution Request ---\n")

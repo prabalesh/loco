@@ -78,6 +78,18 @@ export const AdminLayout = () => {
       label: 'Bulk Import',
       onClick: () => navigate('/problems/bulk-import'),
     },
+    {
+      key: '/submissions',
+      icon: <Code2 className="w-5 h-5" />, // Reusing Code2 icon or maybe a better one if available
+      label: 'Submissions',
+      onClick: () => navigate('/submissions'),
+    },
+    {
+      key: '/piston/executions',
+      icon: <Code2 className="w-5 h-5" />,
+      label: 'Piston Executions',
+      onClick: () => navigate('/piston/executions'),
+    },
   ]
 
   return (

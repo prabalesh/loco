@@ -8,6 +8,9 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/prabalesh/loco/backend/internal/domain"
+	"gorm.io/datatypes"
 )
 
 const (
@@ -18,8 +21,9 @@ const (
 )
 
 type PistonClient struct {
-	baseURL    string
-	httpClient *http.Client
+	baseURL       string
+	httpClient    *http.Client
+	executionRepo domain.PistonExecutionRepository
 }
 
 type ExecuteRequest struct {
@@ -30,6 +34,8 @@ type ExecuteRequest struct {
 	Args           []string `json:"args"`
 	CompileTimeout int      `json:"compile_timeout"` // milliseconds
 	RunTimeout     int      `json:"run_timeout"`     // milliseconds
+	ProblemID      int      `json:"-"`               // Internal use
+	SubmissionID   *int     `json:"-"`               // Internal use
 }
 
 type File struct {
@@ -58,7 +64,7 @@ type Runtime struct {
 	Aliases  []string `json:"aliases"`
 }
 
-func NewPistonClient(baseURL string) *PistonClient {
+func NewPistonClient(baseURL string, executionRepo domain.PistonExecutionRepository) *PistonClient {
 	if baseURL == "" {
 		baseURL = DefaultPistonURL
 	}
@@ -68,6 +74,7 @@ func NewPistonClient(baseURL string) *PistonClient {
 		httpClient: &http.Client{
 			Timeout: RequestTimeout,
 		},
+		executionRepo: executionRepo,
 	}
 }
 
@@ -156,6 +163,25 @@ func (c *PistonClient) executeOnce(req ExecuteRequest) (*ExecuteResponse, error)
 	var executeResp ExecuteResponse
 	if err := json.Unmarshal(respBody, &executeResp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	// Log to database
+	if c.executionRepo != nil {
+		execution := &domain.PistonExecution{
+			ProblemID:    req.ProblemID,
+			SubmissionID: req.SubmissionID,
+			Language:     req.Language,
+			Version:      req.Version,
+			Code: func() string {
+				if len(req.Files) > 0 {
+					return req.Files[0].Content
+				}
+				return ""
+			}(),
+			Stdin:    req.Stdin,
+			Response: datatypes.JSON(respBody),
+		}
+		_ = c.executionRepo.Create(execution) // Log and ignore error to not block execution
 	}
 
 	return &executeResp, nil

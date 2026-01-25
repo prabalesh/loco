@@ -9,8 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"go.uber.org/zap"
+	"gorm.io/datatypes"
 )
 
 type ExecutionRequest struct {
@@ -58,16 +60,17 @@ type ExecutionResult struct {
 }
 
 type PistonService interface {
-	Execute(language, version, code, input string) (*ExecutionResult, error)
+	Execute(problemID int, submissionID *int, language, version, code, input string) (*ExecutionResult, error)
 }
 
 type pistonService struct {
-	client  *http.Client
-	baseURL string
-	logger  *zap.Logger
+	client        *http.Client
+	baseURL       string
+	logger        *zap.Logger
+	executionRepo domain.PistonExecutionRepository
 }
 
-func NewPistonService(cfg *config.Config, logger *zap.Logger) PistonService {
+func NewPistonService(cfg *config.Config, executionRepo domain.PistonExecutionRepository, logger *zap.Logger) PistonService {
 	return &pistonService{
 		client: &http.Client{
 			// client timeout must be slightly higher than the RunTimeout
@@ -78,12 +81,13 @@ func NewPistonService(cfg *config.Config, logger *zap.Logger) PistonService {
 				IdleConnTimeout:     90 * time.Second,
 			},
 		},
-		baseURL: "http://localhost:2000/api/v2",
-		logger:  logger,
+		baseURL:       "http://localhost:2000/api/v2",
+		logger:        logger,
+		executionRepo: executionRepo,
 	}
 }
 
-func (s *pistonService) Execute(language, version, code, input string) (*ExecutionResult, error) {
+func (s *pistonService) Execute(problemID int, submissionID *int, language, version, code, input string) (*ExecutionResult, error) {
 	// These values now leverage your new Docker environment settings
 	const (
 		megabyte           = 1024 * 1024
@@ -109,22 +113,37 @@ func (s *pistonService) Execute(language, version, code, input string) (*Executi
 		return nil, fmt.Errorf("marshal error: %w", err)
 	}
 
-	fmt.Println("*******************************")
-	fmt.Println("JSON Body:", input)
-	fmt.Println("*******************************")
 	resp, err := s.client.Post(s.baseURL+"/execute", "application/json", bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, fmt.Errorf("piston post error: %w", err)
 	}
 	defer resp.Body.Close()
 
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response error: %w", err)
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("piston error %d: %s", resp.StatusCode, string(bodyBytes))
+		return nil, fmt.Errorf("piston error %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	// Log to database
+	if s.executionRepo != nil {
+		execution := &domain.PistonExecution{
+			ProblemID:    problemID,
+			SubmissionID: submissionID,
+			Language:     language,
+			Version:      version,
+			Code:         code,
+			Stdin:        input,
+			Response:     datatypes.JSON(respBody),
+		}
+		_ = s.executionRepo.Create(execution)
 	}
 
 	var pistonResp ExecutionResponse
-	if err := json.NewDecoder(resp.Body).Decode(&pistonResp); err != nil {
+	if err := json.Unmarshal(respBody, &pistonResp); err != nil {
 		return nil, fmt.Errorf("decode error: %w", err)
 	}
 

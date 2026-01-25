@@ -133,6 +133,7 @@ type SubmissionRepository interface {
 	ListByUserProblem(userID int, problemID int, limit, offset int) ([]Submission, error)
 	ListByUser(userID int, limit, offset int) ([]Submission, error)
 	ListByAdminUser(userID int, limit, offset int) ([]Submission, error)
+	ListAll(limit, offset int) ([]Submission, error)
 	CountByUser(userID int) (int64, error)
 	CountByUserProblem(userID int, problemID int) (int64, error)
 
@@ -205,4 +206,10 @@ type TypeImplementationRepository interface {
 	Create(impl *TypeImplementation) error
 	GetByTypeAndLanguage(customTypeID, languageID int) (*TypeImplementation, error)
 	GetByTypeAndLanguageSlug(typeName, languageSlug string) (*TypeImplementation, error)
+}
+
+type PistonExecutionRepository interface {
+	Create(execution *PistonExecution) error
+	List(limit, offset int) ([]PistonExecution, int64, error)
+	GetByProblemID(problemID int, limit, offset int) ([]PistonExecution, int64, error)
 }

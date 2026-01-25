@@ -289,7 +289,8 @@ func (w *Worker) evaluateSubmission(submission *domain.Submission, problem *doma
 			fmt.Printf("Memory Limit: %d MB\n", problem.MemoryLimit)
 			fmt.Printf("--------------------------------------------------\n\n")
 
-			res, err := w.pistonService.Execute(language.Slug, language.Version, fullCode, string(testInputJSON))
+			res, err := w.pistonService.Execute(problem.ID, &submission.ID, language.Slug, language.Version, fullCode, string(testInputJSON))
+
 			if err != nil {
 				return fmt.Errorf("batch %d failed: %w", i, err)
 			}

@@ -18,6 +18,8 @@ import ProblemValidate from './features/problems/pages/ProblemValidate'
 import BulkImport from './pages/BulkImport'
 import ProblemsList from './pages/ProblemsList'
 import ProblemManagement from './pages/ProblemManagement'
+import PistonExecutions from './pages/PistonExecutions'
+import SubmissionsList from './pages/SubmissionsList'
 
 export const App = () => {
   const checkAuth = useAuthStore((state) => state.checkAuth)
@@ -43,6 +45,8 @@ export const App = () => {
           <Route path="/problems/bulk-import" element={<BulkImport />} />
           <Route path="/problems" element={<ProblemsList />} />
           <Route path="/problems/:id/manage" element={<ProblemManagement />} />
+          <Route path="/submissions" element={<SubmissionsList />} />
+          <Route path="/piston/executions" element={<PistonExecutions />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

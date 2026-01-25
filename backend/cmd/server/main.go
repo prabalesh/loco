@@ -87,6 +87,7 @@ func main() {
 		&domain.ProblemReferenceSolution{},
 		&domain.CustomType{},
 		&domain.TypeImplementation{},
+		&domain.PistonExecution{},
 	); err != nil {
 		log.Fatal("Failed to run auto migrations", zap.Error(err))
 	}

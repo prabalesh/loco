@@ -44,6 +44,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	boilerplateRepo := postgres.NewBoilerplateRepository(db)
 	referenceSolutionRepo := postgres.NewReferenceSolutionRepository(db)
 	customTypeRepo := postgres.NewCustomTypeRepository(db.DB)
+	pistonExecutionRepo := postgres.NewPistonExecutionRepository(db)
 
 	// Redis client
 	redisClient, err := redis.NewRedisClient(cfg.Redis, logger)
@@ -54,19 +55,19 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	// Services
 	jwtService := auth.NewJWTService(cfg.JWT.AccessTokenSecret, cfg.JWT.RefreshTokenSecret, cfg.JWT.AccessTokenExpiration, cfg.JWT.RefreshTokenExpiration)
 	emailService := email.NewEmailService(cfg, logger)
-	pistonService := piston.NewPistonService(cfg, logger)
+	pistonService := piston.NewPistonService(cfg, pistonExecutionRepo, logger)
 	jobQueue := queue.NewJobQueue(redisClient, logger)
 	typeImplementationRepo := postgres.NewTypeImplementationRepository(db.DB)
 	codeGenService := codegen.NewCodeGenService(typeImplementationRepo)
 	boilerplateService := codegen.NewBoilerplateService(boilerplateRepo, languageRepo, testCaseRepo, codeGenService)
-	executionService := execution.NewExecutionService(cfg.Server.PistonURL, boilerplateService, codeGenService, problemRepo)
+	executionService := execution.NewExecutionService(cfg.Server.PistonURL, boilerplateService, codeGenService, problemRepo, pistonExecutionRepo)
 
 	cookieManager := cookies.NewCookieManager(cfg)
 
 	// Usecases
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtService, emailService, cfg, logger)
 	userUsecase := usecase.NewUserUsecase(userRepo, submissionRepo, achievementRepo, logger)
-	adminUsecase := usecase.NewAdminUsecase(userRepo, submissionRepo, redisClient.Client, logger)
+	adminUsecase := usecase.NewAdminUsecase(userRepo, submissionRepo, pistonExecutionRepo, redisClient.Client, logger)
 	problemLanguageUsecase := usecase.NewProblemLanguageUsecase(problemLanguageRepo, problemRepo, languageRepo, logger)
 	problemUsecase := usecase.NewProblemUsecase(problemRepo, testCaseRepo, userProblemStatsRepo, tagRepo, categoryRepo, customTypeRepo, boilerplateService, cfg, logger)
 	languageUsecase := usecase.NewLanguageUsecase(languageRepo, cfg, logger)

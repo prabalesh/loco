@@ -24,7 +24,7 @@ func main() {
 			PistonURL: "http://localhost:2000",
 		},
 	}
-	pistonService := piston.NewPistonService(cfg, logger)
+	pistonService := piston.NewPistonService(cfg, nil, logger)
 	cg := codegen.NewCodeGenService(nil)
 
 	languages := []struct {
@@ -74,7 +74,7 @@ func main() {
 		testInput, _ := json.Marshal(testCases)
 
 		fmt.Println("Executing Piston...")
-		res, err := pistonService.Execute(lang.slug, lang.version, harness, string(testInput))
+		res, err := pistonService.Execute(1, nil, lang.slug, lang.version, harness, string(testInput))
 		if err != nil {
 			log.Fatalf("Execution failed: %v", err)
 		}

@@ -1,5 +1,5 @@
 import axiosInstance from '../axios'
-import type { User, AdminAnalytics, LoginCredentials, Language, Problem, TestCase, Tag, Category } from '../../types'
+import type { User, AdminAnalytics, LoginCredentials, Language, Problem, TestCase, Tag, Category, PistonExecution } from '../../types'
 import type { PaginatedResponse, Response, SimpleResponse } from '../../types/response'
 import type { CreateOrUpdateLanguageRequest, CreateOrUpdateProblemRequest, CreateTestCaseRequest } from '../../types/request'
 import type { ProblemLanguage, CreateProblemLanguageRequest, UpdateProblemLanguageRequest } from '../../types/problemLanguage'
@@ -18,6 +18,11 @@ export const adminAuthApi = {
 export const adminAnalyticsApi = {
   getStats: () =>
     axiosInstance.get<Response<AdminAnalytics>>('/admin/analytics'),
+
+  listPistonExecutions: (page = 1, limit = 10) =>
+    axiosInstance.get<PaginatedResponse<PistonExecution[]>>('/admin/piston/executions', {
+      params: { page, limit }
+    }),
 }
 
 export const adminUsersApi = {
@@ -159,6 +164,10 @@ export const adminCategoryApi = {
 
 export const adminSubmissionsApi = {
   getById: (problemId: number, submissionId: number) => axiosInstance.get<Response<any>>(`problems/${problemId}/submissions/${submissionId}`),
+  listSubmissions: (page = 1, limit = 10) =>
+    axiosInstance.get<PaginatedResponse<any[]>>('/admin/submissions', {
+      params: { page, limit }
+    }),
 }
 
 export const adminCodeGenApi = {

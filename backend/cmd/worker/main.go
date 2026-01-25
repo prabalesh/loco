@@ -69,8 +69,10 @@ func main() {
 	typeImplementationRepo := postgres.NewTypeImplementationRepository(db.DB)
 	referenceSolutionRepo := postgres.NewReferenceSolutionRepository(db)
 
+	pistonExecutionRepo := postgres.NewPistonExecutionRepository(db)
+
 	// 6. Initialize Services
-	pistonService := piston.NewPistonService(cfg, loggers)
+	pistonService := piston.NewPistonService(cfg, pistonExecutionRepo, loggers)
 	jobQueue := queue.NewJobQueue(redisClient, loggers)
 	codeGenService := codegen.NewCodeGenService(typeImplementationRepo)
 	boilerplateService := codegen.NewBoilerplateService(boilerplateRepo, languageRepo, testCaseRepo, codeGenService)

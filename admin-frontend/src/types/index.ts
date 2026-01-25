@@ -126,6 +126,19 @@ export interface LoginCredentials {
   password: string
 }
 
+export interface PistonExecution {
+  id: number
+  problem_id: number
+  language: string
+  version: string
+  code: string
+  stdin: string
+  response: any
+  created_at: string
+  submission_id?: number
+  problem?: Problem
+}
+
 
 export * from './request'
 export * from './response'

@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
+	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/prabalesh/loco/backend/internal/usecase"
 	"go.uber.org/zap"
@@ -159,4 +160,42 @@ func (h *AdminHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
 	}
 
 	RespondJSON(w, http.StatusOK, analytics)
+}
+
+// ListPistonExecutions - Get Piston execution logs
+func (h *AdminHandler) ListPistonExecutions(w http.ResponseWriter, r *http.Request) {
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+
+	executions, total, err := h.adminUsecase.ListPistonExecutions(page, limit)
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	RespondPaginatedJSON(w, http.StatusOK, PaginatedResponse[[]domain.PistonExecution]{
+		Total: int(total),
+		Page:  page,
+		Limit: limit,
+		Data:  executions,
+	})
+}
+
+// ListSubmissions - Get all global submissions
+func (h *AdminHandler) ListSubmissions(w http.ResponseWriter, r *http.Request) {
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+
+	submissions, total, err := h.adminUsecase.ListSubmissions(page, limit)
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	RespondPaginatedJSON(w, http.StatusOK, PaginatedResponse[[]domain.Submission]{
+		Total: int(total),
+		Page:  page,
+		Limit: limit,
+		Data:  submissions,
+	})
 }

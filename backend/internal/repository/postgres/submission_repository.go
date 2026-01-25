@@ -47,7 +47,9 @@ func (r *submissionRepository) GetByID(id int) (*domain.Submission, error) {
 
 func (r *submissionRepository) ListByProblem(problemID int, limit, offset int) ([]domain.Submission, error) {
 	var submissions []domain.Submission
-	err := r.db.DB.Where("problem_id = ?", problemID).
+	err := r.db.DB.Model(&domain.Submission{}).
+		Where("problem_id = ?", problemID).
+		Omit("function_code").
 		Order("created_at desc").
 		Limit(limit).
 		Offset(offset).
@@ -57,7 +59,9 @@ func (r *submissionRepository) ListByProblem(problemID int, limit, offset int) (
 
 func (r *submissionRepository) ListByUser(userID int, limit, offset int) ([]domain.Submission, error) {
 	var submissions []domain.Submission
-	err := r.db.DB.Where("user_id = ? AND is_admin_submission = false", userID).
+	err := r.db.DB.Model(&domain.Submission{}).
+		Where("user_id = ? AND is_admin_submission = false", userID).
+		Omit("function_code").
 		Preload("Problem").
 		Preload("Language").
 		Order("created_at desc").
@@ -74,7 +78,9 @@ func (r *submissionRepository) ListByUserProblem(userID int, problemID int, limi
 	fmt.Println("Limit: ", limit)
 	fmt.Println("Offset: ", offset)
 	var submissions []domain.Submission
-	err := r.db.DB.Where("user_id = ? AND problem_id = ? AND is_admin_submission = false AND is_run_only = false", userID, problemID).
+	err := r.db.DB.Model(&domain.Submission{}).
+		Where("user_id = ? AND problem_id = ? AND is_admin_submission = false AND is_run_only = false", userID, problemID).
+		Omit("function_code").
 		Preload("Language").
 		Order("created_at desc").
 		Limit(limit).
@@ -85,7 +91,23 @@ func (r *submissionRepository) ListByUserProblem(userID int, problemID int, limi
 
 func (r *submissionRepository) ListByAdminUser(userID int, limit, offset int) ([]domain.Submission, error) {
 	var submissions []domain.Submission
-	err := r.db.DB.Where("user_id = ? AND is_admin_submission = true", userID).
+	err := r.db.DB.Model(&domain.Submission{}).
+		Where("user_id = ? AND is_admin_submission = true", userID).
+		Omit("function_code").
+		Preload("Problem").
+		Preload("Language").
+		Order("created_at desc").
+		Limit(limit).
+		Offset(offset).
+		Find(&submissions).Error
+	return submissions, err
+}
+
+func (r *submissionRepository) ListAll(limit, offset int) ([]domain.Submission, error) {
+	var submissions []domain.Submission
+	err := r.db.DB.Model(&domain.Submission{}).
+		Omit("function_code").
+		Preload("User").
 		Preload("Problem").
 		Preload("Language").
 		Order("created_at desc").
