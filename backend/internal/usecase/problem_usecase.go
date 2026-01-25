@@ -569,14 +569,16 @@ func (u *ProblemUsecase) ListProblems(req *dto.ListProblemsRequest, userID int) 
 	}
 
 	filters := domain.ProblemFilters{
-		Page:       req.Page,
-		Limit:      req.Limit,
-		Difficulty: req.Difficulty,
-		Status:     "published", // Only published problems for users
-		Visibility: "public",    // Only public problems
-		Search:     req.Search,
-		Tags:       req.Tags,
-		Categories: req.Categories,
+		Page:                req.Page,
+		Limit:               req.Limit,
+		Difficulty:          req.Difficulty,
+		Status:              "published", // Only published problems for users
+		Visibility:          "public",    // Only public problems
+		Search:              req.Search,
+		Tags:                req.Tags,
+		Categories:          req.Categories,
+		IncludeTestCases:    req.IncludeTestCases,
+		IncludeBoilerplates: req.IncludeBoilerplates,
 	}
 
 	problems, total, err := u.problemRepo.List(filters)
@@ -614,14 +616,16 @@ func (u *ProblemUsecase) ListProblems(req *dto.ListProblemsRequest, userID int) 
 // ListAllProblems retrieves all problems (admin - includes drafts, private)
 func (u *ProblemUsecase) ListAllProblems(req *dto.ListProblemsRequest, userID int) ([]*domain.Problem, int, error) {
 	filters := domain.ProblemFilters{
-		Page:       req.Page,
-		Limit:      req.Limit,
-		Difficulty: req.Difficulty,
-		Status:     req.Status,
-		Visibility: req.Visibility,
-		Search:     req.Search,
-		Tags:       req.Tags,
-		Categories: req.Categories,
+		Page:                req.Page,
+		Limit:               req.Limit,
+		Difficulty:          req.Difficulty,
+		Status:              req.Status,
+		Visibility:          req.Visibility,
+		Search:              req.Search,
+		Tags:                req.Tags,
+		Categories:          req.Categories,
+		IncludeTestCases:    req.IncludeTestCases,
+		IncludeBoilerplates: req.IncludeBoilerplates,
 	}
 
 	problems, total, err := u.problemRepo.List(filters)
@@ -653,43 +657,18 @@ func (u *ProblemUsecase) ListAllProblems(req *dto.ListProblemsRequest, userID in
 
 // GetProblemStats returns problem statistics
 func (u *ProblemUsecase) GetProblemStats() (*dto.ProblemStats, error) {
-	totalProblems, err := u.problemRepo.CountProblems()
-	if err != nil {
-		return nil, err
-	}
-
-	publishedCount, err := u.problemRepo.CountByStatus("published")
-	if err != nil {
-		return nil, err
-	}
-
-	draftCount, err := u.problemRepo.CountByStatus("draft")
-	if err != nil {
-		return nil, err
-	}
-
-	easyCount, err := u.problemRepo.CountByDifficulty("easy")
-	if err != nil {
-		return nil, err
-	}
-
-	mediumCount, err := u.problemRepo.CountByDifficulty("medium")
-	if err != nil {
-		return nil, err
-	}
-
-	hardCount, err := u.problemRepo.CountByDifficulty("hard")
+	stats, err := u.problemRepo.GetStats()
 	if err != nil {
 		return nil, err
 	}
 
 	return &dto.ProblemStats{
-		Total:     totalProblems,
-		Published: publishedCount,
-		Draft:     draftCount,
-		Easy:      easyCount,
-		Medium:    mediumCount,
-		Hard:      hardCount,
+		Total:     stats.Total,
+		Published: stats.Published,
+		Draft:     stats.Draft,
+		Easy:      stats.Easy,
+		Medium:    stats.Medium,
+		Hard:      stats.Hard,
 	}, nil
 }
 

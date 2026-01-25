@@ -16,6 +16,7 @@ type AdminAnalytics struct {
 	SubmissionHistory  []domain.DailySubmissionStat `json:"submission_history"`
 	TrendingProblems   []domain.TrendingProblem     `json:"trending_problems"`
 	LanguageStats      []domain.LanguageStat        `json:"language_stats"`
+	ProblemStats       *domain.ProblemStats         `json:"problem_stats"`
 }
 
 type UpdateRoleRequest struct {

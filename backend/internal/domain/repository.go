@@ -38,15 +38,17 @@ type UserRepository interface {
 }
 
 type ProblemFilters struct {
-	Page       int
-	Limit      int
-	Difficulty string
-	Status     string
-	Visibility string
-	Search     string
-	Tags       []string
-	Categories []string
-	CreatedBy  *int
+	Page                int
+	Limit               int
+	Difficulty          string
+	Status              string
+	Visibility          string
+	Search              string
+	Tags                []string
+	Categories          []string
+	CreatedBy           *int
+	IncludeTestCases    bool
+	IncludeBoilerplates bool
 }
 
 // ProblemRepository interface
@@ -65,9 +67,9 @@ type ProblemRepository interface {
 	IncrementStats(id int, isAccepted bool) error
 	UpdateStatus(id int, status string) error
 	UpdateVisibility(id int, visibility string) error
-	CountProblems() (int, error)
 	CountByStatus(status string) (int, error)
 	CountByDifficulty(difficulty string) (int, error)
+	GetStats() (*ProblemStats, error)
 }
 
 // TagRepository interface

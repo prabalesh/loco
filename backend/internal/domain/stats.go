@@ -26,3 +26,12 @@ type HeatmapEntry struct {
 	Date  string `json:"date"` // YYYY-MM-DD
 	Count int    `json:"count"`
 }
+
+type ProblemStats struct {
+	Total     int `json:"total"`
+	Published int `json:"published"`
+	Draft     int `json:"draft"`
+	Easy      int `json:"easy"`
+	Medium    int `json:"medium"`
+	Hard      int `json:"hard"`
+}

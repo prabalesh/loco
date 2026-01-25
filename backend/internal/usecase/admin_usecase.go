@@ -16,13 +16,15 @@ type AdminUsecase struct {
 	userRepo            domain.UserRepository
 	submissionRepo      domain.SubmissionRepository
 	pistonExecutionRepo domain.PistonExecutionRepository
+	problemRepo         domain.ProblemRepository
 	redis               *redis.Client
 	logger              *zap.Logger
 }
 
-func NewAdminUsecase(userRepo domain.UserRepository, submissionRepo domain.SubmissionRepository, pistonExecutionRepo domain.PistonExecutionRepository, redis *redis.Client, logger *zap.Logger) *AdminUsecase {
+func NewAdminUsecase(userRepo domain.UserRepository, problemRepo domain.ProblemRepository, submissionRepo domain.SubmissionRepository, pistonExecutionRepo domain.PistonExecutionRepository, redis *redis.Client, logger *zap.Logger) *AdminUsecase {
 	return &AdminUsecase{
 		userRepo:            userRepo,
+		problemRepo:         problemRepo,
 		submissionRepo:      submissionRepo,
 		pistonExecutionRepo: pistonExecutionRepo,
 		redis:               redis,
@@ -231,6 +233,13 @@ func (u *AdminUsecase) GetAnalytics() (*dto.AdminAnalytics, error) {
 		languageStats = []domain.LanguageStat{}
 	}
 
+	// Fetch problem stats
+	problemStats, err := u.problemRepo.GetStats()
+	if err != nil {
+		u.logger.Error("Failed to get problem stats", zap.Error(err))
+		problemStats = &domain.ProblemStats{}
+	}
+
 	analytics := &dto.AdminAnalytics{
 		TotalUsers:         totalUsers,
 		ActiveUsers:        activeUsers,
@@ -245,6 +254,7 @@ func (u *AdminUsecase) GetAnalytics() (*dto.AdminAnalytics, error) {
 		SubmissionHistory:  dailyStats,
 		TrendingProblems:   trendingProblems,
 		LanguageStats:      languageStats,
+		ProblemStats:       problemStats,
 	}
 
 	return analytics, nil

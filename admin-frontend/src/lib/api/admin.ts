@@ -59,7 +59,7 @@ export const adminLanguagesApi = {
 }
 
 export const adminProblemApi = {
-  getAll: () => axiosInstance.get<Response<Problem[]>>('/admin/problems'),
+  getAll: (params?: any) => axiosInstance.get<Response<Problem[]>>('/admin/problems', { params }),
   getById: (id: string) => axiosInstance.get<Response<Problem>>(`/admin/problems/${id}`),
   create: (data: CreateOrUpdateProblemRequest) =>
     axiosInstance.post<Response<Problem>>('/admin/problems', data),

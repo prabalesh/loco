@@ -309,13 +309,19 @@ func (r *problemRepository) List(filters domain.ProblemFilters) ([]*domain.Probl
 	}
 
 	// Fetch
-	if err := query.Preload("Creator").
+	dbQuery := query.Preload("Creator").
 		Preload("Tags").
-		Preload("Categories").
-		Preload("TestCases").
-		Preload("Boilerplates").
-		Preload("Boilerplates.Language").
-		Order("created_at DESC").
+		Preload("Categories")
+
+	if filters.IncludeTestCases {
+		dbQuery = dbQuery.Preload("TestCases")
+	}
+
+	if filters.IncludeBoilerplates {
+		dbQuery = dbQuery.Preload("Boilerplates").Preload("Boilerplates.Language")
+	}
+
+	if err := dbQuery.Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).
 		Find(&problems).Error; err != nil {
@@ -454,17 +460,27 @@ func (r *problemRepository) UpdateVisibility(id int, visibility string) error {
 	return nil
 }
 
-func (r *problemRepository) CountProblems() (int, error) {
+func (r *problemRepository) GetStats() (*domain.ProblemStats, error) {
 	ctx, cancel := database.WithShortTimeout()
 	defer cancel()
 
-	var count int64
-	err := r.db.DB.WithContext(ctx).Model(&domain.Problem{}).Count(&count).Error
+	var stats domain.ProblemStats
+	query := `
+		SELECT 
+			COUNT(*) as total,
+			COUNT(*) FILTER (WHERE status = 'published') as published,
+			COUNT(*) FILTER (WHERE status = 'draft') as draft,
+			COUNT(*) FILTER (WHERE difficulty = 'easy') as easy,
+			COUNT(*) FILTER (WHERE difficulty = 'medium') as medium,
+			COUNT(*) FILTER (WHERE difficulty = 'hard') as hard
+		FROM problems
+	`
+	err := r.db.DB.WithContext(ctx).Raw(query).Scan(&stats).Error
 	if err != nil {
-		return 0, fmt.Errorf("failed to count problems: %w", err)
+		return nil, fmt.Errorf("failed to get problem stats: %w", err)
 	}
 
-	return int(count), nil
+	return &stats, nil
 }
 
 func (r *problemRepository) CountByStatus(status string) (int, error) {

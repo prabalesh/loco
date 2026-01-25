@@ -207,15 +207,35 @@ func (w *Worker) evaluateSubmission(submission *domain.Submission, problem *doma
 	var testCases []domain.TestCase
 	var err error
 
-	if runOnlyPublicTests || submission.IsRunOnly {
-		testCases, err = w.testCaseRepo.GetSamples(submission.ProblemID)
-	} else {
-		testCases, err = w.testCaseRepo.GetByProblemID(submission.ProblemID)
+	// Try fetching test cases from cache
+	cacheKey := fmt.Sprintf("problem:%d:testcases:%v", submission.ProblemID, runOnlyPublicTests || submission.IsRunOnly)
+	cachedData, err := w.redisClient.Get(context.Background(), cacheKey).Result()
+	if err == nil && cachedData != "" {
+		if err := json.Unmarshal([]byte(cachedData), &testCases); err == nil && len(testCases) > 0 {
+			w.logger.Debug("Using cached test cases", zap.Int("problem_id", submission.ProblemID), zap.Int("count", len(testCases)))
+		} else {
+			testCases = nil // Reset if unmarshal fails
+		}
 	}
-	if err != nil {
-		w.logger.Error("Failed to fetch test cases", zap.Error(err), zap.Int("submission_id", submission.ID))
-		w.updateSubmissionError(submission, domain.SubmissionStatusInternalError, "Failed to fetch test cases")
-		return
+
+	if len(testCases) == 0 {
+		if runOnlyPublicTests || submission.IsRunOnly {
+			testCases, err = w.testCaseRepo.GetSamples(submission.ProblemID)
+		} else {
+			testCases, err = w.testCaseRepo.GetByProblemID(submission.ProblemID)
+		}
+		if err != nil {
+			w.logger.Error("Failed to fetch test cases", zap.Error(err), zap.Int("submission_id", submission.ID))
+			w.updateSubmissionError(submission, domain.SubmissionStatusInternalError, "Failed to fetch test cases")
+			return
+		}
+
+		// Cache test cases for 5 minutes
+		if len(testCases) > 0 {
+			if data, err := json.Marshal(testCases); err == nil {
+				_ = w.redisClient.Set(context.Background(), cacheKey, data, 5*time.Minute).Err()
+			}
+		}
 	}
 
 	submission.TotalTestCases = len(testCases)

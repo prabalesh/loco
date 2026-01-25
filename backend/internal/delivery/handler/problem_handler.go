@@ -87,12 +87,14 @@ func (h *ProblemHandler) AdminGetProblem(w http.ResponseWriter, r *http.Request)
 // ListProblems retrieves problems with filters (public endpoint)
 func (h *ProblemHandler) ListProblems(w http.ResponseWriter, r *http.Request) {
 	req := &dto.ListProblemsRequest{
-		Page:       getIntQuery(r, "page", 1),
-		Limit:      getIntQuery(r, "limit", 20),
-		Difficulty: r.URL.Query().Get("difficulty"),
-		Search:     r.URL.Query().Get("search"),
-		Tags:       r.URL.Query()["tags"], // Multiple tags support
-		Categories: r.URL.Query()["categories"],
+		Page:                getIntQuery(r, "page", 1),
+		Limit:               getIntQuery(r, "limit", 20),
+		Difficulty:          r.URL.Query().Get("difficulty"),
+		Search:              r.URL.Query().Get("search"),
+		Tags:                r.URL.Query()["tags"], // Multiple tags support
+		Categories:          r.URL.Query()["categories"],
+		IncludeTestCases:    r.URL.Query().Get("include_testcases") == "true",
+		IncludeBoilerplates: r.URL.Query().Get("include_boilerplates") == "true",
 	}
 
 	userID, _ := middleware.GetUserID(r.Context())
@@ -294,14 +296,16 @@ func (h *ProblemHandler) DeleteProblem(w http.ResponseWriter, r *http.Request) {
 // ListAllProblems retrieves all problems including drafts (admin only)
 func (h *ProblemHandler) ListAllProblems(w http.ResponseWriter, r *http.Request) {
 	req := &dto.ListProblemsRequest{
-		Page:       getIntQuery(r, "page", 1),
-		Limit:      getIntQuery(r, "limit", 20),
-		Difficulty: r.URL.Query().Get("difficulty"),
-		Status:     r.URL.Query().Get("status"),
-		Visibility: r.URL.Query().Get("visibility"),
-		Search:     r.URL.Query().Get("search"),
-		Tags:       r.URL.Query()["tags"],
-		Categories: r.URL.Query()["categories"],
+		Page:                getIntQuery(r, "page", 1),
+		Limit:               getIntQuery(r, "limit", 20),
+		Difficulty:          r.URL.Query().Get("difficulty"),
+		Status:              r.URL.Query().Get("status"),
+		Visibility:          r.URL.Query().Get("visibility"),
+		Search:              r.URL.Query().Get("search"),
+		Tags:                r.URL.Query()["tags"],
+		Categories:          r.URL.Query()["categories"],
+		IncludeTestCases:    r.URL.Query().Get("include_testcases") == "true",
+		IncludeBoilerplates: r.URL.Query().Get("include_boilerplates") == "true",
 	}
 
 	adminID, _ := middleware.GetUserID(r.Context())

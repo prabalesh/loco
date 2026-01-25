@@ -69,14 +69,16 @@ type TestCaseInput struct {
 }
 
 type ListProblemsRequest struct {
-	Page       int      `json:"page"`
-	Limit      int      `json:"limit"`
-	Difficulty string   `json:"difficulty"`
-	Status     string   `json:"status"`
-	Visibility string   `json:"visibility"`
-	Search     string   `json:"search"`
-	Tags       []string `json:"tags"`
-	Categories []string `json:"categories"`
+	Page                int      `json:"page"`
+	Limit               int      `json:"limit"`
+	Difficulty          string   `json:"difficulty"`
+	Status              string   `json:"status"`
+	Visibility          string   `json:"visibility"`
+	Search              string   `json:"search"`
+	Tags                []string `json:"tags"`
+	Categories          []string `json:"categories"`
+	IncludeTestCases    bool     `json:"include_testcases"`
+	IncludeBoilerplates bool     `json:"include_boilerplates"`
 }
 
 type ProblemStats struct {

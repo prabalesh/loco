@@ -186,4 +186,6 @@ export interface ListProblemsRequest {
     search?: string
     tags?: string[]
     categories?: string[]
+    include_testcases?: boolean
+    include_boilerplates?: boolean
 }
