@@ -144,14 +144,24 @@ func (u *ProblemUsecase) CreateProblem(req *dto.CreateProblemRequest, adminID in
 	// Map Tags
 	if len(req.TagIDs) > 0 {
 		for _, id := range req.TagIDs {
-			problem.Tags = append(problem.Tags, domain.Tag{ID: id})
+			tag, err := u.tagRepo.GetByID(id)
+			if err == nil && tag != nil {
+				problem.Tags = append(problem.Tags, *tag)
+			} else {
+				u.logger.Warn("Tag not found during problem creation", zap.Int("tag_id", id))
+			}
 		}
 	}
 
 	// Map Categories
 	if len(req.CategoryIDs) > 0 {
 		for _, id := range req.CategoryIDs {
-			problem.Categories = append(problem.Categories, domain.Category{ID: id})
+			cat, err := u.categoryRepo.GetByID(id)
+			if err == nil && cat != nil {
+				problem.Categories = append(problem.Categories, *cat)
+			} else {
+				u.logger.Warn("Category not found during problem creation", zap.Int("category_id", id))
+			}
 		}
 	}
 
@@ -282,7 +292,12 @@ func (u *ProblemUsecase) UpdateProblem(problemID int, req *dto.UpdateProblemRequ
 	if req.TagIDs != nil {
 		problem.Tags = []domain.Tag{}
 		for _, id := range req.TagIDs {
-			problem.Tags = append(problem.Tags, domain.Tag{ID: id})
+			tag, err := u.tagRepo.GetByID(id)
+			if err == nil && tag != nil {
+				problem.Tags = append(problem.Tags, *tag)
+			} else {
+				u.logger.Warn("Tag not found during problem update", zap.Int("tag_id", id))
+			}
 		}
 	}
 
@@ -290,7 +305,12 @@ func (u *ProblemUsecase) UpdateProblem(problemID int, req *dto.UpdateProblemRequ
 	if req.CategoryIDs != nil {
 		problem.Categories = []domain.Category{}
 		for _, id := range req.CategoryIDs {
-			problem.Categories = append(problem.Categories, domain.Category{ID: id})
+			cat, err := u.categoryRepo.GetByID(id)
+			if err == nil && cat != nil {
+				problem.Categories = append(problem.Categories, *cat)
+			} else {
+				u.logger.Warn("Category not found during problem update", zap.Int("category_id", id))
+			}
 		}
 	}
 

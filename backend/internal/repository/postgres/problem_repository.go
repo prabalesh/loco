@@ -136,10 +136,6 @@ func (r *problemRepository) Delete(id int) error {
 		if err := tx.Where("problem_id = ?", id).Delete(&domain.UserProblemStats{}).Error; err != nil {
 			return fmt.Errorf("failed to delete user problem stats: %w", err)
 		}
-		if err := tx.Where("problem_id = ?", id).Delete(&domain.ProblemExample{}).Error; err != nil {
-			// ignore error if table doesn't exist or other issues with examples
-			// since it uses db tags it might be legacy
-		}
 
 		// 3. Finally delete the problem itself
 		result := tx.Delete(&domain.Problem{}, id)

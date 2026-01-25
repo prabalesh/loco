@@ -74,7 +74,9 @@ const ProblemManagement: React.FC = () => {
                     ...tc,
                     input: typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input),
                     expected_output: typeof tc.expected_output === 'string' ? tc.expected_output : JSON.stringify(tc.expected_output)
-                })) || []
+                })) || [],
+                tag_ids: p.tags?.map((t: any) => t.id) || [],
+                category_ids: p.categories?.map((c: any) => c.id) || []
             };
             setProblem(normalizedProblem);
             setIsDirty(false);
@@ -134,6 +136,8 @@ const ProblemManagement: React.FC = () => {
                 memory_limit: problem.memory_limit,
                 validator_type: problem.validator_type || 'exact_match',
                 test_cases: formattedTestCases,
+                tag_ids: problem.tag_ids || [],
+                category_ids: problem.category_ids || [],
             });
             toast.success('Problem updated successfully!');
             setIsDirty(false);

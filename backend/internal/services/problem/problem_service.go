@@ -15,6 +15,8 @@ import (
 type ProblemService struct {
 	problemRepo        domain.ProblemRepository
 	testCaseRepo       domain.TestCaseRepository
+	tagRepo            domain.TagRepository
+	categoryRepo       domain.CategoryRepository
 	customTypeRepo     domain.CustomTypeRepository
 	referenceRepo      domain.ReferenceSolutionRepository
 	boilerplateService *codegen.BoilerplateService
@@ -23,6 +25,8 @@ type ProblemService struct {
 func NewProblemService(
 	problemRepo domain.ProblemRepository,
 	testCaseRepo domain.TestCaseRepository,
+	tagRepo domain.TagRepository,
+	categoryRepo domain.CategoryRepository,
 	customTypeRepo domain.CustomTypeRepository,
 	referenceRepo domain.ReferenceSolutionRepository,
 	boilerplateService *codegen.BoilerplateService,
@@ -30,6 +34,8 @@ func NewProblemService(
 	return &ProblemService{
 		problemRepo:        problemRepo,
 		testCaseRepo:       testCaseRepo,
+		tagRepo:            tagRepo,
+		categoryRepo:       categoryRepo,
 		customTypeRepo:     customTypeRepo,
 		referenceRepo:      referenceRepo,
 		boilerplateService: boilerplateService,
@@ -108,18 +114,24 @@ func (s *ProblemService) CreateProblem(req CreateProblemRequest, createdBy int) 
 
 	// Add categories
 	if len(req.CategoryIDs) > 0 {
-		categories := make([]domain.Category, len(req.CategoryIDs))
-		for i, id := range req.CategoryIDs {
-			categories[i] = domain.Category{ID: id}
+		categories := make([]domain.Category, 0, len(req.CategoryIDs))
+		for _, id := range req.CategoryIDs {
+			cat, err := s.categoryRepo.GetByID(id)
+			if err == nil && cat != nil {
+				categories = append(categories, *cat)
+			}
 		}
 		problem.Categories = categories
 	}
 
 	// Add tags
 	if len(req.TagIDs) > 0 {
-		tags := make([]domain.Tag, len(req.TagIDs))
-		for i, id := range req.TagIDs {
-			tags[i] = domain.Tag{ID: id}
+		tags := make([]domain.Tag, 0, len(req.TagIDs))
+		for _, id := range req.TagIDs {
+			tag, err := s.tagRepo.GetByID(id)
+			if err == nil && tag != nil {
+				tags = append(tags, *tag)
+			}
 		}
 		problem.Tags = tags
 	}

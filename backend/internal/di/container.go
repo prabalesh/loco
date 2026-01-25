@@ -106,7 +106,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	// We need to keep ProblemService for BulkImport implementation for now, or check if we can migrate.
 	// But let's check imports.
 	// "github.com/prabalesh/loco/backend/internal/services/problem" is imported.
-	v2ProblemService := problem.NewProblemService(problemRepo, testCaseRepo, customTypeRepo, referenceSolutionRepo, boilerplateService)
+	v2ProblemService := problem.NewProblemService(problemRepo, testCaseRepo, tagRepo, categoryRepo, customTypeRepo, referenceSolutionRepo, boilerplateService)
 
 	bulkImportService := bulk.NewBulkImportService(v2ProblemService, validationService, db.DB)
 	bulkHandler := handler.NewBulkHandler(bulkImportService)
