@@ -8,6 +8,7 @@ import (
 	"github.com/prabalesh/loco/backend/internal/delivery/middleware"
 	"github.com/prabalesh/loco/backend/internal/delivery/router"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/auth"
+	"github.com/prabalesh/loco/backend/internal/infrastructure/cache"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/email"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/piston"
 	"github.com/prabalesh/loco/backend/internal/infrastructure/queue"
@@ -53,6 +54,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	}
 
 	// Services
+	cacheService := cache.NewCacheService(redisClient.Client, logger)
 	jwtService := auth.NewJWTService(cfg.JWT.AccessTokenSecret, cfg.JWT.RefreshTokenSecret, cfg.JWT.AccessTokenExpiration, cfg.JWT.RefreshTokenExpiration)
 	emailService := email.NewEmailService(cfg, logger)
 	pistonService := piston.NewPistonService(cfg, pistonExecutionRepo, logger)
@@ -69,7 +71,7 @@ func NewContainer(db *database.Database, cfg *config.Config, logger *zap.Logger)
 	userUsecase := usecase.NewUserUsecase(userRepo, submissionRepo, achievementRepo, logger)
 	adminUsecase := usecase.NewAdminUsecase(userRepo, submissionRepo, pistonExecutionRepo, redisClient.Client, logger)
 	problemLanguageUsecase := usecase.NewProblemLanguageUsecase(problemLanguageRepo, problemRepo, languageRepo, logger)
-	problemUsecase := usecase.NewProblemUsecase(problemRepo, testCaseRepo, userProblemStatsRepo, tagRepo, categoryRepo, customTypeRepo, boilerplateService, cfg, logger)
+	problemUsecase := usecase.NewProblemUsecase(problemRepo, testCaseRepo, userProblemStatsRepo, tagRepo, categoryRepo, customTypeRepo, boilerplateService, cacheService, cfg, logger)
 	languageUsecase := usecase.NewLanguageUsecase(languageRepo, cfg, logger)
 	testCaseUsecase := usecase.NewTestCaseUsecase(testCaseRepo, problemRepo, cfg, logger)
 	achievementUsecase := usecase.NewAchievementUsecase(achievementRepo, userRepo, submissionRepo, problemRepo, redisClient, logger)

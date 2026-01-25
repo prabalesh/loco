@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"github.com/prabalesh/loco/backend/internal/domain"
 	"github.com/prabalesh/loco/backend/internal/domain/dto"
 	"github.com/prabalesh/loco/backend/internal/domain/uerror" // This import is kept because it's used later in the file.
+	"github.com/prabalesh/loco/backend/internal/infrastructure/cache"
 	"github.com/prabalesh/loco/backend/pkg/config"
 	"github.com/prabalesh/loco/backend/pkg/utils"
 	"go.uber.org/zap"
@@ -23,6 +25,7 @@ type ProblemUsecase struct {
 	categoryRepo       domain.CategoryRepository
 	customTypeRepo     domain.CustomTypeRepository
 	boilerplateService domain.BoilerplateService
+	cache              cache.CacheService
 	cfg                *config.Config
 	logger             *zap.Logger
 }
@@ -35,6 +38,7 @@ func NewProblemUsecase(
 	categoryRepo domain.CategoryRepository,
 	customTypeRepo domain.CustomTypeRepository,
 	boilerplateService domain.BoilerplateService,
+	cacheService cache.CacheService,
 	cfg *config.Config,
 	logger *zap.Logger,
 ) *ProblemUsecase {
@@ -46,6 +50,7 @@ func NewProblemUsecase(
 		categoryRepo:       categoryRepo,
 		customTypeRepo:     customTypeRepo,
 		boilerplateService: boilerplateService,
+		cache:              cacheService,
 		cfg:                cfg,
 		logger:             logger,
 	}
@@ -343,6 +348,9 @@ func (u *ProblemUsecase) UpdateProblem(problemID int, req *dto.UpdateProblemRequ
 		zap.Int("updated_by", adminID),
 	)
 
+	// Invalidate cache
+	u.invalidateProblemCache(problem)
+
 	return problem, nil
 }
 
@@ -382,6 +390,10 @@ func (u *ProblemUsecase) DeleteProblem(problemID int, adminID int) error {
 		zap.Int("problem_id", problemID),
 		zap.Int("deleted_by", adminID),
 	)
+
+	// Invalidate cache
+	_ = u.cache.Delete(context.Background(), fmt.Sprintf("problem:%d", problemID))
+	_ = u.cache.DeleteByPrefix(context.Background(), "problems:list:")
 
 	return nil
 }
@@ -431,16 +443,37 @@ func (u *ProblemUsecase) ArchiveProblem(problemID int, adminID int) error {
 		zap.Int("archived_by", adminID),
 	)
 
+	// Invalidate cache
+	_ = u.cache.Delete(context.Background(), fmt.Sprintf("problem:%d", problemID))
+	_ = u.cache.DeleteByPrefix(context.Background(), "problems:list:")
+
 	return nil
+}
+
+func (u *ProblemUsecase) invalidateProblemCache(problem *domain.Problem) {
+	_ = u.cache.Delete(context.Background(), fmt.Sprintf("problem:%d", problem.ID))
+	_ = u.cache.Delete(context.Background(), fmt.Sprintf("problem:%s", problem.Slug))
+	_ = u.cache.DeleteByPrefix(context.Background(), "problems:list:")
 }
 
 // ========== USER OPERATIONS ==========
 
 // GetProblem retrieves a single problem by ID or slug
 func (u *ProblemUsecase) GetProblem(identifier string, userID int) (*domain.Problem, error) {
+	cacheKey := fmt.Sprintf("problem:%s", identifier)
 	var problem *domain.Problem
-	var err error
 
+	// Try cache
+	if err := u.cache.Get(context.Background(), cacheKey, &problem); err == nil && problem != nil {
+		if userID != 0 {
+			if stats, err := u.userStatsRepo.Get(userID, problem.ID); err == nil && stats != nil {
+				problem.UserStatus = stats.Status
+			}
+		}
+		return problem, nil
+	}
+
+	var err error
 	// Try to get by ID first, then by slug
 	if id, parseErr := utils.ParseInt(identifier); parseErr == nil {
 		problem, err = u.problemRepo.GetByID(id)
@@ -453,6 +486,15 @@ func (u *ProblemUsecase) GetProblem(identifier string, userID int) (*domain.Prob
 			zap.String("identifier", identifier),
 		)
 		return nil, errors.New("problem not found")
+	}
+
+	// Set cache (1 hour)
+	_ = u.cache.Set(context.Background(), cacheKey, problem, 1*time.Hour)
+	// Also cache by ID if we fetched by slug, or vice-versa
+	if _, parseErr := utils.ParseInt(identifier); parseErr == nil {
+		_ = u.cache.Set(context.Background(), fmt.Sprintf("problem:%s", problem.Slug), problem, 1*time.Hour)
+	} else {
+		_ = u.cache.Set(context.Background(), fmt.Sprintf("problem:%d", problem.ID), problem, 1*time.Hour)
 	}
 
 	if userID != 0 {
@@ -493,6 +535,39 @@ func (u *ProblemUsecase) AdminGetProblem(identifier string, userID int) (*domain
 
 // ListProblems retrieves problems with filters (for users - only published & public)
 func (u *ProblemUsecase) ListProblems(req *dto.ListProblemsRequest, userID int) ([]*domain.Problem, int, error) {
+	cacheKey := fmt.Sprintf("problems:list:%d:%d:%s:%s", req.Page, req.Limit, req.Difficulty, req.Search)
+	if len(req.Tags) > 0 {
+		cacheKey += ":" + strings.Join(req.Tags, ",")
+	}
+	if len(req.Categories) > 0 {
+		cacheKey += ":" + strings.Join(req.Categories, ",")
+	}
+
+	type cachedList struct {
+		Problems []*domain.Problem
+		Total    int
+	}
+
+	var cached cachedList
+	if err := u.cache.Get(context.Background(), cacheKey, &cached); err == nil && cached.Problems != nil {
+		if userID != 0 {
+			problemIDs := make([]int, len(cached.Problems))
+			for i, p := range cached.Problems {
+				problemIDs[i] = p.ID
+			}
+
+			statusMap, err := u.userStatsRepo.GetStatuses(userID, problemIDs)
+			if err == nil {
+				for i := range cached.Problems {
+					if status, ok := statusMap[cached.Problems[i].ID]; ok {
+						cached.Problems[i].UserStatus = status
+					}
+				}
+			}
+		}
+		return cached.Problems, cached.Total, nil
+	}
+
 	filters := domain.ProblemFilters{
 		Page:       req.Page,
 		Limit:      req.Limit,
@@ -512,10 +587,21 @@ func (u *ProblemUsecase) ListProblems(req *dto.ListProblemsRequest, userID int) 
 		return nil, 0, errors.New("failed to retrieve problems")
 	}
 
+	// Cache the result (5 minutes for lists as they are more dynamic)
+	_ = u.cache.Set(context.Background(), cacheKey, cachedList{Problems: problems, Total: total}, 5*time.Minute)
+
 	if userID != 0 {
-		for i := range problems {
-			if stats, err := u.userStatsRepo.Get(userID, problems[i].ID); err == nil && stats != nil {
-				problems[i].UserStatus = stats.Status
+		problemIDs := make([]int, len(problems))
+		for i, p := range problems {
+			problemIDs[i] = p.ID
+		}
+
+		statusMap, err := u.userStatsRepo.GetStatuses(userID, problemIDs)
+		if err == nil {
+			for i := range problems {
+				if status, ok := statusMap[problems[i].ID]; ok {
+					problems[i].UserStatus = status
+				}
 			}
 		}
 	}
@@ -547,9 +633,17 @@ func (u *ProblemUsecase) ListAllProblems(req *dto.ListProblemsRequest, userID in
 	}
 
 	if userID != 0 {
-		for i := range problems {
-			if stats, err := u.userStatsRepo.Get(userID, problems[i].ID); err == nil && stats != nil {
-				problems[i].UserStatus = stats.Status
+		problemIDs := make([]int, len(problems))
+		for i, p := range problems {
+			problemIDs[i] = p.ID
+		}
+
+		statusMap, err := u.userStatsRepo.GetStatuses(userID, problemIDs)
+		if err == nil {
+			for i := range problems {
+				if status, ok := statusMap[problems[i].ID]; ok {
+					problems[i].UserStatus = status
+				}
 			}
 		}
 	}

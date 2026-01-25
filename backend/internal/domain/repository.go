@@ -164,6 +164,7 @@ type UserProblemStatsRepository interface {
 	Create(stats *UserProblemStats) error
 	Update(stats *UserProblemStats) error
 	Get(userID, problemID int) (*UserProblemStats, error)
+	GetStatuses(userID int, problemIDs []int) (map[int]string, error)
 	Upsert(stats *UserProblemStats) error
 }
 

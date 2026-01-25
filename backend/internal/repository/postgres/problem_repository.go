@@ -397,11 +397,6 @@ func (r *problemRepository) IncrementStats(id int, isAccepted bool) error {
 	defer cancel()
 
 	return r.db.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var problem domain.Problem
-		if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&problem, id).Error; err != nil {
-			return err
-		}
-
 		updates := map[string]interface{}{
 			"total_submissions": gorm.Expr("total_submissions + ?", 1),
 		}
@@ -410,25 +405,18 @@ func (r *problemRepository) IncrementStats(id int, isAccepted bool) error {
 			updates["total_accepted"] = gorm.Expr("total_accepted + ?", 1)
 		}
 
-		if err := tx.Model(&problem).Updates(updates).Error; err != nil {
+		if err := tx.Model(&domain.Problem{}).Where("id = ?", id).Updates(updates).Error; err != nil {
 			return err
 		}
 
-		// Re-fetch to calculate new rate accurately, or just do it in one go.
-		// For simplicity, let's just do another query or calculation.
-		var updatedProblem domain.Problem
-		if err := tx.First(&updatedProblem, id).Error; err != nil {
-			return err
-		}
-
-		if updatedProblem.TotalSubmissions > 0 {
-			rate := (float64(updatedProblem.TotalAccepted) / float64(updatedProblem.TotalSubmissions)) * 100
-			if err := tx.Model(&updatedProblem).Update("acceptance_rate", rate).Error; err != nil {
-				return err
-			}
-		}
-
-		return nil
+		// Update acceptance rate in the same transaction
+		// We use a subquery to get the latest values for calculation
+		query := `
+			UPDATE problems 
+			SET acceptance_rate = (CAST(total_accepted AS FLOAT) / CAST(NULLIF(total_submissions, 0) AS FLOAT)) * 100
+			WHERE id = ?
+		`
+		return tx.Exec(query, id).Error
 	})
 }
 

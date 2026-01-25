@@ -14,7 +14,7 @@ import (
 const (
 	SubmissionQueueName  = "submission:queue"
 	AchievementQueueName = "achievement:queue"
-	QueueTimeout         = 0 // 0 means block indefinitely
+	QueueTimeout         = 30 // Block for 30 seconds
 )
 
 type JobQueue interface {

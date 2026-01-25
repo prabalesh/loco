@@ -504,50 +504,28 @@ func (w *Worker) updateProblemAndUserStats(submission *domain.Submission, finalS
 	}
 
 	// 2. Update User Stats (Per User-Problem)
-	stats, err := w.userProblemStatsRepo.Get(submission.UserID, submission.ProblemID)
-	if err != nil {
-		w.logger.Error("Failed to get user problem stats",
+	now := time.Now()
+	stats := &domain.UserProblemStats{
+		UserID:    submission.UserID,
+		ProblemID: submission.ProblemID,
+		Attempts:  1,
+		Status:    "attempted",
+		UpdatedAt: now,
+	}
+
+	if isAccepted {
+		stats.Status = "solved"
+		stats.FirstSolvedAt = &now
+		stats.BestSubmissionID = &submission.ID
+	}
+
+	// Upsert handles both creation and increments/updates
+	if err := w.userProblemStatsRepo.Upsert(stats); err != nil {
+		w.logger.Error("Failed to upsert user problem stats",
 			zap.Error(err),
 			zap.Int("user_id", submission.UserID),
 			zap.Int("problem_id", submission.ProblemID),
 		)
-		return
-	}
-
-	now := time.Now()
-	if stats == nil {
-		stats = &domain.UserProblemStats{
-			UserID:    submission.UserID,
-			ProblemID: submission.ProblemID,
-			Attempts:  1,
-			Status:    "attempted",
-		}
-		if isAccepted {
-			stats.Status = "solved"
-			stats.FirstSolvedAt = &now
-			stats.BestSubmissionID = &submission.ID
-		}
-		if err := w.userProblemStatsRepo.Create(stats); err != nil {
-			w.logger.Error("Failed to create user problem stats", zap.Error(err))
-		}
-	} else {
-		stats.Attempts++
-		if isAccepted {
-			if stats.Status != "solved" {
-				stats.Status = "solved"
-				stats.FirstSolvedAt = &now
-				stats.BestSubmissionID = &submission.ID
-			} else {
-				// Already solved, check if this is "better"?
-				// For now just keep first solved ID or update if better?
-				// Let's just keep it simple.
-			}
-		} else if stats.Status != "solved" {
-			stats.Status = "attempted"
-		}
-		if err := w.userProblemStatsRepo.Update(stats); err != nil {
-			w.logger.Error("Failed to update user problem stats", zap.Error(err))
-		}
 	}
 
 	// 3. Trigger achievement evaluation
