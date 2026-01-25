@@ -6,9 +6,9 @@ interface SolvedDistributionProps {
     totalSolved: number
 }
 
-export const SolvedDistribution = ({ distribution, totalSolved }: SolvedDistributionProps) => {
+export const SolvedDistribution = ({ distribution = [], totalSolved }: SolvedDistributionProps) => {
     const getCount = (difficulty: string) =>
-        distribution.find(d => d.difficulty.toLowerCase() === difficulty.toLowerCase())?.count || 0
+        distribution?.find(d => d.difficulty.toLowerCase() === difficulty.toLowerCase())?.count || 0
 
     const easy = getCount('easy')
     const medium = getCount('medium')

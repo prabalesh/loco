@@ -7,7 +7,8 @@ interface StatsHeatmapProps {
     data: HeatmapEntry[]
 }
 
-export const StatsHeatmap = ({ data }: StatsHeatmapProps) => {
+
+export const StatsHeatmap = ({ data = [] }: StatsHeatmapProps) => {
     const days = useMemo(() => {
         const today = startOfToday()
         const startDate = subDays(today, 364) // Last 365 days
@@ -15,7 +16,7 @@ export const StatsHeatmap = ({ data }: StatsHeatmapProps) => {
 
         return interval.map(date => {
             const dateStr = format(date, 'yyyy-MM-dd')
-            const entry = data.find(d => d.date === dateStr)
+            const entry = data?.find(d => d.date === dateStr)
             return {
                 date: dateStr,
                 count: entry?.count || 0,
