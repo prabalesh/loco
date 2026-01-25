@@ -35,6 +35,8 @@ A modern, full-stack competitive programming platform built with **Go** and **Re
 - ✅ **Reference Solution Validation** - Mandatory problem validation against reference solutions before publishing
 - 🏆 **Leaderboard** - Global rankings based on XP and problem-solving prowess
 - 🛠️ **Admin Portal** - Robust management interface for problems, users, and system monitoring
+- 📋 **Global Submissions List** - Admin view for all user submissions across the platform
+- 📜 **Execution Logs** - Detailed logs of all code executions via Piston for auditing and debugging
 - 📊 **Progress Tracking** - Detailed statistics and progress visualization
 - 🎨 **Modern UI** - Premium design system using Tailwind CSS v4 and Framer Motion
 - 🌙 **Dark Mode Ready** - Fully responsive design with native dark theme support
@@ -498,6 +500,8 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - [x] Achievements & Badges system
 - [x] Admin Dashboard for problem management
 - [x] Reference Solution Validation System (V2)
+- [x] Global Submission management for Admins
+- [x] Piston Execution Logging & Auditing
 - [ ] Contest system and live rankings
 - [ ] Contest system and live rankings
 - [ ] Discussion forums per problem
