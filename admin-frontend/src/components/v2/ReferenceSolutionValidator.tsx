@@ -24,7 +24,6 @@ import {
     CheckCircle as CheckCircleIcon,
     Cancel as CancelIcon,
     PlayArrow as PlayIcon,
-    Sync as SyncIcon,
 } from '@mui/icons-material';
 import Editor from '@monaco-editor/react';
 import { adminProblemApi, adminCodeGenApi, adminSubmissionsApi } from '../../lib/api/admin';
