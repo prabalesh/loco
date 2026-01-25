@@ -17,19 +17,32 @@ export const DescriptionTab = ({ problem }: DescriptionTabProps) => {
             transition={{ duration: 0.3 }}
             className="prose prose-blue max-w-none"
         >
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 shadow-sm">
-                    <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">Acceptance Rate</p>
-                    <p className="text-2xl font-bold text-gray-900">{calculateAcceptanceRate(problem.total_accepted, problem.total_submissions).toFixed(1)}%</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 shadow-sm text-center">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Acceptance Rate</p>
+                    <p className="text-xl font-black text-gray-900">{calculateAcceptanceRate(problem.total_accepted, problem.total_submissions).toFixed(1)}%</p>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 shadow-sm">
-                    <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">Total Submissions</p>
-                    <p className="text-2xl font-bold text-gray-900">{problem.total_submissions.toLocaleString()}</p>
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 shadow-sm text-center">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total Submissions</p>
+                    <p className="text-xl font-black text-gray-900">{problem.total_submissions.toLocaleString()}</p>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 shadow-sm">
-                    <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">Total Accepted</p>
-                    <p className="text-2xl font-bold text-gray-900">{problem.total_accepted.toLocaleString()}</p>
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 shadow-sm text-center">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total Accepted</p>
+                    <p className="text-xl font-black text-gray-900">{problem.total_accepted.toLocaleString()}</p>
                 </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-8 items-center border-b border-gray-100 pb-6">
+                {problem.tags?.map(tag => (
+                    <span key={tag.id} className="text-[11px] font-bold px-2.5 py-1 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors cursor-default border border-gray-200/50">
+                        {tag.name}
+                    </span>
+                ))}
+                {problem.categories?.map(cat => (
+                    <span key={cat.id} className="text-[11px] font-bold px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg border border-blue-100">
+                        {cat.name}
+                    </span>
+                ))}
             </div>
 
             {problem.description && (

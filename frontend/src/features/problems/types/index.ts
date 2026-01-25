@@ -42,6 +42,8 @@ export interface ProblemResponse {
     input_format?: string;
     output_format?: string;
     constraints?: string;
+    tags?: Tag[];
+    categories?: Category[];
 
     acceptance_rate: number;
     total_submissions: number;

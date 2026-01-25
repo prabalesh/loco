@@ -28,18 +28,15 @@ const DIFFICULTIES = [
 ];
 
 export const GeneralInfoStep: React.FC<GeneralInfoStepProps> = ({ data, onChange }) => {
-    const { data: tagsResponse } = useQuery({
+    const { data: tags = [] } = useQuery({
         queryKey: ['tags'],
-        queryFn: () => adminProblemApi.getTags(),
+        queryFn: () => adminProblemApi.getTags().then(res => res.data.data || []),
     });
 
-    const { data: categoriesResponse } = useQuery({
+    const { data: categories = [] } = useQuery({
         queryKey: ['categories'],
-        queryFn: () => adminProblemApi.getCategories(),
+        queryFn: () => adminProblemApi.getCategories().then(res => res.data.data || []),
     });
-
-    const tags = tagsResponse?.data?.data || [];
-    const categories = categoriesResponse?.data?.data || [];
     return (
         <Stack spacing={4}>
             <Box>
@@ -96,7 +93,7 @@ export const GeneralInfoStep: React.FC<GeneralInfoStepProps> = ({ data, onChange
                     Describe the problem statement, constraints, and provide hints for users.
                 </Typography>
 
-                <Stack spacing={3}>
+                <Stack spacing={4}>
                     <Box>
                         <Typography variant="body2" fontWeight="bold" gutterBottom>
                             Problem Description <span style={{ color: '#ef4444' }}>*</span>
@@ -120,16 +117,41 @@ export const GeneralInfoStep: React.FC<GeneralInfoStepProps> = ({ data, onChange
                                 onChange={(content) => onChange({ constraints: content })}
                             />
                         </Box>
-                        <TextField
-                            fullWidth
-                            label="Hints (One per line)"
-                            value={data.hints || ''}
-                            onChange={(e) => onChange({ hints: e.target.value })}
-                            multiline
-                            rows={4}
-                            placeholder="Check for null\nUse a hashmap"
-                            sx={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
-                        />
+                        <Box>
+                            <Typography variant="body2" fontWeight="bold" gutterBottom>
+                                Hints (One per line)
+                            </Typography>
+                            <TextField
+                                fullWidth
+                                value={data.hints || ''}
+                                onChange={(e) => onChange({ hints: e.target.value })}
+                                multiline
+                                rows={6}
+                                placeholder="Check for null\nUse a hashmap"
+                                sx={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
+                            />
+                        </Box>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Box>
+                            <Typography variant="body2" fontWeight="bold" gutterBottom>
+                                Input Format
+                            </Typography>
+                            <TiptapEditor
+                                content={data.input_format || ''}
+                                onChange={(content) => onChange({ input_format: content })}
+                            />
+                        </Box>
+                        <Box>
+                            <Typography variant="body2" fontWeight="bold" gutterBottom>
+                                Output Format
+                            </Typography>
+                            <TiptapEditor
+                                content={data.output_format || ''}
+                                onChange={(content) => onChange({ output_format: content })}
+                            />
+                        </Box>
                     </div>
                 </Stack>
             </Box>
@@ -147,7 +169,7 @@ export const GeneralInfoStep: React.FC<GeneralInfoStepProps> = ({ data, onChange
                         <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Tags</Typography>
                         <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1, minHeight: 120, maxHeight: 250, overflowY: 'auto', bgcolor: '#fafafa' }}>
                             <div className="flex flex-wrap gap-2">
-                                {tags.map((tag: Tag) => (
+                                {Array.isArray(tags) && tags.map((tag: Tag) => (
                                     <Chip
                                         key={tag.id}
                                         label={tag.name}
@@ -172,7 +194,7 @@ export const GeneralInfoStep: React.FC<GeneralInfoStepProps> = ({ data, onChange
                         <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Categories</Typography>
                         <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1, minHeight: 120, maxHeight: 250, overflowY: 'auto', bgcolor: '#fafafa' }}>
                             <Stack spacing={0.5}>
-                                {categories.map((cat: Category) => (
+                                {Array.isArray(categories) && categories.map((cat: Category) => (
                                     <FormControlLabel
                                         key={cat.id}
                                         control={
@@ -196,6 +218,6 @@ export const GeneralInfoStep: React.FC<GeneralInfoStepProps> = ({ data, onChange
                     </div>
                 </div>
             </Box>
-        </Stack>
+        </Stack >
     );
 };

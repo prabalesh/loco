@@ -81,13 +81,13 @@ func (r *problemRepository) Update(problem *domain.Problem) error {
 		}
 
 		if problem.Tags != nil {
-			if err := tx.Model(problem).Association("Tags").Replace(problem.Tags); err != nil {
+			if err := tx.Model(&domain.Problem{ID: problem.ID}).Association("Tags").Replace(problem.Tags); err != nil {
 				return fmt.Errorf("failed to update tags: %w", err)
 			}
 		}
 
 		if problem.Categories != nil {
-			if err := tx.Model(problem).Association("Categories").Replace(problem.Categories); err != nil {
+			if err := tx.Model(&domain.Problem{ID: problem.ID}).Association("Categories").Replace(problem.Categories); err != nil {
 				return fmt.Errorf("failed to update categories: %w", err)
 			}
 		}

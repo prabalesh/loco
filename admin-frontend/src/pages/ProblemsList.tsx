@@ -167,6 +167,7 @@ const ProblemsList: React.FC = () => {
                         <TableRow>
                             <TableCell sx={{ fontWeight: 'bold' }}>Title</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Difficulty</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Classification</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Validation</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Submissions</TableCell>
@@ -205,6 +206,16 @@ const ProblemsList: React.FC = () => {
                                             color={getDifficultyColor(prob.difficulty) as any}
                                             variant="outlined"
                                         />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                                            {prob.tags?.map(tag => (
+                                                <Chip key={tag.id} label={tag.name} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 20 }} />
+                                            ))}
+                                            {prob.categories?.map(cat => (
+                                                <Chip key={cat.id} label={cat.name} size="small" color="secondary" variant="outlined" sx={{ fontSize: '0.65rem', height: 20 }} />
+                                            ))}
+                                        </Stack>
                                     </TableCell>
                                     <TableCell>
                                         <Chip
